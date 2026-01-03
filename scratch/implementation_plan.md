@@ -1,34 +1,42 @@
-# Implementation Plan: Ephemeral Docker Execution Environment
+# Implementation Plan: Architectural Separation of Concerns
 
 ## Goal
-Design a robust, high-performance, and secure execution environment for Python tools using Docker containers. To minimize latency, we will implement a "Hot Standby" pool of pre-warmed containers.
+Decouple the "Experiment" domain (State, Plans, Roles) from the "Backend" infrastructure (Docker, Node.js Process, Event Bus emissions). The `Experiment` object should be a passive state holder, and a separate `ExperimentRunner` service should drive the execution using interfaces.
 
 ## User Review Required
 > [!IMPORTANT]
-> **Execution Strategy**: We will use an "Execute-and-Destroy" strategy. Containers are pulled from a "Warm Pool", used for a *single* step/tool execution, and then destroyed. This ensures perfect isolation and prevents state pollution between steps. The pool automatically replenishes itself in the background.
+> **Major Refactor**: The `Experiment` class will lose its `start()` and `step()` methods. These will move to a new `ExperimentRunner` service. The `Experiment` entity will effectively become a data structure (Model) rather than an active object.
 
 ## Proposed Changes
 
 ### [SPEC.md](file:///home/andrew/Projects/Code/web/scientist-ai/SPEC.md)
 
-#### [NEW] Domain Objects
-- **ContainerPool**: Manages the lifecycle of idle containers.
-  - `maxSize`: int (default 2 or 3)
-  - `acquire()`: Returns a ready container.
-  - `replenish()`: Spawns new containers to fill the pool.
-- **ContainerWrapper**: Represents a single Docker container instance.
-  - `id`: String
-  - `status`: Enum (STARTING, READY, BUSY, TERMINATED)
-  - `execute(script, env)`: Runs command.
+#### [NEW] Interfaces
+- **IExecutionEnvironment**: Interface for the isolation layer.
+  - `runCommand(image, script, env, args) -> Result`
+  - Implementation: `DockerExecutionEnvironment` (wraps ContainerPool).
+- **IScriptRunner**: Interface for running specific script types.
+  - `runTool(tool, env) -> Result`
+  - `runHook(hook, context) -> void`
 
-#### [MODIFY] Execution Engine
-- Update **Lifecycle** to use `ContainerPool.acquire()` instead of `spawn process`.
-- Add **Container Lifecycle** section detailing the "Warm Pool" logic.
+#### [MODIFY] Domain Objects
+- **Experiment**:
+    - [DELETE] `start()`, `step()`, `pause()`, `stop()`, `events`.
+    - [NEW] `status`, `data`, `plan` (Pure state).
+    - *Rationale*: The Experiment entity shouldn't know *how* to run itself, only *what* its current state is.
 
-#### [MODIFY] Technology Stack
-- Add `dockerode` (Node.js Docker client) or similar.
-- Add `python:3.11-slim` (or custom image) as the base runner image.
+#### [NEW] Services (The "Backend" Layer)
+- **ExperimentOrchestrator** (The "Engine"):
+    - Owns the `EventBus`.
+    - Accepts an `Experiment` (state) and `ExperimentPlan`.
+    - Implements the `Step Loop`.
+    - Uses `IExecutionEnvironment` to run tools.
+    - Updates the `Experiment` state object.
+    
+#### [MODIFY] Class Diagram
+- Show `ExperimentOrchestrator` depending on `IExecutionEnvironment`.
+- Show `Experiment` as a data object used by `Orchestrator`.
 
 ## Verification Plan
-- **Manual verification**: Review SPEC.md against user requirements for "hot standby".
-- **Diagram check**: Ensure Class Diagram and Flowcharts (if detailed enough) reflect this.
+- **Logical Check**: Ensure `Experiment` object has ZERO dependencies on Docker, EventBus, or Node.js runtime specifics.
+- **Diagram Check**: The dependency arrow should go `Orchestrator -> Experiment`, not `Experiment -> Infrastructure`.

@@ -23,9 +23,17 @@
 
 # Task: Design Ephemeral Docker Execution Environment
 
-- [ ] Add `ContainerPool` and `Container` objects to Domain <!-- id: 14 -->
-- [ ] Detail Container Lifecycle (Warm Pool, Execute-and-Destroy) <!-- id: 15 -->
-- [ ] Update Technology Stack (Dockerode) <!-- id: 16 -->
+- [x] Add `ContainerPool` and `Container` objects to Domain <!-- id: 14 -->
+- [x] Detail Container Lifecycle (Warm Pool, Execute-and-Destroy) <!-- id: 15 -->
+- [x] Update Technology Stack (Dockerode) <!-- id: 16 -->
+
+# Task: Refactor Architecture for Separation of Concerns
+
+- [ ] Analyze coupling and create `implementation_plan.md` <!-- id: 17 -->
+- [ ] Define `IExecutionEngine` and `IScriptRunner` interfaces <!-- id: 18 -->
+- [ ] Refactor `Experiment` to be a pure State Entity <!-- id: 19 -->
+- [ ] Update Class Diagram to show Interfaces <!-- id: 20 -->
+
 
 
 
