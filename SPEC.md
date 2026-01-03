@@ -39,8 +39,10 @@ robust platform for designing and running agentic AI experiments.
   - `parameters`: JSON Schema definition of accepted arguments.
   - `code`: String (Python source code).
 - **Methods**:
-  - `execute(environment, arguments)`: Runs the python script, returns output,
-    may modify environment.
+- **Methods**:
+  - `execute(environment, arguments, context)`: Runs the python script.
+    - `context`: `ToolContext` object containing a scoped `logger`.
+    - Returns output, may modify environment.
 
 #### ModelConfig
 
@@ -105,8 +107,13 @@ robust platform for designing and running agentic AI experiments.
     - `BEFORE_TOOL_CALL`
     - `AFTER_TOOL_CALL`
   - `code`: String (Python).
+  - `code`: String (Python).
 - **Methods**:
-  - `run(context)`: Executed at the appropriate lifecycle event. `context` contains references to the `Experiment` and `Environment`.
+  - `run(context)`: Executed at the appropriate lifecycle event.
+    - `context`: `ScriptContext` containing:
+      - `experiment`: Read-only reference to Experiment metadata.
+      - `environment`: Mutable reference to current Environment.
+      - `logger`: Scoped `Logger` instance for writing logs.
 
 #### **ExperimentPlan**
 
@@ -603,14 +610,17 @@ The Execution Engine is a Node.js process that acts as the orchestrator for an E
 1.  **Instantiation**: An `Experiment` record is created in MongoDB based on the `ExperimentPlan`.
 2.  **State Population**: The `initialEnvironment` from the plan is copied into the `Experiment.currentEnvironment`.
 3.  **Script Registration**: The engine loads all Scripts defined in the plan and sorts them by `HookType`.
-4.  **Start Hook**: The engine executes any scripts registered to `EXPERIMENT_START`.
-5.  **Status Update**: Status transitions to `RUNNING`.
+4.  **Logging**: Log "Experiment Initialized" with Experiment ID and Plan Name. Log "Scripts Loaded" with count.
+5.  **Start Hook**: The engine executes any scripts registered to `EXPERIMENT_START`.
+    *   *Context passed to script includes a Logger scoped to "Script:ScriptIdentifier".*
+6.  **Status Update**: Status transitions to `RUNNING`.
 
 #### Phase 2: The Step Loop
 The core loop repeats until a termination condition is met.
 
-1.  **Step Start Hook**: Execute `STEP_START` scripts.
-2.  **Role Iteration**: Iterate through each `Role` in the ordered list defined in the plan.
+1.  **Step Logging**: Log "Step N Started".
+2.  **Step Start Hook**: Execute `STEP_START` scripts.
+3.  **Role Iteration**: Iterate through each `Role` in the ordered list defined in the plan.
     *   **Prompt Construction**:
         *   The Engine creates a deep copy of the `currentEnvironment`.
         *   It filters this copy based on the Role's `variableWhitelist`.
@@ -620,27 +630,32 @@ The core loop repeats until a termination condition is met.
     *   **Inference**:
         *   Send the Prompt to the Role's configured Model via the `Provider`.
         *   Stream the response (Reasoning + Content).
+        *   *Log*: Log "Role [Name] Thinking..." (streaming updates).
     *   **Tool Execution (If requested)**:
         *   If the Model requests a Tool Call:
             *   **Before Tool Hook**: Execute `BEFORE_TOOL_CALL` scripts.
             *   **Execution**: Spawn a Python subprocess to run the Tool code with the provided arguments and the current Experiment Environment.
+                *   *Context passed to Tool includes a Logger scoped to "Tool:ToolName".*
             *   **State Update**: The Tool may modify the Environment. The Engine merges these changes back into the canonical state.
             *   **After Tool Hook**: Execute `AFTER_TOOL_CALL` scripts.
             *   **Feedback**: The Tool's output is added to the conversation history, and the Model is re-prompted to handle the output (this may happen recursively).
     *   **After Response Hook**: Execute `AFTER_MODEL_RESPONSE` scripts.
-3.  **Step End Hook**: Execute `STEP_END` scripts.
-4.  **Goal Evaluation**:
+4.  **Step End Hook**: Execute `STEP_END` scripts.
+5.  **Step Logging**: Log "Step N Ended". Log snapshot of `currentEnvironment` (Debug/Info level).
+6.  **Goal Evaluation**:
     *   Iterate through all `Goals`.
     *   Execute the `conditionScript` for each using the current Environment.
     *   If any returns `True`:
         *   Set `Experiment.result` to the Goal's description.
+        *   *Log*: "Goal Met: [Goal Description]".
         *   Break the loop.
-5.  **Safety Check**: Increment `currentStep`. If `currentStep > maxSteps`, set result to "Max Steps Exceeded" and break.
+7.  **Safety Check**: Increment `currentStep`. If `currentStep > maxSteps`, set result to "Max Steps Exceeded" and break.
 
 #### Phase 3: Termination
 1.  **Status Update**: Set status to `COMPLETED` (or `FAILED` if critical error).
 2.  **End Hook**: Execute `EXPERIMENT_END` scripts.
 3.  **Cleanup**: Close database connections (if dedicated), clean up any temp files.
+4.  **Final Log**: Log "Experiment Ended" with result and total duration.
 
 ### 12.3 Step Process Flowchart
 
