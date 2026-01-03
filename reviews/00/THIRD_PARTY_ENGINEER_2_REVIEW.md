@@ -1,3 +1,18 @@
+# Front Matter
+
+Model: **qwen3-coder**
+
+Prompt:
+> Review this software design spec document with the critical eye of a
+> professional software engineer with decades of experience. Write up a
+> report of your comments, feedback, and suggestions. Look for security
+> vulerabilities, UI/UX issues, architectural problems. Your goal is to
+> help us produce a modular, composable, and well-engineered system that
+> can be easily extended and adapted in the foture. Your output needs
+> to be your generated report written in english as a narrative.
+
+# Content
+
 **Security Vulnerabilities:**
 
 1. **Python Code Execution**: The system executes user-defined Python scripts in subprocesses without sandboxing. This is a critical vulnerability as malicious code can access the host filesystem, network, and other system resources. Immediate mitigation is required using Docker containers or Firejail.
