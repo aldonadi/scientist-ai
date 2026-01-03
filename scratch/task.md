@@ -20,3 +20,7 @@
 - [x] Add 'Execution Engine & Step Lifecycle' section to SPEC.md <!-- id: 19 -->
     - [x] Create Mermaid Flowchart for Step Process <!-- id: 20 -->
     - [x] Detail pseudocode/logic for the step loop <!-- id: 21 -->
+- [ ] Create implementation plan for Logging Integration <!-- id: 22 -->
+- [ ] Incorporate Logging into SPEC.md <!-- id: 23 -->
+    - [ ] Update Domain Objects (Script Context) <!-- id: 24 -->
+    - [ ] Update Execution Engine Lifecycle with Logging steps <!-- id: 25 -->

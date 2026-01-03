@@ -1,7 +1,7 @@
-# Refine SPEC.md: Execution Engine & Step Lifecycle
+# Refine SPEC.md: Logging Integration
 
 ## Goal Description
-Detailed specification of the Experiment Execution Engine, including a rigorous step-by-step flowchart and logic description, as requested by the user.
+Integrate comprehensive logging into the Experiment Lifecycle and Step Loop. Define how generic `Logger` instances are passed to Scripts and Tools to maintain separation of concerns.
 
 ## User Review Required
 None.
@@ -11,20 +11,19 @@ None.
 ### Documentation
 #### [MODIFY] [SPEC.md](file:///home/andrew/Projects/Code/web/scientist-ai/SPEC.md)
 
-1.  **New Section 12: Execution Engine & Step Lifecycle**:
-    *   **Overview**: Describe the Node.js Orchestrator's role.
-    *   **Lifecycle Phases**:
-        1.  **Initialization**: Plan -> Experiment instantiation.
-        2.  **The Step Loop**: Detailed breakdown of a single step.
-        3.  **Termination**: Goal checks and cleanup.
-    *   **Mermaid Flowchart**: A visual representation of the loop, including Hooks (`StartStep`, `BeforeTool`, etc.).
+1.  **Domain Objects Updates**:
+    *   **Script**: Explicitly define `ScriptContext` which is passed to `run()`. `ScriptContext` includes `environment` and `logger`.
+    *   **Tool**: Update `execute` signature to include `logger` (or `ToolContext`).
 
-2.  **Logic Details**:
-    *   Explicitly define how `Role` turns work (sequential).
-    *   Define how `Tool` output is fed back to the model (Re-prompting with tool outputs).
-    *   Define `Goal` evaluation timing (End of step? or after every Role action?). *Decision: End of step for stability, unless a "Sudden Death" goal is needed. SPEC will say End of Step for now.*
+2.  **Execution Engine (Section 12) Updates**:
+    *   **Initialization**: Log "Experiment Initialized", "Scripts Loaded".
+    *   **Step Loop**:
+        *   Log "Step N Started".
+        *   Log Environment State Snapshot at the end of the step.
+    *   **Goal Evaluation**: Log "Goal Met: [Description]" upon success.
+    *   **Script/Tool Execution**: Mention that the Engine passes a scoped Logger (e.g. `logger.cloneWithSource('ScriptName')`) to the executable.
 
 ## Verification Plan
 ### Manual Verification
-- Review the Mermaid diagram for logical correctness against `CONCEPT.md`.
-- Ensure all hooks from the Domain Object section are placed in the flowchart.
+- Review `SPEC.md` to ensure every phase of the lifecycle has a corresponding logging action.
+- Verify that `ScriptContext` is clearly defined.
