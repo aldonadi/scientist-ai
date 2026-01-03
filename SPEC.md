@@ -37,6 +37,26 @@ robust platform for designing and running agentic AI experiments.
   - `EXPERIMENT_END`: `{ result, duration }`
   - `LOG`: `{ source, level, message, data }`
 
+#### **Container** (Ephemeral)
+- **Purpose**: Represents a single Docker container instance.
+- **Members**:
+  - `id`: String (Docker Container ID).
+  - `status`: Enum (STARTING, READY, BUSY, TERMINATED).
+  - `expiry`: Timestamp (For cleaning up stuck containers).
+- **Methods**:
+  - `execute(script, env, args)`: Runs a command inside the container.
+  - `destroy()`: Force kills and removes the container.
+
+#### **ContainerPool**
+- **Purpose**: Manages a reservoir of "Warm" containers to minimize latency.
+- **Members**:
+  - `poolSize`: Integer (Configurable, e.g., 2).
+  - `available`: Queue<Container>.
+- **Methods**:
+  - `acquire()`: Returns a ready Container from the pool. (Triggers async replenishment).
+  - `replenish()`: Spawns new containers until `available.length == poolSize`.
+  - `shutdown()`: Destroys all containers.
+
 #### **Environment**
 
 - **Purpose**: Holds the state of an experiment step.
@@ -533,6 +553,7 @@ classDiagram
   - Express.js.
   - Mongoose (ODM).
   - `python-shell` or `execa` for running Python scripts.
+  - `dockerode` for managing Docker containers.
   - `ollama-js` or direct fetch for LLM communication.
 
 - **Database**:
@@ -716,7 +737,27 @@ The core loop repeats until a termination condition is met.
 2.  **End Event**: Emit `EXPERIMENT_END`.
 3.  **Cleanup**: Close database connections (if dedicated), clean up any temp files.
 
-### 12.3 Step Process Flowchart
+### 12.4 Container Lifecycle & Security (Execute-and-Destroy)
+
+To ensure maximum security and performance, the system employs a "Warm Pool" strategy.
+
+1.  **Warm Pool**:
+    *   The `ContainerPool` maintains a configurable number (default: 2) of idle, pre-warmed Docker containers (Status: `READY`).
+    *   These containers are started with network restrictions and resource limits applied at boot.
+
+2.  **Acquisition (Hot)**:
+    *   When the Engine needs to execute a Tool, it requests a container from the pool.
+    *   The pool returns a `READY` container immediately and marks it `BUSY`.
+    *   *Async*: The pool immediately spawns a new container to replace the leased one (Replenishment).
+
+3.  **Execution**:
+    *   The Tool code and arguments are injected into the `BUSY` container.
+    *   The command is executed. Standard Output/Error is captured.
+
+4.  **Destruction**:
+    *   Once execution completes (success or failure), the container is **Terminated**.
+    *   It is NOT returned to the pool. This "One-Shot" policy prevents side-effects from one tool call affecting subsequent calls (e.g., leftover files, modified environment variables).
+
 
 ```mermaid
 flowchart TD
