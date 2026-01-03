@@ -16,3 +16,7 @@
     - [x] Add 'Configuration & Deployment' section <!-- id: 15 -->
     - [x] Add '/api/health' endpoint <!-- id: 16 -->
     - [x] Detail Dashboard health check UI <!-- id: 17 -->
+- [ ] Create implementation plan for Execution Engine Spec <!-- id: 18 -->
+- [ ] Add 'Execution Engine & Step Lifecycle' section to SPEC.md <!-- id: 19 -->
+    - [ ] Create Mermaid Flowchart for Step Process <!-- id: 20 -->
+    - [ ] Detail pseudocode/logic for the step loop <!-- id: 21 -->

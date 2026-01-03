@@ -1,7 +1,7 @@
-# Refine SPEC.md: Configuration & Connectivity
+# Refine SPEC.md: Execution Engine & Step Lifecycle
 
 ## Goal Description
-Address user requirement to define how the system is configured (hostings, DB URLs) and how connectivity is tested and reported to the frontend.
+Detailed specification of the Experiment Execution Engine, including a rigorous step-by-step flowchart and logic description, as requested by the user.
 
 ## User Review Required
 None.
@@ -11,18 +11,20 @@ None.
 ### Documentation
 #### [MODIFY] [SPEC.md](file:///home/andrew/Projects/Code/web/scientist-ai/SPEC.md)
 
-1.  **New Section 11: Configuration & Deployment**:
-    *   **Backend Config**: Define standard `.env` variables (`PORT`, `MONGO_URI`, `API_BASE_URL`).
-    *   **Frontend Config**: Define how the Angular app locates the backend (environment files).
-    *   **Logic Location**: Explicitly state that "Health Checks" are a backend responsibility exposed via API.
+1.  **New Section 12: Execution Engine & Step Lifecycle**:
+    *   **Overview**: Describe the Node.js Orchestrator's role.
+    *   **Lifecycle Phases**:
+        1.  **Initialization**: Plan -> Experiment instantiation.
+        2.  **The Step Loop**: Detailed breakdown of a single step.
+        3.  **Termination**: Goal checks and cleanup.
+    *   **Mermaid Flowchart**: A visual representation of the loop, including Hooks (`StartStep`, `BeforeTool`, etc.).
 
-2.  **API Update**:
-    *   Add `GET /api/health` endpoint.
-    *   Response format: `{ database: "connected", providers: [{name: "Ollama", status: "ok"}] }`.
-
-3.  **UI Update**:
-    *   Refine Dashboard section to mention polling `GET /api/health`.
+2.  **Logic Details**:
+    *   Explicitly define how `Role` turns work (sequential).
+    *   Define how `Tool` output is fed back to the model (Re-prompting with tool outputs).
+    *   Define `Goal` evaluation timing (End of step? or after every Role action?). *Decision: End of step for stability, unless a "Sudden Death" goal is needed. SPEC will say End of Step for now.*
 
 ## Verification Plan
 ### Manual Verification
-- Review `SPEC.md` to ensure the new section is comprehensive and the API endpoint is clearly defined.
+- Review the Mermaid diagram for logical correctness against `CONCEPT.md`.
+- Ensure all hooks from the Domain Object section are placed in the flowchart.
