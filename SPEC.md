@@ -174,12 +174,36 @@ robust platform for designing and running agentic AI experiments.
   - `startTime`: Timestamp.
   - `endTime`: Timestamp. Empty/null until the Experiment reaches COMPLETED or FAILED.
   - `result`: String.
-  - `events`: `EventBus`. The backbone of the experiment instance.
 - **Methods**:
-  - `start()`: Initializes EventBus, registers Logger/Hooks, begins execution.
-  - `step()`: Advance one cycle.
-  - `pause()`: Halt execution.
-  - `stop()`: Abort.
+  - None (Pure State Object).
+
+## 3. Services & Interfaces (Infrastructure Layer)
+
+This layer handles the "How" of execution, keeping the Domain Objects (The "What") pure.
+
+### **IExecutionEnvironment** (Interface)
+- **Purpose**: Abstract interface for the isolation layer.
+- **Methods**:
+  - `runCommand(image: String, script: String, env: Map, args: Map) -> ExecutionResult`
+    - `ExecutionResult`: `{ stdout, stderr, exitCode, duration }`
+
+### **IScriptRunner** (Interface)
+- **Purpose**: Abstract interface for running Tools and Hooks.
+- **Methods**:
+  - `runTool(tool: Tool, env: Environment) -> ToolResult`
+  - `runHook(script: Script, context: Context) -> Void`
+
+### **ExperimentOrchestrator** (Service)
+- **Purpose**: The "Engine" that drives the experiment. It owns the `EventBus` and manages the lifecycle.
+- **Dependencies**:
+  - `experiment`: The Experiment State Object (Mutable).
+  - `plan`: The ExperimentPlan (ReadOnly).
+  - `executionEnv`: `IExecutionEnvironment` (e.g., DockerPool).
+  - `eventBus`: `EventBus`.
+- **Methods**:
+  - `start()`: Starts the efficient event loop.
+  - `processStep()`: Executes the logic for a single step.
+  - `emit(event, payload)`: Emits lifecycle events.
 
 #### Logger
 
@@ -201,7 +225,7 @@ robust platform for designing and running agentic AI experiments.
   - `message`: String.
   - `data`: JSON (Optional snapshot of relevant state).
 
-## 3. Class Diagram (Mermaid)
+## 4. Class Diagram (Mermaid)
 
 ```mermaid
 classDiagram
@@ -224,9 +248,15 @@ classDiagram
         +Date endTime
         +Status status
         +Logger logger
+    }
+    class ExperimentOrchestrator {
         +start()
-        +pause()
-        +stop()
+        +processStep()
+        +emit()
+    }
+    class IExecutionEnvironment {
+        <<interface>>
+        +runCommand()
     }
 
     class Provider {
@@ -320,7 +350,11 @@ classDiagram
     ExperimentPlan "1" *-- "many" Script
     Experiment "1" -- "1" ExperimentPlan : instantiated from
     Experiment "1" *-- "1" Environment : current state
-    Experiment "1" *-- "1" EventBus : owns
+    
+    ExperimentOrchestrator --> Experiment : manages state
+    ExperimentOrchestrator "1" *-- "1" EventBus : owns
+    ExperimentOrchestrator --> IExecutionEnvironment : uses
+    
     Logger "1" ..> EventBus : subscribes
     Script "1" ..> EventBus : subscribes
     Experiment "1" *-- "1" Logger
@@ -333,7 +367,7 @@ classDiagram
     Goal ..> Environment : reads
 ```
 
-## 4. MongoDB Database Schemas
+## 5. MongoDB Database Schemas
 
 **Top-Level Collections**: `Tools`, `ExperimentPlans`, `Experiments`, `Logs`.
 
@@ -685,8 +719,13 @@ individual components to full system integration.
 
 ## 12. Execution Engine & Step Lifecycle
 
+The **Execution Engine** (implemented via `ExperimentOrchestrator`) is the core service that drives the experiment. It is completely decoupled from the `Experiment` state object.
+
 ### 12.1 Overview
-The Execution Engine is a Node.js process that acts as the orchestrator for an Experiment. It maintains the canonical state of the Experiment, persists it to the database, and schedules the execution of Python code. To ensure security and isolation, all Python execution (Tools and Scripts) occurs within ephemeral Docker containers. The Engine uses an internal `EventBus` to emit lifecycle events. It DOES NOT manually invoke Hooks or Loggers; instead, it simply emits events (e.g., `STEP_START`), and the registered listeners (ScriptRunner, Logger) react accordingly.
+- **Orchestrator**: Maintains the event loop.
+- **State**: `Experiment` object acts as the "Memory" or "Register".
+- **Events**: The Orchestrator emits events via `EventBus`.
+- **Execution**: The Orchestrator uses `IExecutionEnvironment` to actually run code.
 
 ### 12.2 Lifecycle Phases
 
