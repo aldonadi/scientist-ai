@@ -44,31 +44,31 @@ robust platform for designing and running agentic AI experiments.
 
 #### ModelConfig
 
-- Purpose: Specifies a Model and its provider and configuration.
-- Members:
-  - `provider`: `Provider`. Backend used to communicate with model).
-  - `modelName`: String. Passed to backend to identify which modell to inference
-    with).
-  - `config`: JSON. Provider- and Model-specific config which is passed to the
-    Provider as-is.
-- Methods:
-  - `isValid()`: Returns `true` if `provider` can be communicated with and the
-    `modelName` is valid with the `provider`.
-    - Uses the `provider.isValid()`
-  - `chat`: TODO what needs to be passed for this? Just the prompt or more
-    things? Fill this in.
+- **Purpose**: Specifies a Model and its provider and configuration.
+- **Members**:
+  - `provider`: `Provider`. Backend used to communicate with model.
+  - `modelName`: String. Passed to backend to identify which model to inference with.
+  - `config`: JSON. Provider- and Model-specific config (e.g., temperature, top_p) which is passed to the Provider as-is.
+- **Methods**:
+  - `isValid()`: Returns `true` if `provider` can be communicated with and the `modelName` is valid with the `provider`.
+  - `chat(history, tools)`: wrapper around `provider.chat`.
+    - `history`: List of message objects `{role: string, content: string}`.
+    - `tools`: List of tool definitions.
+    - Returns: A stream of events/tokens.
 
 #### Provider
 
-- Purpose: Interface between this app and backend driver (e.g. Ollama, OpenAI,
-  Anthropic, etc).
-- Members:
-  - TODO: what members and methods are needed here?
-- Methods:
-  - `isValid()``: Returns`true` if a connection to this Provider can be established
-    successfully
-  - `isModelReady(modelName)`: Returns `true` if the provider reports that a model
-    by this name can be chatted with.
+- **Purpose**: Interface between this app and backend driver (e.g. Ollama, OpenAI, Anthropic, etc).
+- **Members**:
+  - `name`: String (e.g., "Ollama Local", "OpenAI").
+  - `type`: Enum (OLLAMA, OPENAI, ANTHROPIC, GENERIC_OPENAI).
+  - `baseUrl`: String (URL to the API endpoint).
+  - `apiKey`: String (Encrypted/Safe storage).
+- **Methods**:
+  - `isValid()`: Returns `true` if a connection to this Provider can be established successfully.
+  - `isModelReady(modelName)`: Returns `true` if the provider reports that a model by this name can be chatted with.
+  - `listModels()`: Returns a list of available model names.
+  - `chat(modelName, history, tools, config)`: Initiates a chat completion request and returns a stream.
 
 #### **Role**
 
@@ -82,8 +82,7 @@ robust platform for designing and running agentic AI experiments.
     this Role can see).
 - **Methods**:
   - `constructPrompt(environment)`: Builds the context window.
-  - TODO: Need to be able to access streamed reasoning tokens, streamed
-    response tokens, etc.
+  - Note: Streaming data is captured by the Experiment execution engine and emitted via events/logs. The Role object defines *how* to interact, but the `Experiment` class manages the actual I/O stream.
 
 #### **Goal**
 
@@ -94,16 +93,20 @@ robust platform for designing and running agentic AI experiments.
 - **Methods**:
   - `evaluate(environment)`: Boolean.
 
-#### **Script** (Hooks)
-
 - **Purpose**: Lifecycle hooks for custom logic.
 - **Members**:
-  - `hookType`: Enum (ExperimentStart, StepStart, BeforeModelPrompt, etc.).
+  - `hookType`: Enum.
+    - `EXPERIMENT_START`
+    - `EXPERIMENT_END`
+    - `STEP_START`
+    - `STEP_END`
+    - `BEFORE_MODEL_PROMPT`
+    - `AFTER_MODEL_RESPONSE`
+    - `BEFORE_TOOL_CALL`
+    - `AFTER_TOOL_CALL`
   - `code`: String (Python).
 - **Methods**:
-  - `run(context)`: Executed at the appropriate lifecycle event.
-- TODO: Need to think about what all stages of the Experiment run pipeline
-  should be hookable.
+  - `run(context)`: Executed at the appropriate lifecycle event. `context` contains references to the `Experiment` and `Environment`.
 
 #### **ExperimentPlan**
 
@@ -180,6 +183,7 @@ classDiagram
         +Date startTime
         +Date endTime
         +Status status
+        +Logger logger
         +start()
         +pause()
         +stop()
@@ -187,18 +191,21 @@ classDiagram
 
     class Provider {
         +String name
-        +String description
-        +JSONSchena config?? (TODO: sketch this out better)
-        +bool isValid()
-        +bool isModelReady(modelName)
+        +String type
+        +String baseUrl
+        +String apiKey
+        +isValid()
+        +isModelReady(modelName)
+        +listModels()
+        +chat(modelName, history, tools, config)
     }
 
     class ModelConfig {
         +Provider provider
         +String modelName
-        +JSONSchema config
-        +chat(prompt)
-        +bool isValid()
+        +JSON config
+        +isValid()
+        +chat(history, tools)
     }
 
     class Role {
@@ -207,6 +214,7 @@ classDiagram
         +String systemPrompt
         +List~Tool~ tools
         +List~String~ variableWhitelist
+        +constructPrompt(env)
     }
 
     class Tool {
@@ -219,8 +227,10 @@ classDiagram
 
     class Environment {
         +Map~String, Any~ variables
+        +Map~String, String~ variableTypes
         +get(key)
         +set(key, val)
+        +deepCopy()
         +toJSON()
     }
 
@@ -236,7 +246,7 @@ classDiagram
         +run(context)
     }
 
-    class Log {
+    class LogEntry {
         +String experimentId
         +int step
         +Date timestamp
@@ -245,7 +255,11 @@ classDiagram
         +JSON data
     }
 
-    // TODO: Add the Logger class to this diagram
+    class Logger {
+        +List~LogEntry~ entries
+        +log(source, msg, env)
+        +size()
+    }
 
     ExperimentPlan "1" *-- "many" Role
     ExperimentPlan "1" *-- "1" Environment
@@ -254,7 +268,9 @@ classDiagram
     Experiment "1" -- "1" ExperimentPlan : instantiated from
     Experiment "1" *-- "1" Environment : current state
     Experiment "1" *-- "1" Logger
-    Logger "1" --> "many" LogEntry : has
+    Logger "1" *-- "many" LogEntry
+    Role "1" --> "1" ModelConfig : has
+    ModelConfig "1" --> "1" Provider : uses
     Role "1" --> "many" Tool : uses
     Role ..> Environment : reads (filtered)
     Tool ..> Environment : modifies
@@ -345,8 +361,8 @@ classDiagram
 
 ### Tools
 
-- `GET /api/tools` - List all tools (supports filtering by namespace).
-  - TODO: How do we implement namespace filtering?
+- `GET /api/tools` - List all tools.
+  - Query Params: `?namespace=my_namespace` (Exact match).
 - `GET /api/tools/:id` - Get tool details.
 - `POST /api/tools` - Create a new tool.
 - `PUT /api/tools/:id` - Update a tool.
@@ -360,7 +376,7 @@ classDiagram
 - `PUT /api/plans/:id` - Update a plan.
 - `DELETE /api/plans/:id` - Delete a plan.
 - `POST /api/plans/:id/duplicate` - Clone a plan.
-  - TODO: How do we handle the clone's name? Probably it needs to be specified in the postdata
+  - Body: `{ name: "New Plan Name" }` (Required).
 
 ### Experiments (Execution)
 
