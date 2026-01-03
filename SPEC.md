@@ -591,3 +591,92 @@ individual components to full system integration.
     and verify the JSON output is parsed correctly by Node.js.
   - Test error handling: e.g., Python script crashing, syntax errors in
     user-defined tools.
+
+## 12. Execution Engine & Step Lifecycle
+
+### 12.1 Overview
+The Execution Engine is a Node.js process that acts as the orchestrator for an Experiment. It maintains the canonical state of the Experiment, persists it to the database, and schedules the execution of Python subprocesses for running Scripts and Tools.
+
+### 12.2 Lifecycle Phases
+
+#### Phase 1: Initialization
+1.  **Instantiation**: An `Experiment` record is created in MongoDB based on the `ExperimentPlan`.
+2.  **State Population**: The `initialEnvironment` from the plan is copied into the `Experiment.currentEnvironment`.
+3.  **Script Registration**: The engine loads all Scripts defined in the plan and sorts them by `HookType`.
+4.  **Start Hook**: The engine executes any scripts registered to `EXPERIMENT_START`.
+5.  **Status Update**: Status transitions to `RUNNING`.
+
+#### Phase 2: The Step Loop
+The core loop repeats until a termination condition is met.
+
+1.  **Step Start Hook**: Execute `STEP_START` scripts.
+2.  **Role Iteration**: Iterate through each `Role` in the ordered list defined in the plan.
+    *   **Prompt Construction**:
+        *   The Engine creates a deep copy of the `currentEnvironment`.
+        *   It filters this copy based on the Role's `variableWhitelist`.
+        *   It constructs a System Message using the Role's `systemPrompt`.
+        *   It appends a User Message containing the current step number and specific instructions (e.g., "Analyze the environment and take action.").
+    *   **Before Prompt Hook**: Execute `BEFORE_MODEL_PROMPT` scripts (can modify the prompt).
+    *   **Inference**:
+        *   Send the Prompt to the Role's configured Model via the `Provider`.
+        *   Stream the response (Reasoning + Content).
+    *   **Tool Execution (If requested)**:
+        *   If the Model requests a Tool Call:
+            *   **Before Tool Hook**: Execute `BEFORE_TOOL_CALL` scripts.
+            *   **Execution**: Spawn a Python subprocess to run the Tool code with the provided arguments and the current Experiment Environment.
+            *   **State Update**: The Tool may modify the Environment. The Engine merges these changes back into the canonical state.
+            *   **After Tool Hook**: Execute `AFTER_TOOL_CALL` scripts.
+            *   **Feedback**: The Tool's output is added to the conversation history, and the Model is re-prompted to handle the output (this may happen recursively).
+    *   **After Response Hook**: Execute `AFTER_MODEL_RESPONSE` scripts.
+3.  **Step End Hook**: Execute `STEP_END` scripts.
+4.  **Goal Evaluation**:
+    *   Iterate through all `Goals`.
+    *   Execute the `conditionScript` for each using the current Environment.
+    *   If any returns `True`:
+        *   Set `Experiment.result` to the Goal's description.
+        *   Break the loop.
+5.  **Safety Check**: Increment `currentStep`. If `currentStep > maxSteps`, set result to "Max Steps Exceeded" and break.
+
+#### Phase 3: Termination
+1.  **Status Update**: Set status to `COMPLETED` (or `FAILED` if critical error).
+2.  **End Hook**: Execute `EXPERIMENT_END` scripts.
+3.  **Cleanup**: Close database connections (if dedicated), clean up any temp files.
+
+### 12.3 Step Process Flowchart
+
+```mermaid
+flowchart TD
+    Start([Start Step]) --> StepStartHook[/Run STEP_START Scripts/]
+    StepStartHook --> RoleLoop{Roles Remaining?}
+    
+    RoleLoop -- Yes --> GetRole[Get Next Role]
+    GetRole --> FilterEnv[Filter Environment]
+    FilterEnv --> BuildPrompt[Build Prompt]
+    BuildPrompt --> PrePromptHook[/Run BEFORE_MODEL_PROMPT Scripts/]
+    PrePromptHook --> Inference[Model Inference]
+    
+    Inference --> ToolCheck{Tool Called?}
+    
+    ToolCheck -- Yes --> PreToolHook[/Run BEFORE_TOOL_CALL Scripts/]
+    PreToolHook --> ExecTool[Execute Tool Python Process]
+    ExecTool --> UpdateEnv[Update Environment]
+    UpdateEnv --> PostToolHook[/Run AFTER_TOOL_CALL Scripts/]
+    PostToolHook --> AppendHistory[Append Tool Output to History]
+    AppendHistory --> Inference
+    
+    ToolCheck -- No --> PostResponseHook[/Run AFTER_MODEL_RESPONSE Scripts/]
+    PostResponseHook --> RoleLoop
+    
+    RoleLoop -- No --> StepEndHook[/Run STEP_END Scripts/]
+    StepEndHook --> GoalCheck{Any Goal Met?}
+    
+    GoalCheck -- Yes --> SetResult[Set Result]
+    SetResult --> Completed([Experiment Completed])
+    
+    GoalCheck -- No --> MaxStepCheck{Max Steps Reached?}
+    MaxStepCheck -- Yes --> SetMaxResult[Set Result: Max Steps]
+    SetMaxResult --> Completed
+    
+    MaxStepCheck -- No --> IncStep[Increment Step]
+    IncStep --> Start
+```
