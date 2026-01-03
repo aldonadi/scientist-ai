@@ -16,6 +16,27 @@ robust platform for designing and running agentic AI experiments.
 
 ### 2.1 Core Objects
 
+#### **EventBus**
+
+- **Purpose**: Decouples the Execution Engine from side-effects (Logging, UI Updates, Hooks).
+- **Members**:
+  - `subscribers`: Map<EventType, List<Callback>>.
+- **Methods**:
+  - `emit(eventType, payload)`: Synchronously notifies all subscribers.
+  - `on(eventType, callback)`: Registers a listener.
+- **Event Types**:
+  - `EXPERIMENT_START`: `{ experimentId, planName }`
+  - `STEP_START`: `{ experimentId, stepNumber }`
+  - `ROLE_START`: `{ roleName }`
+  - `MODEL_PROMPT`: `{ roleName, messages }`
+  - `MODEL_RESPONSE_CHUNK`: `{ roleName, chunk }` (Streaming)
+  - `MODEL_RESPONSE_COMPLETE`: `{ roleName, fullResponse }`
+  - `TOOL_CALL`: `{ toolName, args }`
+  - `TOOL_RESULT`: `{ toolName, result, envChanges }`
+  - `STEP_END`: `{ stepNumber, environmentSnapshot }`
+  - `EXPERIMENT_END`: `{ result, duration }`
+  - `LOG`: `{ source, level, message, data }`
+
 #### **Environment**
 
 - **Purpose**: Holds the state of an experiment step.
@@ -95,25 +116,20 @@ robust platform for designing and running agentic AI experiments.
 - **Methods**:
   - `evaluate(environment)`: Boolean.
 
-- **Purpose**: Lifecycle hooks for custom logic.
+### **Script**
+
 - **Members**:
-  - `hookType`: Enum.
+  - `hookType`: Enum (Maps to EventTypes).
     - `EXPERIMENT_START`
-    - `EXPERIMENT_END`
-    - `STEP_START`
-    - `STEP_END`
-    - `BEFORE_MODEL_PROMPT`
-    - `AFTER_MODEL_RESPONSE`
-    - `BEFORE_TOOL_CALL`
-    - `AFTER_TOOL_CALL`
-  - `code`: String (Python).
+    - `STEP_START` (etc...)
   - `code`: String (Python).
 - **Methods**:
-  - `run(context)`: Executed at the appropriate lifecycle event.
-    - `context`: `ScriptContext` containing:
-      - `experiment`: Read-only reference to Experiment metadata.
-      - `environment`: Mutable reference to current Environment.
-      - `logger`: Scoped `Logger` instance for writing logs.
+  - `register(eventBus)`: Subscribes `this.run` to the matching event on the bus.
+  - `run(payload)`: Executed when event fires.
+    - `context`:
+      - `experiment`: Read-only metadata.
+      - `environment`: Mutable reference (if payload contains it).
+      - `event`: The raw event payload.
 
 #### **ExperimentPlan**
 
@@ -138,24 +154,21 @@ robust platform for designing and running agentic AI experiments.
   - `startTime`: Timestamp.
   - `endTime`: Timestamp. Empty/null until the Experiment reaches COMPLETED or FAILED.
   - `result`: String.
-  - `logger`: `Logger` object associated with this Experiment.
+  - `events`: `EventBus`. The backbone of the experiment instance.
 - **Methods**:
-  - `start()`: Begins execution.
+  - `start()`: Initializes EventBus, registers Logger/Hooks, begins execution.
   - `step()`: Advance one cycle.
   - `pause()`: Halt execution.
   - `stop()`: Abort.
 
 #### Logger
 
-- Purpose: Handle logging and storage of logs.
+- Purpose: Listens to the EventBus and persists logs to the database.
 - Members:
-  - `List<LogEntry>`: Sequential, chronological array of LogEntry items that have
-    been stored.
+  - `experiment`: (Reference)
 - Methods:
-  - `log(source, msg, [environment])`: Write a log entry `msg` (String)
-    from `source` (String), optionally attaching an `Environment`
-    which is deep-copied and then immutable.
-  - `size()`: Returns the number of log entries.
+  - `constructor(eventBus)`: Subscribes to `LOG` and other lifecycle events (e.g., `STEP_START` to log start automatically).
+  - `onLog(payload)`: Internal handler.
 
 #### **LogEntry**
 
@@ -261,6 +274,11 @@ classDiagram
         +run(context)
     }
 
+    class EventBus {
+        +emit(type, payload)
+        +on(type, callback)
+    }
+
     class LogEntry {
         +String experimentId
         +int step
@@ -282,6 +300,9 @@ classDiagram
     ExperimentPlan "1" *-- "many" Script
     Experiment "1" -- "1" ExperimentPlan : instantiated from
     Experiment "1" *-- "1" Environment : current state
+    Experiment "1" *-- "1" EventBus : owns
+    Logger "1" ..> EventBus : subscribes
+    Script "1" ..> EventBus : subscribes
     Experiment "1" *-- "1" Logger
     Logger "1" *-- "many" LogEntry
     Role "1" --> "1" ModelConfig : has
@@ -644,95 +665,94 @@ individual components to full system integration.
 ## 12. Execution Engine & Step Lifecycle
 
 ### 12.1 Overview
-The Execution Engine is a Node.js process that acts as the orchestrator for an Experiment. It maintains the canonical state of the Experiment, persists it to the database, and schedules the execution of Python code. To ensure security and isolation, all Python execution (Tools and Scripts) occurs within ephemeral Docker containers. The Engine uses an internal Event Bus to emit lifecycle events which triggers Hooks and Logging.
+The Execution Engine is a Node.js process that acts as the orchestrator for an Experiment. It maintains the canonical state of the Experiment, persists it to the database, and schedules the execution of Python code. To ensure security and isolation, all Python execution (Tools and Scripts) occurs within ephemeral Docker containers. The Engine uses an internal `EventBus` to emit lifecycle events. It DOES NOT manually invoke Hooks or Loggers; instead, it simply emits events (e.g., `STEP_START`), and the registered listeners (ScriptRunner, Logger) react accordingly.
 
 ### 12.2 Lifecycle Phases
 
 #### Phase 1: Initialization
 1.  **Instantiation**: An `Experiment` record is created in MongoDB based on the `ExperimentPlan`.
 2.  **State Population**: The `initialEnvironment` from the plan is copied into the `Experiment.currentEnvironment`.
-3.  **Script Registration**: The engine loads all Scripts defined in the plan and sorts them by `HookType`.
-4.  **Logging**: Log "Experiment Initialized" with Experiment ID and Plan Name. Log "Scripts Loaded" with count.
-5.  **Start Hook**: The engine executes any scripts registered to `EXPERIMENT_START`.
-    *   *Context passed to script includes a Logger scoped to "Script:ScriptIdentifier".*
+3.  **Script Registration**: The engine loads all Scripts defined in the plan and registers them as listeners on the `EventBus`.
+4.  **Logging**: The Logger subscribes to the `EventBus`.
+5.  **Start Event**: Engine emits `EXPERIMENT_START`.
+    *   *Effect*: `EXPERIMENT_START` hooks run. Logger logs "Experiment Initialized".
 6.  **Status Update**: Status transitions to `RUNNING`.
 
 #### Phase 2: The Step Loop
 The core loop repeats until a termination condition is met.
 
-1.  **Step Logging**: Log "Step N Started".
-2.  **Step Start Hook**: Execute `STEP_START` scripts.
+1.  **Step Start**: Emit `STEP_START`.
+    *   *Effect*: `STEP_START` hooks run. Logger logs "Step N Started".
 3.  **Role Iteration**: Iterate through each `Role` in the ordered list defined in the plan.
     *   **Prompt Construction**:
         *   The Engine creates a deep copy of the `currentEnvironment`.
         *   It filters this copy based on the Role's `variableWhitelist`.
         *   It constructs a System Message using the Role's `systemPrompt`.
         *   It appends a User Message containing the current step number and specific instructions (e.g., "Analyze the environment and take action.").
-    *   **Before Prompt Hook**: Execute `BEFORE_MODEL_PROMPT` scripts (can modify the prompt).
+    *   **Before Prompt**: Emit `MODEL_PROMPT` (Mutable payload allows Hooks to modify messages).
     *   **Inference**:
-        *   Send the Prompt to the Role's configured Model via the `Provider`.
-        *   Stream the response (Reasoning + Content).
-        *   *Log*: Log "Role [Name] Thinking..." (streaming updates).
+        *   Send Prompt to Provider.
+        *   Emit `MODEL_RESPONSE_CHUNK` events during streaming.
     *   **Tool Execution (If requested)**:
         *   If the Model requests a Tool Call:
-            *   **Before Tool Hook**: Execute `BEFORE_TOOL_CALL` scripts.
-            *   **Execution**: Spawn a Docker container to run the Tool code with the provided arguments and the current Experiment Environment. The container is isolated with resource limits.
-                *   *Context passed to Tool includes a Logger scoped to "Tool:ToolName".*
-            *   **State Update**: The Tool may modify the Environment. The Engine merges these changes back into the canonical state.
-            *   **After Tool Hook**: Execute `AFTER_TOOL_CALL` scripts.
-            *   **Feedback**: The Tool's output is added to the conversation history, and the Model is re-prompted to handle the output (this may happen recursively).
-    *   **After Response Hook**: Execute `AFTER_MODEL_RESPONSE` scripts.
-4.  **Step End Hook**: Execute `STEP_END` scripts.
-5.  **Step Logging**: Log "Step N Ended". Log snapshot of `currentEnvironment` (Debug/Info level).
-6.  **Goal Evaluation**:
+            *   Emit `TOOL_CALL`.
+            *   **Execution**: Spawn Docker container.
+            *   **State Update**: Merge changes.
+            *   Emit `TOOL_RESULT`.
+            *   **Feedback**: Append to history.
+    *   **After Response**: Emit `MODEL_RESPONSE_COMPLETE`.
+4.  **Step End**: Emit `STEP_END`.
+5.  **Goal Evaluation**:
     *   Iterate through all `Goals`.
     *   Execute the `conditionScript` for each using the current Environment.
     *   If any returns `True`:
         *   Set `Experiment.result` to the Goal's description.
         *   *Log*: "Goal Met: [Goal Description]".
         *   Break the loop.
-7.  **Safety Check**: Increment `currentStep`. If `currentStep > maxSteps`, set result to "Max Steps Exceeded" and break.
+6.  **Safety Check**: Increment `currentStep`. If `currentStep > maxSteps`, set result to "Max Steps Exceeded" and break.
 
 #### Phase 3: Termination
 1.  **Status Update**: Set status to `COMPLETED` (or `FAILED` if critical error).
-2.  **End Hook**: Execute `EXPERIMENT_END` scripts.
+2.  **End Event**: Emit `EXPERIMENT_END`.
 3.  **Cleanup**: Close database connections (if dedicated), clean up any temp files.
-4.  **Final Log**: Log "Experiment Ended" with result and total duration.
 
 ### 12.3 Step Process Flowchart
 
 ```mermaid
 flowchart TD
-    Start([Start Step]) --> StepStartHook[/Run STEP_START Scripts/]
-    StepStartHook --> RoleLoop{Roles Remaining?}
+    Start([Start Step]) --> StepStartEvt{{Emit STEP_START}}
+    StepStartEvt --> RoleLoop{Roles Remaining?}
     
     RoleLoop -- Yes --> GetRole[Get Next Role]
     GetRole --> FilterEnv[Filter Environment]
-    FilterEnv --> BuildPrompt[Build Prompt]
-    BuildPrompt --> PrePromptHook[/Run BEFORE_MODEL_PROMPT Scripts/]
-    PrePromptHook --> Inference[Model Inference]
+    GetRole --> RoleStartEvt{{Emit ROLE_START}}
+    RoleStartEvt --> BuildPrompt[Build Prompt]
+    BuildPrompt --> PromptEvt{{Emit MODEL_PROMPT}}
+    PromptEvt --> Inference[Model Inference]
     
-    Inference --> ToolCheck{Tool Called?}
+    Inference --> ChunkEvt{{Emit MODEL_RESPONSE_CHUNK}}
+    ChunkEvt --> ToolCheck{Tool Called?}
     
-    ToolCheck -- Yes --> PreToolHook[/Run BEFORE_TOOL_CALL Scripts/]
-    PreToolHook --> ExecTool[Execute Tool Python Process]
+    ToolCheck -- Yes --> ToolCallEvt{{Emit TOOL_CALL}}
+    ToolCallEvt --> ExecTool[Execute Tool Docker]
     ExecTool --> UpdateEnv[Update Environment]
-    UpdateEnv --> PostToolHook[/Run AFTER_TOOL_CALL Scripts/]
-    PostToolHook --> AppendHistory[Append Tool Output to History]
+    UpdateEnv --> ToolResultEvt{{Emit TOOL_RESULT}}
+    ToolResultEvt --> AppendHistory[Append Tool Output to History]
     AppendHistory --> Inference
     
-    ToolCheck -- No --> PostResponseHook[/Run AFTER_MODEL_RESPONSE Scripts/]
-    PostResponseHook --> RoleLoop
+    ToolCheck -- No --> ResponseCompleteEvt{{Emit MODEL_RESPONSE_COMPLETE}}
+    ResponseCompleteEvt --> RoleLoop
     
-    RoleLoop -- No --> StepEndHook[/Run STEP_END Scripts/]
-    StepEndHook --> GoalCheck{Any Goal Met?}
+    RoleLoop -- No --> StepEndEvt{{Emit STEP_END}}
+    StepEndEvt --> GoalCheck{Any Goal Met?}
     
     GoalCheck -- Yes --> SetResult[Set Result]
-    SetResult --> Completed([Experiment Completed])
+    SetResult --> ExpEndEvt{{Emit EXPERIMENT_END}}
+    ExpEndEvt --> Completed([Experiment Completed])
     
     GoalCheck -- No --> MaxStepCheck{Max Steps Reached?}
     MaxStepCheck -- Yes --> SetMaxResult[Set Result: Max Steps]
-    SetMaxResult --> Completed
+    SetMaxResult --> ExpEndEvt
     
     MaxStepCheck -- No --> IncStep[Increment Step]
     IncStep --> Start
