@@ -1,26 +1,31 @@
-- [x] Create implementation plan <!-- id: 0 -->
-- [x] Add Testing Plan to SPEC.md <!-- id: 1 -->
-    - [x] Define Unit Testing Strategy (Frontend, Backend, Python) <!-- id: 2 -->
-    - [x] Define Integration Testing Strategy <!-- id: 3 -->
-    - [x] Define E2E Testing Strategy <!-- id: 4 -->
-    - [x] Define CI/CD Pipeline integration (optional but good for SPEC) <!-- id: 5 -->
-- [x] Verify SPEC.md update <!-- id: 6 -->
-- [x] Create implementation plan for SPEC refinement <!-- id: 7 -->
-- [x] Refine SPEC.md <!-- id: 8 -->
-    - [x] Define Provider and ModelConfig details <!-- id: 9 -->
-    - [x] Define Script hooks <!-- id: 10 -->
-    - [x] Address API TODOs (filtering, cloning) <!-- id: 11 -->
-    - [x] Update Class Diagram <!-- id: 12 -->
-- [x] Create implementation plan for Configuration & Health Checks <!-- id: 13 -->
-- [x] Refine SPEC.md for Config & Health <!-- id: 14 -->
-    - [x] Add 'Configuration & Deployment' section <!-- id: 15 -->
-    - [x] Add '/api/health' endpoint <!-- id: 16 -->
-    - [x] Detail Dashboard health check UI <!-- id: 17 -->
-- [x] Create implementation plan for Execution Engine Spec <!-- id: 18 -->
-- [x] Add 'Execution Engine & Step Lifecycle' section to SPEC.md <!-- id: 19 -->
-    - [x] Create Mermaid Flowchart for Step Process <!-- id: 20 -->
-    - [x] Detail pseudocode/logic for the step loop <!-- id: 21 -->
-- [ ] Create implementation plan for Logging Integration <!-- id: 22 -->
-- [ ] Incorporate Logging into SPEC.md <!-- id: 23 -->
-    - [ ] Update Domain Objects (Script Context) <!-- id: 24 -->
-    - [ ] Update Execution Engine Lifecycle with Logging steps <!-- id: 25 -->
+# Task: Consolidate Review Reports
+
+- [/] Locate and read the 4 review reports <!-- id: 0 -->
+- [x] Create `REVIEW_ANALYSIS.md` with consolidated issues <!-- id: 1 -->
+- [x] Evaluate each issue and decide on action (Fix/No Fix) <!-- id: 2 -->
+- [x] Finalize `REVIEW_ANALYSIS.md` <!-- id: 3 -->
+
+# Task: Incorporate Review Feedback into SPEC.md
+
+- [x] Update Security Section (Auth, HTTPS, Secrets, Input Validation) <!-- id: 4 -->
+- [x] Update Architecture Section (Interfaces, Event Bus, Plugin System) <!-- id: 5 -->
+- [x] Update Execution Engine Section (Docker Sandboxing) <!-- id: 6 -->
+- [x] Update Database Section (Indexes) <!-- id: 7 -->
+- [x] Update UI/UX and Testing Sections <!-- id: 8 -->
+
+# Task: Fully Integrate Event Bus into SPEC.md
+
+- [x] Define EventBus Object and Event Types <!-- id: 9 -->
+- [/] Update Domain Objects (Experiment, Logger, Scripts) to use EventBus <!-- id: 10 -->
+- [x] Update Class Diagram with EventBus <!-- id: 11 -->
+- [x] Update Execution Engine to emit events <!-- id: 12 -->
+- [x] Update Flowcharts and descriptions <!-- id: 13 -->
+
+# Task: Design Ephemeral Docker Execution Environment
+
+- [ ] Add `ContainerPool` and `Container` objects to Domain <!-- id: 14 -->
+- [ ] Detail Container Lifecycle (Warm Pool, Execute-and-Destroy) <!-- id: 15 -->
+- [ ] Update Technology Stack (Dockerode) <!-- id: 16 -->
+
+
+
