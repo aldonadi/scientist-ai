@@ -387,7 +387,6 @@ classDiagram
 - `POST /api/experiments/:id/control` - Send commands.
   - Body: `{ command: "pause" | "resume" | "stop" }`
 - `GET /api/experiments/:id/logs` - Get logs for an experiment.
-- `GET /api/experiments/:id/logs` - Get logs for an experiment.
 - `GET /api/experiments/:id/stream` - SSE (Server-Sent Events) for real-time updates.
 
 ### System
