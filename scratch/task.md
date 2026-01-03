@@ -1,0 +1,13 @@
+- [x] Create implementation plan <!-- id: 0 -->
+- [x] Add Testing Plan to SPEC.md <!-- id: 1 -->
+    - [x] Define Unit Testing Strategy (Frontend, Backend, Python) <!-- id: 2 -->
+    - [x] Define Integration Testing Strategy <!-- id: 3 -->
+    - [x] Define E2E Testing Strategy <!-- id: 4 -->
+    - [x] Define CI/CD Pipeline integration (optional but good for SPEC) <!-- id: 5 -->
+- [x] Verify SPEC.md update <!-- id: 6 -->
+- [ ] Create implementation plan for SPEC refinement <!-- id: 7 -->
+- [ ] Refine SPEC.md <!-- id: 8 -->
+    - [ ] Define Provider and ModelConfig details <!-- id: 9 -->
+    - [ ] Define Script hooks <!-- id: 10 -->
+    - [ ] Address API TODOs (filtering, cloning) <!-- id: 11 -->
+    - [ ] Update Class Diagram <!-- id: 12 -->
