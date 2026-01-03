@@ -8,9 +8,9 @@ robust platform for designing and running agentic AI experiments.
 - **Frontend**: Angular application serving as the "Scientist" interface.
 - **Backend**: Node.js/Express REST API server.
 - **Database**: MongoDB for storing plans, experiments, logs, and object definitions.
-- **Execution Engine**: Node.js orchestrator that spawns Python subprocesses for
-  executing Tools and Scripts (keeping the core logic close to the AI ML ecosystem).
+- **Execution Engine**: Node.js orchestrator that spawns Python subprocesses (managed via Docker containers) for executing Tools and Scripts.
 - **AI Interface**: Module to communicate with LLM providers (initially Ollama).
+- **Event Bus**: Internal Node.js EventEmitter to decouple lifecycle events, logging, and hooks.
 
 ## 2. Domain Objects & Class Layout
 
@@ -65,7 +65,7 @@ robust platform for designing and running agentic AI experiments.
   - `name`: String (e.g., "Ollama Local", "OpenAI").
   - `type`: Enum (OLLAMA, OPENAI, ANTHROPIC, GENERIC_OPENAI).
   - `baseUrl`: String (URL to the API endpoint).
-  - `apiKey`: String (Encrypted/Safe storage).
+  - `apiKey`: String (Reference to Secret Manager or Encrypted Storage).
 - **Methods**:
   - `isValid()`: Returns `true` if a connection to this Provider can be established successfully.
   - `isModelReady(modelName)`: Returns `true` if the provider reports that a model by this name can be chatted with.
@@ -215,7 +215,15 @@ classDiagram
         +chat(history, tools)
     }
 
-    class Role {
+    class IProvider {
+        <<interface>>
+        +isValid()
+        +isModelReady(modelName)
+        +listModels()
+        +chat(modelName, history, tools, config)
+    }
+
+    class Tool {
         +String name
         +ModelConfig model
         +String systemPrompt
@@ -287,6 +295,12 @@ classDiagram
 ## 4. MongoDB Database Schemas
 
 **Top-Level Collections**: `Tools`, `ExperimentPlans`, `Experiments`, `Logs`.
+
+### Indexes
+- **Logs**: `{ experimentId: 1, stepNumber: 1 }` (Compound), `{ timestamp: -1 }` (TTL optional).
+- **Experiments**: `{ status: 1 }`, `{ planId: 1 }`.
+- **Tools**: `{ namespace: 1, name: 1 }` (Unique).
+
 
 ### Tool Schema
 
@@ -360,8 +374,10 @@ classDiagram
   timestamp: Date,
   source: String,
   message: String,
+  message: String,
   data: Object // Mixed type
 }
+// Indexes: { experimentId: 1, stepNumber: 1 }, { timestamp: -1 }
 ```
 
 ## 5. RESTful API Endpoints
@@ -430,8 +446,8 @@ classDiagram
 
 2. **Tool Editor**
     - List view of tools.
-    - Code editor (Monaco or similar) for Python script.
-    - Parameter definition UI (Visual or JSON).
+    - Code editor: Monaco Editor with Python syntax highlighting and basic linting.
+    - Parameter definition UI (Visual or JSON with Schema validation).
 
 3. **Plan Designer**
     - **General**: Name, Description, Max Steps.
@@ -453,7 +469,12 @@ classDiagram
         - **Right Panel**: Environment Inspector (Live JSON tree view of variables).
     - **Visuals**: Progress bar for step execution.
 
-### Workflows
+### 6.2 UI Guidelines
+- **Responsiveness**: The application must be fully responsive, supporting desktop and tablet viewports.
+- **Accessibility**: All components must support keyboard navigation and include ARIA labels where appropriate.
+- **Validation**: Forms must provide real-time feedback (e.g., invalid JSON, missing required fields) before submission.
+
+### 6.3 Workflows
 
 #### Creating an Experiment Plan
 
@@ -499,7 +520,27 @@ classDiagram
 - **Python Environment**:
   - Virtual environment (`venv`).
 
-## 8. Error Handling & Resilience
+
+## 8. Non-Functional Requirements & Security
+
+### 8.1 Security
+- **Sandboxing**:
+  - **Requirement**: All user-defined code (Tools, Scripts) MUST run in isolated containers (Docker) to prevent host compromise.
+  - **Implementation**: The Execution Engine will interface with the Docker Daemon to spawn ephemeral containers for each step or tool execution.
+  - **Limits**: Containers effectively limit CPU, Memory, and Network access.
+- **Authentication & Authorization**:
+  - **Method**: JSON Web Tokens (JWT).
+  - **Policy**: All API endpoints (except `/api/health` and `/api/auth/login`) require a valid Bearer token.
+  - **Roles**: Initially Single-User (Admin), but designed for RBAC (Admin, Editor, Viewer) in future.
+- **Secrets Management**:
+  - **storage**: API Keys and sensitive credentials must NOT be stored in plaintext. They should be encrypted at rest using AES-256 or delegating to a Secret Manager (e.g. Vault, AWS Secrets Manager).
+- **Network**:
+  - **Transport**: HTTPS is mandatory for all API traffic.
+- **Input Validation**:
+  - **Middleware**: All API endpoints must enforce strict schema validation (using Joi or Zod) on request bodies.
+  - **Sanitization**: Inputs intended for Python execution must be sanitized to prevent injection, though Docker provides the primary defense.
+
+### 8.2 Error Handling & Resilience
 
 - **Tool Failures**: If a Python tool script crashes or returns a non-zero exit
   code, the Experiment Step should catch this.
@@ -511,13 +552,9 @@ classDiagram
 - **Orphaned Processes**: The Execution Engine must ensure all spawned Python
   subprocesses are killed if the Node.js parent process terminates.
 
-## 9. Security & Authentication
-
-- **Mode**: Single-User (initially).
-- **Future**:
-  - **Authentication**: Simple API Key or Basic Auth for the web interface.
-  - **Sandboxing**: Python tools currently run on the host. Future versions
-     should use Docker or Firejail to sandbox tool execution for safety.
+## 9. Future Security Roadmap
+- **Multi-tenancy**: Namespace isolation for different users.
+- **Audit Logging**: Immutable audit trails for all sensitive actions.
 
 ## 11. Configuration & Deployment
 
@@ -592,17 +629,22 @@ individual components to full system integration.
     Environment object to ensure state is read/modified correctly.
 
 ### 10.5 System Integration
-
 - **Node-Python Bridge**:
-  - Create specific tests that spawn the Python subprocess with a known payload
-    and verify the JSON output is parsed correctly by Node.js.
-  - Test error handling: e.g., Python script crashing, syntax errors in
-    user-defined tools.
+  - Create specific tests that spawn the Python subprocess with a known payload and verify the JSON output is parsed correctly by Node.js.
+  - Test error handling: e.g., Python script crashing, syntax errors in user-defined tools.
+
+### 10.6 Security & Container Testing
+- **Static Analysis**: Run `bandit` on all built-in Python tools to check for vulnerabilities.
+- **Container Isolation**:
+  - Verify Docker containers spawn with correct CPU/Memory limits.
+  - Verify network restrictions prevents containers from accessing restricted hosts.
+  - Attempt "jailbreak" scripts in test suite to ensure sandboxing holds.
+
 
 ## 12. Execution Engine & Step Lifecycle
 
 ### 12.1 Overview
-The Execution Engine is a Node.js process that acts as the orchestrator for an Experiment. It maintains the canonical state of the Experiment, persists it to the database, and schedules the execution of Python subprocesses for running Scripts and Tools.
+The Execution Engine is a Node.js process that acts as the orchestrator for an Experiment. It maintains the canonical state of the Experiment, persists it to the database, and schedules the execution of Python code. To ensure security and isolation, all Python execution (Tools and Scripts) occurs within ephemeral Docker containers. The Engine uses an internal Event Bus to emit lifecycle events which triggers Hooks and Logging.
 
 ### 12.2 Lifecycle Phases
 
@@ -634,7 +676,7 @@ The core loop repeats until a termination condition is met.
     *   **Tool Execution (If requested)**:
         *   If the Model requests a Tool Call:
             *   **Before Tool Hook**: Execute `BEFORE_TOOL_CALL` scripts.
-            *   **Execution**: Spawn a Python subprocess to run the Tool code with the provided arguments and the current Experiment Environment.
+            *   **Execution**: Spawn a Docker container to run the Tool code with the provided arguments and the current Experiment Environment. The container is isolated with resource limits.
                 *   *Context passed to Tool includes a Logger scoped to "Tool:ToolName".*
             *   **State Update**: The Tool may modify the Environment. The Engine merges these changes back into the canonical state.
             *   **After Tool Hook**: Execute `AFTER_TOOL_CALL` scripts.
