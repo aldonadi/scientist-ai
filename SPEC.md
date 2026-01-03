@@ -42,6 +42,34 @@ robust platform for designing and running agentic AI experiments.
   - `execute(environment, arguments)`: Runs the python script, returns output,
     may modify environment.
 
+#### ModelConfig
+
+- Purpose: Specifies a Model and its provider and configuration.
+- Members:
+  - `provider`: `Provider`. Backend used to communicate with model).
+  - `modelName`: String. Passed to backend to identify which modell to inference
+    with).
+  - `config`: JSON. Provider- and Model-specific config which is passed to the
+    Provider as-is.
+- Methods:
+  - `isValid()`: Returns `true` if `provider` can be communicated with and the
+    `modelName` is valid with the `provider`.
+    - Uses the `provider.isValid()`
+  - `chat`: TODO what needs to be passed for this? Just the prompt or more
+    things? Fill this in.
+
+#### Provider
+
+- Purpose: Interface between this app and backend driver (e.g. Ollama, OpenAI,
+  Anthropic, etc).
+- Members:
+  - TODO: what members and methods are needed here?
+- Methods:
+  - `isValid()``: Returns`true` if a connection to this Provider can be established
+    successfully
+  - `isModelReady(modelName)`: Returns `true` if the provider reports that a model
+    by this name can be chatted with.
+
 #### **Role**
 
 - **Purpose**: Defines an Agent's identity and capabilities.
@@ -54,6 +82,8 @@ robust platform for designing and running agentic AI experiments.
     this Role can see).
 - **Methods**:
   - `constructPrompt(environment)`: Builds the context window.
+  - TODO: Need to be able to access streamed reasoning tokens, streamed
+    response tokens, etc.
 
 #### **Goal**
 
@@ -72,6 +102,8 @@ robust platform for designing and running agentic AI experiments.
   - `code`: String (Python).
 - **Methods**:
   - `run(context)`: Executed at the appropriate lifecycle event.
+- TODO: Need to think about what all stages of the Experiment run pipeline
+  should be hookable.
 
 #### **ExperimentPlan**
 
@@ -94,15 +126,28 @@ robust platform for designing and running agentic AI experiments.
   - `currentStep`: Integer.
   - `currentEnvironment`: Environment.
   - `startTime`: Timestamp.
-  - `endTime`: Timestamp.
+  - `endTime`: Timestamp. Empty/null until the Experiment reaches COMPLETED or FAILED.
   - `result`: String.
+  - `logger`: `Logger` object associated with this Experiment.
 - **Methods**:
   - `start()`: Begins execution.
   - `step()`: Advance one cycle.
   - `pause()`: Halt execution.
   - `stop()`: Abort.
 
-#### **Log**
+#### Logger
+
+- Purpose: Handle logging and storage of logs.
+- Members:
+  - `List<LogEntry>`: Sequential, chronological array of LogEntry items that have
+    been stored.
+- Methods:
+  - `log(source, msg, [environment])`: Write a log entry `msg` (String)
+    from `source` (String), optionally attaching an `Environment`
+    which is deep-copied and then immutable.
+  - `size()`: Returns the number of log entries.
+
+#### **LogEntry**
 
 - **Purpose**: Immutable record of events.
 - **Members**:
@@ -138,6 +183,22 @@ classDiagram
         +start()
         +pause()
         +stop()
+    }
+
+    class Provider {
+        +String name
+        +String description
+        +JSONSchena config?? (TODO: sketch this out better)
+        +bool isValid()
+        +bool isModelReady(modelName)
+    }
+
+    class ModelConfig {
+        +Provider provider
+        +String modelName
+        +JSONSchema config
+        +chat(prompt)
+        +bool isValid()
     }
 
     class Role {
@@ -184,13 +245,16 @@ classDiagram
         +JSON data
     }
 
+    // TODO: Add the Logger class to this diagram
+
     ExperimentPlan "1" *-- "many" Role
     ExperimentPlan "1" *-- "1" Environment
     ExperimentPlan "1" *-- "many" Goal
     ExperimentPlan "1" *-- "many" Script
     Experiment "1" -- "1" ExperimentPlan : instantiated from
     Experiment "1" *-- "1" Environment : current state
-    Experiment "1" *-- "many" Log
+    Experiment "1" *-- "1" Logger
+    Logger "1" --> "many" LogEntry : has
     Role "1" --> "many" Tool : uses
     Role ..> Environment : reads (filtered)
     Tool ..> Environment : modifies
@@ -282,6 +346,7 @@ classDiagram
 ### Tools
 
 - `GET /api/tools` - List all tools (supports filtering by namespace).
+  - TODO: How do we implement namespace filtering?
 - `GET /api/tools/:id` - Get tool details.
 - `POST /api/tools` - Create a new tool.
 - `PUT /api/tools/:id` - Update a tool.
@@ -294,7 +359,8 @@ classDiagram
 - `POST /api/plans` - Create a new plan.
 - `PUT /api/plans/:id` - Update a plan.
 - `DELETE /api/plans/:id` - Delete a plan.
-- `POST /api/plans/:id/duplicate` - CLone a plan.
+- `POST /api/plans/:id/duplicate` - Clone a plan.
+  - TODO: How do we handle the clone's name? Probably it needs to be specified in the postdata
 
 ### Experiments (Execution)
 
@@ -318,6 +384,10 @@ classDiagram
 
 1. **Dashboard**
     - Summary capabilities: Active experiments count, recent plans, system health.
+      - Health includes successful connections to:
+        - Backend API server
+        - Backend Database
+        - All configured Providers
     - "Quick Start" button.
 
 2. **Tool Editor**
