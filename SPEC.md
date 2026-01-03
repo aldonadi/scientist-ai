@@ -381,3 +381,48 @@ classDiagram
 *   **Future**:
     *   **Authentication**: Simple API Key or Basic Auth for the web interface.
     *   **Sandboxing**: Python tools currently run on the host. Future versions should use Docker or Firejail to sandbox tool execution for safety.
+
+## 10. Testing Plan
+
+### 10.1 Strategy Overview
+The testing strategy covers the entire stack, ensuring reliability from individual components to full system integration.
+
+### 10.2 Frontend (Angular)
+*   **Unit & Component Testing**:
+    *   **Framework**: Jasmine + Karma (Angular default).
+    *   **Scope**:
+        *   Services: Mock external dependencies (API services) to test logic in isolation.
+        *   Components: Test rendering, input/output bindings, and event handling.
+*   **Integration Testing**:
+    *   **Framework**: Use `HtmlFixture` in Jasmine to test component interaction with child components.
+*   **End-to-End (E2E) Testing**:
+    *   **Framework**: Cypress (preferred over Protractor).
+    *   **Scope**: Critical user flows:
+        *   Creating a Tool.
+        *   Building an ExperimentPlan.
+        *   Running an Experiment and observing the log stream.
+
+### 10.3 Backend (Node.js/Express)
+*   **Unit Testing**:
+    *   **Framework**: Jest.
+    *   **Scope**: Control logic, utility functions, and data transformation helpers.
+*   **API Integration Testing**:
+    *   **Framework**: Jest + Supertest.
+    *   **Scope**: Test all REST endpoints (`GET`, `POST`, `PUT`, `DELETE`).
+    *   **Database**: Use `mongodb-memory-server` to spin up an ephemeral in-memory MongoDB instance for each test suite, ensuring clean measuring and no side effects.
+
+### 10.4 Python Execution Engine
+*   **Unit Testing**:
+    *   **Framework**: Pytest.
+    *   **Scope**:
+        *   **Standard Library Tools**: Verify each built-in tool performs as expected (mocking external API calls where necessary).
+        *   **Script Hooks**: Verify hook logic triggers correctly.
+*   **Integration Testing**:
+    *   **Framework**: Pytest.
+    *   **Scope**: Test the interface between the Python scripts and the Mock Environment object to ensure state is read/modified correctly.
+
+### 10.5 System Integration
+*   **Node-Python Bridge**:
+    *   Create specific tests that spawn the Python subprocess with a known payload and verify the JSON output is parsed correctly by Node.js.
+    *   Test error handling: e.g., Python script crashing, syntax errors in user-defined tools.
+
