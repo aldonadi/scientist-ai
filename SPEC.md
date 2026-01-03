@@ -387,7 +387,22 @@ classDiagram
 - `POST /api/experiments/:id/control` - Send commands.
   - Body: `{ command: "pause" | "resume" | "stop" }`
 - `GET /api/experiments/:id/logs` - Get logs for an experiment.
+- `GET /api/experiments/:id/logs` - Get logs for an experiment.
 - `GET /api/experiments/:id/stream` - SSE (Server-Sent Events) for real-time updates.
+
+### System
+- `GET /api/health` - Check system health and connectivity.
+  - Response:
+    ```json
+    {
+      "status": "ok", // or "error"
+      "database": "connected",
+      "providers": [
+        { "name": "Ollama Local", "status": "ok" },
+        { "name": "OpenAI", "status": "error", "message": "Invalid API Key" }
+      ]
+    }
+    ```
 
 ## 6. User Interface (Angular)
 
@@ -401,9 +416,10 @@ classDiagram
 1. **Dashboard**
     - Summary capabilities: Active experiments count, recent plans, system health.
       - Health includes successful connections to:
-        - Backend API server
-        - Backend Database
-        - All configured Providers
+        - Backend API server (via basic HTTP check)
+        - Backend Database (via `/api/health`)
+        - All configured Providers (via `/api/health`)
+      - UI Periodically polls `/api/health` (every 30s) to update status indicators.
     - "Quick Start" button.
 
 2. **Tool Editor**
@@ -496,6 +512,29 @@ classDiagram
   - **Authentication**: Simple API Key or Basic Auth for the web interface.
   - **Sandboxing**: Python tools currently run on the host. Future versions
      should use Docker or Firejail to sandbox tool execution for safety.
+
+## 11. Configuration & Deployment
+
+### 11.1 Backend Configuration
+The backend is configured via environment variables (typically in a `.env` file).
+
+- `PORT`: Port to listen on (default: 3000).
+- `MONGO_URI`: Connection string for MongoDB (e.g., `mongodb://localhost:27017/scientist-ai` or a remote Atlas URL).
+- `API_BASE_URL`: Base URL for the API (used for self-referencing if needed).
+- `LOG_LEVEL`: Logging verbosity (DEBUG, INFO, WARN, ERROR).
+- `PROVIDER_CONFIG_PATH`: (Optional) Path to a JSON file pre-seeding provider configurations.
+
+### 11.2 Frontend Configuration
+The Angular application uses `environment.ts` (dev) and `environment.prod.ts` (production) for build-time configuration, and a runtime `config.json` for deployment flexibility.
+
+- `apiUrl`: URL of the backend API.
+  - In development: `http://localhost:3000/api`
+  - In production: Loaded from `assets/config.json` to allow the same build artifact to point to different backends (e.g., Docker container linking).
+
+### 11.3 Health Checks
+Logic for verifying connectivity resides in the Backend.
+- **Database**: The Backend maintains an open connection pool to MongoDB and reports connection status.
+- **Providers**: The Backend periodically (or on-demand via `/api/health`) attempts to list models or ping the configured LLM providers to verify reachability and authentication.
 
 ## 10. Testing Plan
 

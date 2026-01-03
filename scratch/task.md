@@ -11,3 +11,8 @@
     - [x] Define Script hooks <!-- id: 10 -->
     - [x] Address API TODOs (filtering, cloning) <!-- id: 11 -->
     - [x] Update Class Diagram <!-- id: 12 -->
+- [x] Create implementation plan for Configuration & Health Checks <!-- id: 13 -->
+- [x] Refine SPEC.md for Config & Health <!-- id: 14 -->
+    - [x] Add 'Configuration & Deployment' section <!-- id: 15 -->
+    - [x] Add '/api/health' endpoint <!-- id: 16 -->
+    - [x] Detail Dashboard health check UI <!-- id: 17 -->

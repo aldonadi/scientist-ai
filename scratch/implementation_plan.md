@@ -1,7 +1,7 @@
-# Refine SPEC.md based on User Feedback
+# Refine SPEC.md: Configuration & Connectivity
 
 ## Goal Description
-Address the `TODO` items added by the user in `SPEC.md` and ensure the new Domain Objects (`Provider`, `ModelConfig`, `Logger`) are fully integrated into the specification, including the Class Diagram and API definitions.
+Address user requirement to define how the system is configured (hostings, DB URLs) and how connectivity is tested and reported to the frontend.
 
 ## User Review Required
 None.
@@ -11,22 +11,18 @@ None.
 ### Documentation
 #### [MODIFY] [SPEC.md](file:///home/andrew/Projects/Code/web/scientist-ai/SPEC.md)
 
-1.  **Domain Objects**:
-    *   **Provider**: Define members (`name`, `type` [Ollama, OpenAI], `baseUrl`, `apiKey`) and methods (`listModels()`).
-    *   **ModelConfig**: Define `chat()` input (messages history, tools definitions) and output (stream).
-    *   **Role**: Clarify access to streaming tokens (likely via an event emitter on the `Experiment` execution or a callback).
-    *   **Script**: Define the specific Hook Types in a list.
+1.  **New Section 11: Configuration & Deployment**:
+    *   **Backend Config**: Define standard `.env` variables (`PORT`, `MONGO_URI`, `API_BASE_URL`).
+    *   **Frontend Config**: Define how the Angular app locates the backend (environment files).
+    *   **Logic Location**: Explicitly state that "Health Checks" are a backend responsibility exposed via API.
 
-2.  **API**:
-    *   **Tools**: Specify `?namespace=value` query parameter for filtering.
-    *   **Plans**: Specify `POST /duplicate` body schema `{ name: "New Name" }`.
+2.  **API Update**:
+    *   Add `GET /api/health` endpoint.
+    *   Response format: `{ database: "connected", providers: [{name: "Ollama", status: "ok"}] }`.
 
-3.  **Class Diagram**:
-    *   Add `Provider` and `ModelConfig` classes.
-    *   Add `Logger` and `LogEntry` classes.
-    *   Connect `Experiment` to `Logger`.
+3.  **UI Update**:
+    *   Refine Dashboard section to mention polling `GET /api/health`.
 
 ## Verification Plan
 ### Manual Verification
-- Review the updated `SPEC.md` to ensure all `TODO` comments are removed and replaced with concrete specifications.
-- Verify the Mermaid diagram renders correctly (I will verify the syntax).
+- Review `SPEC.md` to ensure the new section is comprehensive and the API endpoint is clearly defined.
