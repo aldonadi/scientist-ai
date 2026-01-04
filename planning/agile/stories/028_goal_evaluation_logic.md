@@ -1,6 +1,6 @@
 # Implement Goal Evaluation Logic
 
-- **Status:** READY
+- **Status:** NOT READY
 - **Points:** 3
 - **Story ID:** 028
 - **Type:** Feature

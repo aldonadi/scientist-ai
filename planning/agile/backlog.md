@@ -28,30 +28,30 @@ Status can be:
 | 007_api_get_tool                                   | 1      | DONE        |
 | 008_api_update_tool                                | 2      | DONE        |
 | 009_api_delete_tool                                | 1      | DONE      |
-| 010_plan_model_schema                              | 1      | READY       |
-| 011_api_create_plan                                | 2      | READY       |
-| 012_api_list_plans                                 | 2      | READY       |
-| 013_api_get_plan                                   | 1      | READY       |
-| 014_api_update_plan                                | 3      | READY       |
-| 015_experiment_model_schema                        | 1      | READY       |
-| 016_log_model_schema                               | 1      | READY       |
-| 017_api_launch_experiment                          | 3      | READY       |
-| 018_event_bus_system                               | 3      | READY       |
-| 019_logger_service                                 | 3      | READY       |
-| 020_container_pool_manager                         | 8      | READY       |
-| 021_container_execution_wrapper                    | 5      | READY       |
-| 022_llm_provider_interface                         | 3      | READY       |
-| 023_ollama_integration                             | 3      | READY       |
-| 024_orchestrator_initialization                    | 5      | READY       |
-| 025_orchestrator_step_loop                         | 8      | READY       |
-| 026_role_prompt_construction                       | 5      | READY       |
-| 027_tool_execution_logic                           | 5      | READY       |
-| 028_goal_evaluation_logic                          | 3      | READY       |
-| 029_setup_frontend_layout                          | 3      | READY       |
-| 030_ui_tool_list                                   | 2      | READY       |
-| 031_ui_tool_editor                                 | 5      | READY       |
-| 032_ui_plan_list                                   | 2      | READY       |
-| 033_ui_plan_editor_basic                           | 3      | READY       |
-| 034_ui_plan_editor_roles                           | 5      | READY       |
-| 035_ui_experiment_monitor                          | 8      | READY       |
-| 036_ui_realtime_logs                               | 5      | READY       |
+| 010_plan_model_schema                              | 1      | NOT READY   |
+| 011_api_create_plan                                | 2      | NOT READY   |
+| 012_api_list_plans                                 | 2      | NOT READY   |
+| 013_api_get_plan                                   | 1      | NOT READY   |
+| 014_api_update_plan                                | 3      | NOT READY   |
+| 015_experiment_model_schema                        | 1      | NOT READY   |
+| 016_log_model_schema                               | 1      | NOT READY   |
+| 017_api_launch_experiment                          | 3      | NOT READY   |
+| 018_event_bus_system                               | 3      | NOT READY   |
+| 019_logger_service                                 | 3      | NOT READY   |
+| 020_container_pool_manager                         | 8      | NOT READY   |
+| 021_container_execution_wrapper                    | 5      | NOT READY   |
+| 022_llm_provider_interface                         | 3      | NOT READY   |
+| 023_ollama_integration                             | 3      | NOT READY   |
+| 024_orchestrator_initialization                    | 5      | NOT READY   |
+| 025_orchestrator_step_loop                         | 8      | NOT READY   |
+| 026_role_prompt_construction                       | 5      | NOT READY   |
+| 027_tool_execution_logic                           | 5      | NOT READY   |
+| 028_goal_evaluation_logic                          | 3      | NOT READY   |
+| 029_setup_frontend_layout                          | 3      | NOT READY   |
+| 030_ui_tool_list                                   | 2      | NOT READY   |
+| 031_ui_tool_editor                                 | 5      | NOT READY   |
+| 032_ui_plan_list                                   | 2      | NOT READY   |
+| 033_ui_plan_editor_basic                           | 3      | NOT READY   |
+| 034_ui_plan_editor_roles                           | 5      | NOT READY   |
+| 035_ui_experiment_monitor                          | 8      | NOT READY   |
+| 036_ui_realtime_logs                               | 5      | NOT READY   |

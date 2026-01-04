@@ -1,6 +1,6 @@
 # Create Log Entry Model
 
-- **Status:** READY
+- **Status:** NOT READY
 - **Points:** 1
 - **Story ID:** 016
 - **Type:** Feature

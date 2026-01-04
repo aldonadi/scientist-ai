@@ -1,6 +1,6 @@
 # Implement Experiment Step Loop
 
-- **Status:** READY
+- **Status:** NOT READY
 - **Points:** 8
 - **Story ID:** 025
 - **Type:** Feature

@@ -1,6 +1,6 @@
 # Create Experiment Plan Model
 
-- **Status:** READY
+- **Status:** NOT READY
 - **Points:** 1
 - **Story ID:** 010
 - **Type:** Feature

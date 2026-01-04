@@ -1,6 +1,6 @@
 # Implement Create Plan API
 
-- **Status:** READY
+- **Status:** NOT READY
 - **Points:** 2
 - **Story ID:** 011
 - **Type:** Feature

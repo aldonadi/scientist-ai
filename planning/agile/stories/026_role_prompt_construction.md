@@ -1,6 +1,6 @@
 # Implement Role Prompt Construction
 
-- **Status:** READY
+- **Status:** NOT READY
 - **Points:** 5
 - **Story ID:** 026
 - **Type:** Feature

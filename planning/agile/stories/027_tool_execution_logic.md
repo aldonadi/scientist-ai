@@ -1,6 +1,6 @@
 # Implement Tool Execution Logic
 
-- **Status:** READY
+- **Status:** NOT READY
 - **Points:** 5
 - **Story ID:** 027
 - **Type:** Feature

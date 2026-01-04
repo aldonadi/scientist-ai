@@ -1,6 +1,6 @@
 # Implement Experiment Orchestrator Initialization
 
-- **Status:** READY
+- **Status:** NOT READY
 - **Points:** 5
 - **Story ID:** 024
 - **Type:** Feature

@@ -1,6 +1,6 @@
 # Implement Internal Event Bus
 
-- **Status:** READY
+- **Status:** NOT READY
 - **Points:** 3
 - **Story ID:** 018
 - **Type:** Feature

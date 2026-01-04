@@ -1,6 +1,6 @@
 # Implement Ollama Provider
 
-- **Status:** READY
+- **Status:** NOT READY
 - **Points:** 3
 - **Story ID:** 023
 - **Type:** Feature

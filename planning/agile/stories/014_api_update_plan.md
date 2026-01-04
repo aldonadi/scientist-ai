@@ -1,6 +1,6 @@
 # Implement Update Plan API
 
-- **Status:** READY
+- **Status:** NOT READY
 - **Points:** 3
 - **Story ID:** 014
 - **Type:** Feature

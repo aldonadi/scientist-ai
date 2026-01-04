@@ -1,6 +1,6 @@
 # Implement List Plans API
 
-- **Status:** READY
+- **Status:** NOT READY
 - **Points:** 2
 - **Story ID:** 012
 - **Type:** Feature

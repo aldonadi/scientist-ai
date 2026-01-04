@@ -1,6 +1,6 @@
 # Implement Plan Basic Settings UI
 
-- **Status:** READY
+- **Status:** NOT READY
 - **Points:** 3
 - **Story ID:** 033
 - **Type:** Feature

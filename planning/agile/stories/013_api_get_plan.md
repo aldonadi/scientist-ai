@@ -1,6 +1,6 @@
 # Implement Get Plan Details API
 
-- **Status:** READY
+- **Status:** NOT READY
 - **Points:** 1
 - **Story ID:** 013
 - **Type:** Feature

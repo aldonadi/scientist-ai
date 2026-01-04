@@ -1,6 +1,6 @@
 # Implement Persistent Logger Service
 
-- **Status:** READY
+- **Status:** NOT READY
 - **Points:** 3
 - **Story ID:** 019
 - **Type:** Feature

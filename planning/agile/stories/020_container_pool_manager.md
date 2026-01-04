@@ -1,6 +1,6 @@
 # Implement Docker Container Pool
 
-- **Status:** READY
+- **Status:** NOT READY
 - **Points:** 8
 - **Story ID:** 020
 - **Type:** Feature

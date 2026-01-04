@@ -1,6 +1,6 @@
 # Implement LLM Provider Abstraction
 
-- **Status:** READY
+- **Status:** NOT READY
 - **Points:** 3
 - **Story ID:** 022
 - **Type:** Feature
