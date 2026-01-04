@@ -1,6 +1,6 @@
 # Implement Get Tool Details API
 
-- **Status:** READY
+- **Status:** REVIEW
 - **Points:** 1
 - **Story ID:** 007
 - **Type:** Feature
@@ -22,11 +22,11 @@ Implement the `GET /api/tools/:id` endpoint to retrieve the details of a specifi
     - `id` (path): The MongoDB ObjectId of the tool to retrieve.
 
 ### Behavior
-- [ ] Validates that `id` is a valid MongoDB ObjectId.
-- [ ] Returns 400 Bad Request if `id` is invalid.
-- [ ] Queries the `Tools` collection for the document with `_id: id`.
-- [ ] Returns 404 Not Found if no document exists.
-- [ ] Returns 200 OK with the tool object if found.
+- [x] Validates that `id` is a valid MongoDB ObjectId.
+- [x] Returns 400 Bad Request if `id` is invalid.
+- [x] Queries the `Tools` collection for the document with `_id: id`.
+- [x] Returns 404 Not Found if no document exists.
+- [x] Returns 200 OK with the tool object if found.
 
 ### Response Codes
 - **200 OK**: Successfully retrieved the tool.

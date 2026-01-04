@@ -72,7 +72,37 @@ const listTools = async (req, res, next) => {
     }
 };
 
+const mongoose = require('mongoose');
+
+const getTool = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        // Validate ObjectId format
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                error: 'Bad Request',
+                message: 'Invalid tool ID format'
+            });
+        }
+
+        const tool = await Tool.findById(id);
+
+        if (!tool) {
+            return res.status(404).json({
+                error: 'Not Found',
+                message: 'Tool not found'
+            });
+        }
+
+        res.status(200).json(tool);
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     createTool,
-    listTools
+    listTools,
+    getTool
 };
