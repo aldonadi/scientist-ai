@@ -191,9 +191,44 @@ const updateTool = async (req, res, next) => {
     }
 };
 
+const deleteTool = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        // Validate ObjectId format
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                error: 'Bad Request',
+                message: 'Invalid tool ID format'
+            });
+        }
+
+        const deletedTool = await Tool.findByIdAndDelete(id);
+
+        if (!deletedTool) {
+            return res.status(404).json({
+                error: 'Not Found',
+                message: 'Tool not found'
+            });
+        }
+
+        // Log the destructive action
+        console.log(`Tool deleted: ${deletedTool.namespace}/${deletedTool.name} (ID: ${id})`);
+
+        res.status(200).json({
+            message: 'Tool deleted successfully',
+            id: id
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     createTool,
     listTools,
     getTool,
-    updateTool
+    updateTool,
+    deleteTool
 };

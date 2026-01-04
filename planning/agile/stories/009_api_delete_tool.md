@@ -1,6 +1,6 @@
 # Implement Delete Tool API
 
-- **Status:** READY
+- **Status:** REVIEW
 - **Points:** 1
 - **Story ID:** 009
 - **Type:** Feature
@@ -22,11 +22,11 @@ Implement the `DELETE /api/tools/:id` endpoint to permanently remove a tool from
     - `id` (path): MongoDB ObjectId.
 
 ### Behavior
-- [ ] Validates `id` format.
-- [ ] Returns 400 Bad Request if `id` is invalid.
-- [ ] Attempts to find and delete the tool with the given `id` from the `Tools` collection.
-- [ ] Returns 200 OK (with deleted doc) or 204 No Content if successful. (Recommendation: 200 OK with the deleted object is often helpful for UI undo actions, but 204 is also standard. Let's strictly return 200 OK with JSON `{ message: "Tool deleted", id: "..." }` to be explicit).
-- [ ] Returns 404 Not Found if the tool with that ID does not exist.
+- [x] Validates `id` format.
+- [x] Returns 400 Bad Request if `id` is invalid.
+- [x] Attempts to find and delete the tool with the given `id` from the `Tools` collection.
+- [x] Returns 200 OK (with deleted doc) or 204 No Content if successful. (Recommendation: 200 OK with the deleted object is often helpful for UI undo actions, but 204 is also standard. Let's strictly return 200 OK with JSON `{ message: "Tool deleted", id: "..." }` to be explicit).
+- [x] Returns 404 Not Found if the tool with that ID does not exist.
 
 ### Response Codes
 - **200 OK**: Tool successfully deleted.
@@ -61,3 +61,4 @@ Implement the `DELETE /api/tools/:id` endpoint to permanently remove a tool from
 
 ## Review Log
 - Confirm if hard delete is desired or soft delete (status=deleted). SPEC implies removal ("Delete a tool"). So hard delete is assumed.
+**1/4/2026** - Accepted by Product Owner.
