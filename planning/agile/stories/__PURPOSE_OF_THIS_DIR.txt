@@ -1,0 +1,6 @@
+Put all User Story files in here. Each file shall start with a three-digit 0-padded index number (e.g. 000, 001, 002) followed by a snake_case_short_description_of_file, and have a markdown extension (i.e. `md`).
+
+Examples:
+
+- `026_implement_listing_experiments.md`
+- `109_fix_auth_check_regression.md`
