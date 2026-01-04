@@ -31,6 +31,11 @@ mongoose.connect(process.env.MONGO_URI)
         process.exit(1);
     });
 
+// Error Handling Middleware
+const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
+app.use(notFoundHandler);
+app.use(errorHandler);
+
 // Start Server
 if (require.main === module) {
     app.listen(PORT, () => {
