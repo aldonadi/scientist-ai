@@ -28,7 +28,7 @@ Status can be:
 | 007_api_get_tool                                   | 1      | DONE        |
 | 008_api_update_tool                                | 2      | DONE        |
 | 009_api_delete_tool                                | 1      | DONE        |
-| 037_environment_schema                             | 2      | REVIEW      |
+| 037_environment_schema                             | 2      | DONE        |
 | 038_provider_schema                                | 2      | NOT READY   |
 | 039_model_config_schema                            | 2      | NOT READY   |
 | 040_role_schema                                    | 3      | NOT READY   |
