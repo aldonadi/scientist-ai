@@ -1,5 +1,11 @@
-# Task: Refine "API Create Tool" Story
+# Implement Create Tool API
 
-- [x] Read `planning/agile/stories/005_api_create_tool.md`, `planning/SPEC.md`, and `planning/agile/backlog.md` <!-- id: 0 -->
-- [x] Update `planning/agile/stories/005_api_create_tool.md` with details from SPEC and TDD requirements <!-- id: 1 -->
-- [x] Verify the story is ready for implementation <!-- id: 2 -->
+- [ ] Verify Tool Model (`backend/src/models/tool.model.ts`?) <!-- id: 0 -->
+- [ ] Create Implementation Plan <!-- id: 1 -->
+- [ ] Implement `POST /api/tools` endpoint <!-- id: 2 -->
+    - [ ] Create/Update Controller `backend/src/controllers/tool.controller.ts` <!-- id: 3 -->
+    - [ ] Add Route `backend/src/routes/tool.routes.ts` <!-- id: 4 -->
+    - [ ] Register validation schema <!-- id: 5 -->
+- [ ] Write Automated Tests <!-- id: 6 -->
+- [ ] Verify Tests Pass <!-- id: 7 -->
+- [ ] Review and Cleanup <!-- id: 8 -->

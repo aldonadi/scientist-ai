@@ -1,41 +1,49 @@
-# Implementation Plan - Tool Model Schema
+# Implement Create Tool API
 
-## Goal Description
-Implement the **Tool** Mongoose model to store agent capabilities (Python scripts and their parameter definitions). This model is foundational for the `scientist-ai` execution engine, allowing tools to be persisted, retrieved, and validated.
+This plan outlines the implementation of the `POST /api/tools` endpoint, allowing the registration of new tools in the system.
 
 ## User Review Required
-> [!NOTE]
-> The `parameters` field uses `Schema.Types.Mixed` to store JSON Schema objects. While flexible, changes to the validation logic of this field might be needed in the future as we strictly enforce JSON Schema format.
+
+> [!IMPORTANT]
+> I will be adding `zod` as a new dependency for request validation. Please ensure this is acceptable.
 
 ## Proposed Changes
 
 ### Backend
 
-#### [NEW] [tool.model.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/models/tool.model.js)
-- Define Mongoose Schema with:
-    - `namespace`: String, Required
-    - `name`: String, Required
-    - `description`: String
-    - `parameters`: Mixed (Object)
-    - `code`: String
-- Enable Timestamps.
-- Add Compound Unique Index on `namespace` and `name`.
+#### [NEW] [tool.controller.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/controllers/tool.controller.js)
+- Implement `createTool` function.
+- Validate request body using `zod`.
+- Check for existing tool (namespace + name uniqueness handled by DB index, but we can catch the error or check beforehand. DB error handling is cleaner for concurrent requests, but `409` mapping in controller is good).
+- Save to DB.
+- Handle errors (400 for validation, 409 for conflict, 500 for others).
 
-### Testing
+#### [NEW] [tool.routes.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/routes/tool.routes.js)
+- Define `POST /` route.
+- Link to `toolController.createTool`.
 
-#### [NEW] [tool.model.test.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/tests/models/tool.model.test.js)
-- **Unit Test Strategy**: Use `jest` with `mongodb-memory-server` (if available, or standard mocking if strictly unit testing without DB access, but the story implies usage of an in-memory instance or similar mechanism). Use `mongoose` to validate schema constraints.
-- Test Cases:
-    1.  **Success**: Save a valid tool.
-    2.  **Validation Error**: Fail when required fields (`name`, `namespace`) are missing.
-    3.  **Duplicate Error**: Fail when saving a duplicate `{namespace, name}` pair.
-    4.  **Different Namespace**: Succeed when same `name` is used in different `namespace`.
+#### [MODIFY] [index.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/index.js)
+- Import and mount `toolRoutes` at `/api/tools`.
+
+#### [MODIFY] [package.json](file:///home/andrew/Projects/Code/web/scientist-ai/backend/package.json)
+- Add `zod` dependency.
 
 ## Verification Plan
 
 ### Automated Tests
-Run the newly created test file:
+I will create a new integration test file: `backend/tests/integration/tool.api.test.js`.
+
+**Run Command:**
 ```bash
-npm test backend/tests/models/tool.model.test.js
+cd backend && npm test tests/integration/tool.api.test.js
 ```
-(Or ensure it runs via the project's standard test script).
+
+**Test Scenarios:**
+1.  **Happy Path**: POST valid tool -> 201 Created. Verify DB.
+2.  **Validation Error**: Missing 'name' -> 400 Bad Request.
+3.  **Validation Error**: Invalid 'parameters' (not object) -> 400 Bad Request.
+4.  **Conflict**: POST duplicate tool -> 409 Conflict.
+5.  **Sanitization**: Check if 'code' and 'description' are saved correctly stringified.
+
+### Manual Verification
+N/A - Coverage provided by automated integration tests.
