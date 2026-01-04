@@ -2,7 +2,7 @@
 
 The ground-truth tracker for user story status for tracking their completion.
 
-Story Number corresponds with the actual User Story data file under `./stories`. For example, `026` corresponds with story file at `./stories/026_implement_list_experiments.md`.
+Story Number corresponds with the actual User Story data file under `./stories`. For example, `026_implement_list_experiments` corresponds with story file at `./stories/026_implement_list_experiments.md`.
 
 Story Points is how many points the story is worth, as listed in the Story file.
 
@@ -16,6 +16,6 @@ Status can be:
 - `DONE`: The eventual resting place of, hopefully, all user stories. It has been implemented!
 - `CANCELLED`: We have decided that this user story will not be implemented. See the Story file for details.
 
-| Story Number | Story Points | Status |
-| --           | --           | --     |
-| 000          | 1            | IN-PROGRESS |
+| Story                                              | Points | Status      |
+| --                                                 | --     | --          |
+| 000_familiarize_with_agile_administration          | 1      | DONE        |
