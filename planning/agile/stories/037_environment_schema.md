@@ -1,6 +1,6 @@
 # Environment Schema
 
-- **Status:** NOT READY
+- **Status:** REVIEW
 - **Points:** 2
 - **Story ID:** 037
 - **Type:** Feature
@@ -36,12 +36,12 @@ The Environment is embedded, not a standalone collection.
 **So that** I can store and validate experiment state with proper type enforcement.
 
 ## Acceptance Criteria
-- [ ] Environment subdocument schema is defined in `backend/src/models/schemas/environment.schema.js`.
-- [ ] `variables` field is defined as `Schema.Types.Mixed`.
-- [ ] `variableTypes` field is defined as `Schema.Types.Mixed`.
-- [ ] Schema is exported for embedding in `ExperimentPlan` and `Experiment` models.
-- [ ] Utility functions for `deepCopy()`, `get()`, `set()` are implemented.
-- [ ] Type validation logic is implemented for `set()` method.
+- [x] Environment subdocument schema is defined in `backend/src/models/schemas/environment.schema.js`.
+- [x] `variables` field is defined as `Schema.Types.Mixed`.
+- [x] `variableTypes` field is defined as `Schema.Types.Mixed`.
+- [x] Schema is exported for embedding in `ExperimentPlan` and `Experiment` models.
+- [x] Utility functions for `deepCopy()`, `get()`, `set()` are implemented.
+- [x] Type validation logic is implemented for `set()` method.
 
 ## Testing
 1. **Unit Test**: Create test file `backend/tests/models/schemas/environment.schema.test.js`.
