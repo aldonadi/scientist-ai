@@ -1,0 +1,11 @@
+{
+    "name": "scientist-ai-root",
+    "version": "0.0.1",
+    "description": "Root package for Scientist AI project",
+    "scripts": {
+        "start": "echo \"Please run start scripts in frontend or backend directories\"",
+        "test": "echo \"Please run test scripts in frontend or backend directories\""
+    },
+    "author": "",
+    "license": "ISC"
+}
