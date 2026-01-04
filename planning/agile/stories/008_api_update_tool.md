@@ -1,6 +1,6 @@
 # Implement Update Tool API
 
-- **Status:** REVIEW
+- **Status:** DONE
 - **Points:** 2
 - **Story ID:** 008
 - **Type:** Feature
@@ -72,5 +72,5 @@ Returns the *updated* tool object.
 2.  `curl -X PUT -H "Content-Type: application/json" -d '{"description": "updated"}' http://localhost:3000/api/tools/<id>`
 3.  Verify response contains "updated".
 
-## Review
-- Ensure `updatedAt` is correctly modified.
+## Review Log
+**1/4/26** - Accepted by Product Owner.
