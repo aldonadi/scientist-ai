@@ -1,6 +1,6 @@
 # Implement Delete Tool API
 
-- **Status:** REVIEW
+- **Status:** DONE
 - **Points:** 1
 - **Story ID:** 009
 - **Type:** Feature
