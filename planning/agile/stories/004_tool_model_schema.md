@@ -32,14 +32,14 @@ The Mongoose Schema must be defined as follows:
 **So that** I can store, retrieve, and unique-validate tool definitions for use in experiments.
 
 ## Acceptance Criteria
-- [ ] Mongoose Schema created in `backend/src/models/tool.model.js` (or appropriate path).
-- [ ] `namespace` field is defined as String and Required.
-- [ ] `name` field is defined as String and Required.
-- [ ] `parameters` field is defined to hold a JSON object.
-- [ ] `code` field is defined as String.
-- [ ] Standard Mongoose timestamps (`{ timestamps: true }`) are enabled.
-- [ ] A compound unique index is applied to `{ namespace: 1, name: 1 }`.
-- [ ] The model is exported correctly for use in other parts of the application.
+- [x] Mongoose Schema created in `backend/src/models/tool.model.js` (or appropriate path).
+- [x] `namespace` field is defined as String and Required.
+- [x] `name` field is defined as String and Required.
+- [x] `parameters` field is defined to hold a JSON object.
+- [x] `code` field is defined as String.
+- [x] Standard Mongoose timestamps (`{ timestamps: true }`) are enabled.
+- [x] A compound unique index is applied to `{ namespace: 1, name: 1 }`.
+- [x] The model is exported correctly for use in other parts of the application.
 
 ## Testing
 1. **Unit Test**: Create a test file `backend/tests/models/tool.model.test.js`.
