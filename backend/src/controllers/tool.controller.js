@@ -1,4 +1,5 @@
 const { z } = require('zod');
+const mongoose = require('mongoose');
 const Tool = require('../models/tool.model');
 
 // Zod schema for tool validation
@@ -71,8 +72,6 @@ const listTools = async (req, res, next) => {
         next(error);
     }
 };
-
-const mongoose = require('mongoose');
 
 const getTool = async (req, res, next) => {
     try {
