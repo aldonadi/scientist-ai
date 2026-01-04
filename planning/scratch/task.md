@@ -1,11 +1,14 @@
-# Implement Create Tool API
+# Task: Implement List Tools API (Story 006)
 
-- [x] Verify Tool Model (`backend/src/models/tool.model.ts`?) <!-- id: 0 -->
-- [x] Create Implementation Plan <!-- id: 1 -->
-- [x] Implement `POST /api/tools` endpoint <!-- id: 2 -->
-    - [x] Create/Update Controller `backend/src/controllers/tool.controller.ts` <!-- id: 3 -->
-    - [x] Add Route `backend/src/routes/tool.routes.ts` <!-- id: 4 -->
-    - [x] Register validation schema <!-- id: 5 -->
-- [x] Write Automated Tests <!-- id: 6 -->
-- [x] Verify Tests Pass <!-- id: 7 -->
-- [/] Review and Cleanup <!-- id: 8 -->
+- [ ] Update backlog and story status to IN-PROGRESS <!-- id: 0 -->
+- [ ] Create implementation plan <!-- id: 1 -->
+- [ ] Implement `GET /api/tools` endpoint <!-- id: 2 -->
+    - [ ] Create route handler <!-- id: 3 -->
+    - [ ] Implement filtering logic <!-- id: 4 -->
+- [ ] Write automated tests <!-- id: 5 -->
+    - [ ] Test listing all tools <!-- id: 6 -->
+    - [ ] Test filtering by namespace <!-- id: 7 -->
+    - [ ] Test empty list <!-- id: 8 -->
+    - [ ] Test error handling <!-- id: 9 -->
+- [ ] Verify implementation <!-- id: 10 -->
+- [ ] Update documentation (if needed) <!-- id: 11 -->

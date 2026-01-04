@@ -1,6 +1,6 @@
 # Implement List Tools API
 
-- **Status:** READY
+- **Status:** IN-PROGRESS
 - **Points:** 2
 - **Story ID:** 006
 - **Type:** Feature

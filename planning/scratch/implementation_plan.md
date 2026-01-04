@@ -1,49 +1,44 @@
-# Implement Create Tool API
+# Implementation Plan - List Tools API (Story 006)
 
-This plan outlines the implementation of the `POST /api/tools` endpoint, allowing the registration of new tools in the system.
+This plan outlines the steps to implement the `GET /api/tools` endpoint, allowing users to list available tools with optional namespace filtering.
 
 ## User Review Required
 
-> [!IMPORTANT]
-> I will be adding `zod` as a new dependency for request validation. Please ensure this is acceptable.
+> [!NOTE]
+> No breaking changes are expected. The response format strictly follows the specification.
 
 ## Proposed Changes
 
 ### Backend
 
-#### [NEW] [tool.controller.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/controllers/tool.controller.js)
-- Implement `createTool` function.
-- Validate request body using `zod`.
-- Check for existing tool (namespace + name uniqueness handled by DB index, but we can catch the error or check beforehand. DB error handling is cleaner for concurrent requests, but `409` mapping in controller is good).
-- Save to DB.
-- Handle errors (400 for validation, 409 for conflict, 500 for others).
+#### [MODIFY] [tools.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/routes/tools.js)
+- Implement `GET /` handler.
+- Use `Tool.find()` with dynamic query construction based on `req.query.namespace`.
+- Return 200 OK with JSON array of tools.
+- Handle 500 errors.
 
-#### [NEW] [tool.routes.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/routes/tool.routes.js)
-- Define `POST /` route.
-- Link to `toolController.createTool`.
+### Testing
 
-#### [MODIFY] [index.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/index.js)
-- Import and mount `toolRoutes` at `/api/tools`.
-
-#### [MODIFY] [package.json](file:///home/andrew/Projects/Code/web/scientist-ai/backend/package.json)
-- Add `zod` dependency.
+#### [NEW] [list_tools.test.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/tests/api/tool/list_tools.test.js)
+- Create a new test file for the list endpoint.
+- **Tests**:
+    1.  `GET /api/tools` returns all tools.
+    2.  `GET /api/tools?namespace=...` returns filtered tools.
+    3.  `GET /api/tools` returns empty array when no tools exist.
+    4.  Verify response structure matches schema.
 
 ## Verification Plan
 
 ### Automated Tests
-I will create a new integration test file: `backend/tests/integration/tool.api.test.js`.
-
-**Run Command:**
+Run the specific test file:
 ```bash
-cd backend && npm test tests/integration/tool.api.test.js
+npm test tests/api/tool/list_tools.test.js
 ```
 
-**Test Scenarios:**
-1.  **Happy Path**: POST valid tool -> 201 Created. Verify DB.
-2.  **Validation Error**: Missing 'name' -> 400 Bad Request.
-3.  **Validation Error**: Invalid 'parameters' (not object) -> 400 Bad Request.
-4.  **Conflict**: POST duplicate tool -> 409 Conflict.
-5.  **Sanitization**: Check if 'code' and 'description' are saved correctly stringified.
-
 ### Manual Verification
-N/A - Coverage provided by automated integration tests.
+1.  Start server: `npm start`
+2.  Use curl to check endpoints:
+    ```bash
+    curl http://localhost:3000/api/tools
+    curl http://localhost:3000/api/tools?namespace=default
+    ```
