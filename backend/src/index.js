@@ -1,27 +1,8 @@
-const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
+const app = require('./app');
 require('dotenv').config();
 
-const app = express();
 const PORT = process.env.PORT || 3000;
-
-// Middleware
-app.use(helmet());
-app.use(cors());
-app.use(morgan('dev'));
-app.use(express.json());
-
-// Routes
-app.get('/api/health', (req, res) => {
-    res.json({
-        status: 'ok',
-        timestamp: new Date(),
-        service: 'scientist-ai-backend'
-    });
-});
 
 // Database Connection
 mongoose.connect(process.env.MONGO_URI)
@@ -31,11 +12,6 @@ mongoose.connect(process.env.MONGO_URI)
         process.exit(1);
     });
 
-// Error Handling Middleware
-const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
-app.use(notFoundHandler);
-app.use(errorHandler);
-
 // Start Server
 if (require.main === module) {
     app.listen(PORT, () => {
@@ -43,4 +19,5 @@ if (require.main === module) {
     });
 }
 
-module.exports = app; // For testing
+module.exports = app;
+

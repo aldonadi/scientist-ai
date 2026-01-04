@@ -23,4 +23,4 @@ Create the Tool Editor component with Monaco Editor integration.
 2. Save.
 3. Reload to verify persistence.
 
-## Review
+## Review Log

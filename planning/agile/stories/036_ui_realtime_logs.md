@@ -22,4 +22,4 @@ Connect the Experiment Monitor to the specialized SSE endpoint/logic to stream l
 1. Run experiment.
 2. Watch logs appear.
 
-## Review
+## Review Log

@@ -23,4 +23,4 @@ Create the comprehensive 'Scientist' view for running experiments.
 1. Open an experiment ID.
 2. Verify layout loads.
 
-## Review
+## Review Log

@@ -22,4 +22,4 @@ Create a service that subscribes to the EventBus and writes logs to MongoDB.
 1. Emit event on bus.
 2. Check for new document in `logs` collection.
 
-## Review
+## Review Log

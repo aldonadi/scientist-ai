@@ -24,7 +24,7 @@ Implement a centralized error handling middleware for the Express application to
 2. Trigger a 500 exception.
 3. Verify JSON response format.
 
-## Review
+## Review Log
 
 **1/3/26**: Added acceptance criteria for automated testing.
 
