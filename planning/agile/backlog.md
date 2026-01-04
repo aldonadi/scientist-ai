@@ -27,8 +27,15 @@ Status can be:
 | 006_api_list_tools                                 | 2      | DONE        |
 | 007_api_get_tool                                   | 1      | DONE        |
 | 008_api_update_tool                                | 2      | DONE        |
-| 009_api_delete_tool                                | 1      | DONE      |
-| 010_plan_model_schema                              | 1      | NOT READY   |
+| 009_api_delete_tool                                | 1      | DONE        |
+| 037_environment_schema                             | 2      | NOT READY   |
+| 038_provider_schema                                | 2      | NOT READY   |
+| 039_model_config_schema                            | 2      | NOT READY   |
+| 040_role_schema                                    | 3      | NOT READY   |
+| 041_goal_schema                                    | 2      | NOT READY   |
+| 042_script_schema                                  | 2      | NOT READY   |
+| 043_experiment_plan_schema                         | 3      | NOT READY   |
+| 010_plan_model_schema                              | 9      | CANCELLED   |
 | 011_api_create_plan                                | 2      | NOT READY   |
 | 012_api_list_plans                                 | 2      | NOT READY   |
 | 013_api_get_plan                                   | 1      | NOT READY   |
@@ -55,3 +62,4 @@ Status can be:
 | 034_ui_plan_editor_roles                           | 5      | NOT READY   |
 | 035_ui_experiment_monitor                          | 8      | NOT READY   |
 | 036_ui_realtime_logs                               | 5      | NOT READY   |
+
