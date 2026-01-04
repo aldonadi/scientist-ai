@@ -1,6 +1,6 @@
 # Implement Global Error Handling
 
-- **Status:** REVIEW
+- **Status:** DONE
 - **Points:** 2
 - **Story ID:** 003
 - **Type:** Feature
@@ -27,3 +27,5 @@ Implement a centralized error handling middleware for the Express application to
 ## Review
 
 **1/3/26**: Added acceptance criteria for automated testing.
+
+**1/3/26**: Accepted by Product Owner.
