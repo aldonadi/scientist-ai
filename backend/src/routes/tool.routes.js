@@ -6,6 +6,7 @@ const toolController = require('../controllers/tool.controller');
 router.post('/', toolController.createTool);
 router.get('/', toolController.listTools);
 router.get('/:id', toolController.getTool);
+router.put('/:id', toolController.updateTool);
 
 
 module.exports = router;

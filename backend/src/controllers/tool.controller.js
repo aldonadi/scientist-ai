@@ -100,8 +100,100 @@ const getTool = async (req, res, next) => {
     }
 };
 
+// Partial schema for updates - all fields optional but validated if present
+const toolUpdateSchema = z.object({
+    namespace: z.string()
+        .min(1, 'Namespace cannot be empty')
+        .regex(/^[a-zA-Z0-9_]+$/, 'Namespace must be alphanumeric with underscores')
+        .optional(),
+    name: z.string()
+        .min(1, 'Name cannot be empty')
+        .regex(/^[a-zA-Z0-9_]+$/, 'Name must be alphanumeric with underscores')
+        .optional(),
+    description: z.string().optional(),
+    parameters: z.object({}).passthrough()
+        .refine((data) => {
+            return typeof data === 'object' && data !== null;
+        }, {
+            message: "Parameters must be a valid JSON Schema object"
+        })
+        .optional(),
+    code: z.string().optional()
+});
+
+const updateTool = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        // Validate ObjectId format
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                error: 'Bad Request',
+                message: 'Invalid tool ID format'
+            });
+        }
+
+        // Validate request body
+        const validatedData = toolUpdateSchema.parse(req.body);
+
+        // Check if tool exists first
+        const existingTool = await Tool.findById(id);
+        if (!existingTool) {
+            return res.status(404).json({
+                error: 'Not Found',
+                message: 'Tool not found'
+            });
+        }
+
+        // Check for duplicate name/namespace if either is being updated
+        const newNamespace = validatedData.namespace || existingTool.namespace;
+        const newName = validatedData.name || existingTool.name;
+
+        if (validatedData.namespace || validatedData.name) {
+            const duplicateTool = await Tool.findOne({
+                namespace: newNamespace,
+                name: newName,
+                _id: { $ne: id }
+            });
+
+            if (duplicateTool) {
+                return res.status(400).json({
+                    error: 'Bad Request',
+                    message: `Tool '${newName}' already exists in namespace '${newNamespace}'`
+                });
+            }
+        }
+
+        // Update the tool
+        const updatedTool = await Tool.findByIdAndUpdate(
+            id,
+            validatedData,
+            { new: true, runValidators: true }
+        );
+
+        res.status(200).json(updatedTool);
+
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            return res.status(400).json({
+                error: 'Bad Request',
+                details: error.errors
+            });
+        }
+        // Handle MongoDB duplicate key error (should be caught above, but as fallback)
+        if (error.code === 11000) {
+            return res.status(400).json({
+                error: 'Bad Request',
+                message: 'A tool with this name and namespace already exists'
+            });
+        }
+        next(error);
+    }
+};
+
 module.exports = {
     createTool,
     listTools,
-    getTool
+    getTool,
+    updateTool
 };

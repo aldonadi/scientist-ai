@@ -1,6 +1,6 @@
 # Implement Update Tool API
 
-- **Status:** READY
+- **Status:** REVIEW
 - **Points:** 2
 - **Story ID:** 008
 - **Type:** Feature
@@ -28,14 +28,14 @@ Implement the `PUT /api/tools/:id` endpoint to allow updating an existing tool's
     - `parameters` (object, optional)
 
 ### Behavior
-- [ ] Validates `id` format.
-- [ ] Validates request body against the Tool schema checks (e.g. required fields if they were null, but here we are updating so just checking types).
-- [ ] Checks for uniqueness: If `name` or `namespace` is being updated, ensure the new combination doesn't already exist.
-- [ ] Updates the tool in the database.
-- [ ] Updates `updatedAt` timestamp.
-- [ ] Returns the updated tool object.
-- [ ] Returns 400 Bad Request if validation fails or unique constraint violated.
-- [ ] Returns 404 Not Found if tool does not exist.
+- [x] Validates `id` format.
+- [x] Validates request body against the Tool schema checks (e.g. required fields if they were null, but here we are updating so just checking types).
+- [x] Checks for uniqueness: If `name` or `namespace` is being updated, ensure the new combination doesn't already exist.
+- [x] Updates the tool in the database.
+- [x] Updates `updatedAt` timestamp.
+- [x] Returns the updated tool object.
+- [x] Returns 400 Bad Request if validation fails or unique constraint violated.
+- [x] Returns 404 Not Found if tool does not exist.
 
 ### Response Codes
 - **200 OK**: Update successful.
