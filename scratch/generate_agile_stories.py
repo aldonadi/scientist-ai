@@ -11,7 +11,11 @@ stories = [
     #     "points": 1,
     #     "type": "Feature",
     #     "description": "Description of the story.",
-    #     "user_story": "**As a** User,\n**I want** ...,\n**So that** ...",
+    #     "user_story": {
+    #         "as_a": "Somebody",
+    #         "i_want": "something",
+    #         "so_that": "I can accomplish my goal"
+    #     },
     #     "acceptance_criteria": [
     #         "Criteria 1",
     #         "Criteria 2"
@@ -67,7 +71,9 @@ for story in stories:
 {story['description']}
 
 ## User Story
-{story['user_story']}
+**As a** {story['user_story']['as_a']},
+**I want** {story['user_story']['i_want']},
+**So that** {story['user_story']['so_that']}
 
 ## Acceptance Criteria
 """
