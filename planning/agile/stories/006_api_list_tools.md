@@ -1,6 +1,6 @@
 # Implement List Tools API
 
-- **Status:** IN-PROGRESS
+- **Status:** DONE
 - **Points:** 2
 - **Story ID:** 006
 - **Type:** Feature
@@ -22,9 +22,9 @@ Implement the `GET /api/tools` endpoint to retrieve a list of all available tool
     - `namespace` (optional): Filter tools by their `namespace` field (exact match).
 
 ### Behavior
-- [ ] If no `namespace` is provided, return all tools from the `Tools` collection.
-- [ ] If `namespace` is provided, return only tools matching that namespace.
-- [ ] Returns a JSON array of tool objects.
+- [X] If no `namespace` is provided, return all tools from the `Tools` collection.
+- [X] If `namespace` is provided, return only tools matching that namespace.
+- [X] Returns a JSON array of tool objects.
 
 ### Response Codes
 - **200 OK**: Successfully retrieved the list (returns empty array `[]` if no tools found).
@@ -66,3 +66,5 @@ Implement the `GET /api/tools` endpoint to retrieve a list of all available tool
 
 ## Review
 - Ensure the response shape matches the defined schema in Story 004.
+
+**1/4/2026** - Accepted by Product Owner.

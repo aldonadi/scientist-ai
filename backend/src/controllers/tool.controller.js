@@ -58,6 +58,21 @@ const createTool = async (req, res, next) => {
     }
 };
 
+const listTools = async (req, res, next) => {
+    try {
+        const filter = {};
+        if (req.query.namespace) {
+            filter.namespace = req.query.namespace;
+        }
+
+        const tools = await Tool.find(filter);
+        res.status(200).json(tools);
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
-    createTool
+    createTool,
+    listTools
 };
