@@ -1,17 +1,5 @@
-# Backend Error Handling
+# Task: Refine "API Create Tool" Story
 
-- [ ] Planning [/]
-    - [ ] Analyze requirements and existing code
-    - [ ] Create implementation plan
-- [ ] Implementation [ ]
-    - [ ] Install dependencies (if needed)
-    - [ ] Implement `errorHandler` middleware
-    - [ ] Register middleware in `app.js` (or `server.js`)
-    - [ ] Implement 404 handler
-- [ ] Verification [ ]
-    - [ ] Start backend server
-    - [ ] Test 404 error
-    - [ ] Test 500 error
-- [ ] Documentation [ ]
-    - [ ] Update Story Status
-    - [ ] Update Backlog Status
+- [x] Read `planning/agile/stories/005_api_create_tool.md`, `planning/SPEC.md`, and `planning/agile/backlog.md` <!-- id: 0 -->
+- [x] Update `planning/agile/stories/005_api_create_tool.md` with details from SPEC and TDD requirements <!-- id: 1 -->
+- [x] Verify the story is ready for implementation <!-- id: 2 -->
