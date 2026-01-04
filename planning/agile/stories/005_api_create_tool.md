@@ -1,13 +1,6 @@
 # Implement Create Tool API
 
-- **Status:** READY
-- **Points:** 2
-- **Story ID:** 005
-- **Type:** Feature
-
-# Implement Create Tool API
-
-- **Status:** READY
+- **Status:** DONE
 - **Points:** 2
 - **Story ID:** 005
 - **Type:** Feature
@@ -37,12 +30,12 @@ Implement the `POST /api/tools` endpoint to allow the registration of new tools 
 **So that** I can extend the capabilities of the agentic system with custom Python scripts.
 
 ## Acceptance Criteria
-- [ ] Endpoint `POST /api/tools` is implemented.
-- [ ] Request body is validated using a schema validator (e.g., Joi/Zod) matching the fields above.
-- [ ] Uniqueness check: Implementation prevents duplicate `namespace` + `name` pairs.
-- [ ] Successfully saves the new Tool document to the MongoDB `Tools` collection.
-- [ ] Returns correct HTTP status codes (`201`, `400`, `409`, `500`).
-- [ ] All inputs are sanitized to prevent injection (though execution is sandboxed, storage should be clean).
+- [x] Endpoint `POST /api/tools` is implemented.
+- [x] Request body is validated using a schema validator (e.g., Joi/Zod) matching the fields above.
+- [x] Uniqueness check: Implementation prevents duplicate `namespace` + `name` pairs.
+- [x] Successfully saves the new Tool document to the MongoDB `Tools` collection.
+- [x] Returns correct HTTP status codes (`201`, `400`, `409`, `500`).
+- [x] All inputs are sanitized to prevent injection (though execution is sandboxed, storage should be clean).
 
 ## Testing
 This story requires **Automated Unit Tests** (e.g., Jest + Supertest).

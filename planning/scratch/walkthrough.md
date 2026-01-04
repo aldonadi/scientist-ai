@@ -1,34 +1,43 @@
-# Walkthrough - Tool Model Schema Implementation
+# Walkthrough - Implement Create Tool API
 
-I have successfully implemented the `Tool` Mongoose model, adhering to the project specification and ensuring compatibility with OpenAI/Ollama tool calling formats.
+I have implemented the `POST /api/tools` endpoint, which allows ensuring that new tools can be registered in the system with proper validation.
 
 ## Changes
 
-### Backend
-- **Created** `backend/src/models/tool.model.js`:
-    - Defined schema with `namespace`, `name`, `description`, `parameters`, and `code`.
-    - Enforced alphanumeric + underscore validation on `name` for Python function safety.
-    - Used `Schema.Types.Mixed` for `parameters` to store flexible JSON Schema objects required by LLM Providers.
-    - Added a compound unique index on `{ namespace: 1, name: 1 }`.
-- **Created** `backend/tests/models/tool.model.test.js`:
-    - Implemented unit tests using `validateSync` to verify schema rules without needing a heavy database dependency.
-    - Verified all acceptance criteria: required fields, naming constraints, default values, and index definition.
+### 1. Controller Implementation
+I created `backend/src/controllers/tool.controller.js` to handle the request logic.
+- **Validation**: Uses `zod` to validate:
+    - `namespace`: Alphanumeric + underscore.
+    - `name`: Alphanumeric + underscore.
+    - `parameters`: Valid JSON object.
+    - `code`: Non-empty string.
+- **Error Handling**:
+    - Returns `400 Bad Request` for validation failures.
+    - Returns `409 Conflict` if a tool with the same name/namespace already exists.
+    - Returns `201 Created` on success.
+
+### 2. Route Definition
+I added `backend/src/routes/tool.routes.js` and mounted it in `backend/src/index.js` at `/api/tools`.
+
+### 3. Dependencies
+- Added `zod` for strict schema validation.
 
 ## Verification Results
 
 ### Automated Tests
-Ran `jest` on the new test file:
+I implemented integration tests in `backend/tests/integration/tool.api.test.js`.
+> [!NOTE]
+> Due to installation issues with `mongodb-memory-server`, I refactored the tests to use **Jest Mocks** for Mongoose. This verifies the controller logic and routing without requiring an in-memory database binary.
 
+**Test Execution:**
 ```bash
-> jest tests/models/tool.model.test.js
+> jest tests/integration/tool.api.test.js
 
- PASS  tests/models/tool.model.test.js
-  Tool Model Schema Test              
-    ✓ should be valid with all required fields (13 ms)
-    ✓ should be invalid if required fields are missing (4 ms)
-    ✓ should be invalid if name contains special characters (3 ms)
-    ✓ should have default values (3 ms)
-    ✓ should define the unique compound index (1 ms)
+PASS  tests/integration/tool.api.test.js
+  POST /api/tools
+    ✓ should create a new tool successfully (201) (86 ms)
+    ✓ should fail with 400 if validation fails (missing field) (13 ms)
+    ✓ should fail with 400 if validation fails (invalid parameters) (9 ms)
+    ✓ should fail with 409 if tool already exists (10 ms)
 ```
-
-All tests passed, confirming the schema behaves as expected.
+All tests passed successfully, confirming the endpoint behaves as expected.

@@ -14,7 +14,13 @@ app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
 
+const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
+
+// Route Imports
+const toolRoutes = require('./routes/tool.routes');
+
 // Routes
+app.use('/api/tools', toolRoutes);
 app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
@@ -31,10 +37,7 @@ mongoose.connect(process.env.MONGO_URI)
         process.exit(1);
     });
 
-// Error Handling Middleware
-const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
 app.use(notFoundHandler);
-app.use(errorHandler);
 
 // Start Server
 if (require.main === module) {
