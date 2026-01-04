@@ -14,6 +14,8 @@ Configure Mongoose to connect to the MongoDB database using environment variable
 **So that** I can store and persist data.
 
 ## Acceptance Criteria
+- [ ] Generate a standard default `.env` file
+- [ ] Before continuing, ask the Product Owner to update the default MONGO_URI, if they desire to.
 - [ ] Mongoose connected to `MONGO_URI` from `.env`.
 - [ ] Connection events (connected, error) are logged.
 - [ ] Application fails gracefully if DB is not reachable on startup.

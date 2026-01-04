@@ -17,7 +17,9 @@ Initialize the Git repository and set up the basic directory structure for the M
 - [ ] Angular CLI project initialized in `frontend/`.
 - [ ] Node.js Express project initialized in `backend/`.
 - [ ] Root level `package.json` for orchestration (optional) or clear instructions.
-- [ ] Git repository initialized with appropriate `.gitignore`.
+- [ ] Testing frameworks set up per SPEC.md
+- [X] Git repository initialized
+- [ ] `.gitignore` with appropriate entries.
 
 ## Testing
 1. Run `npm install` in backend and frontend.
