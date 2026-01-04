@@ -29,12 +29,13 @@ Status can be:
 | 008_api_update_tool                                | 2      | DONE        |
 | 009_api_delete_tool                                | 1      | DONE        |
 | 037_environment_schema                             | 2      | DONE        |
-| 038_provider_schema                                | 2      | NOT READY   |
-| 039_model_config_schema                            | 2      | NOT READY   |
-| 040_role_schema                                    | 3      | NOT READY   |
-| 041_goal_schema                                    | 2      | NOT READY   |
-| 042_script_schema                                  | 2      | NOT READY   |
-| 043_experiment_plan_schema                         | 3      | NOT READY   |
+| 038_provider_schema                                | 2      | READY       |
+| 039_model_config_schema                            | 2      | READY       |
+| 040_role_schema                                    | 3      | READY       |
+| 041_goal_schema                                    | 2      | READY       |
+| 042_script_schema                                  | 2      | READY       |
+| 043_experiment_plan_schema                         | 3      | READY       |
+| 044_secret_storage_interface                       | 3      | READY       |
 | 010_plan_model_schema                              | 9      | CANCELLED   |
 | 011_api_create_plan                                | 2      | NOT READY   |
 | 012_api_list_plans                                 | 2      | NOT READY   |
