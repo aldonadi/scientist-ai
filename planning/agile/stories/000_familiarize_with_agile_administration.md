@@ -1,0 +1,29 @@
+# Familiarize with Agile Administration
+
+- **Status:** IN-PROGRESS
+- **Points:** 1
+- **Story ID:** 000
+- **Type:** Chore
+
+## Description
+This story helps us establish and verify our markdown-based agile workflow. We need to define the structure of a "User Story Card" and ensure we can track it in the backlog.
+
+## User Story
+**As a** Developer,
+**I want** a clear, standardized user story format,
+**So that** I can understand requirements, acceptance criteria, and testing steps for every task.
+
+## Acceptance Criteria
+- [ ] The user story file contains all required fields: Name, Description, Points, Status.
+- [ ] A `User Story` section exists with standard "As a... I want... So that..." format.
+- [ ] A `Testing` section exists to guide verification.
+- [ ] A `Review` section exists for comments.
+- [ ] The story is added to `backlog.md`.
+
+## Testing
+1. **Verify File Structure**: Ensure this file renders correctly in Markdown.
+2. **Backlog Check**: Confirm this story appears in `planning/agile/backlog.md`.
+3. **Process Check**: Move this story to `DONE` once the structure is approved.
+
+## Review
+- *2025-01-03*: Initial draft created.
