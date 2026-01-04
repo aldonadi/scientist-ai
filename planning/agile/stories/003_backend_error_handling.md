@@ -14,10 +14,10 @@ Implement a centralized error handling middleware for the Express application to
 **So that** I can handle failures gracefully.
 
 ## Acceptance Criteria
-- [ ] Middleware captures unhandled exceptions.
-- [ ] Standard JSON error format: `{ error: true, message: '...' }`.
-- [ ] HTTP Status codes are respected (400, 404, 500).
-- [ ] Automated testing suite tests for these codes and tests pass.
+- [x] Middleware captures unhandled exceptions.
+- [x] Standard JSON error format: `{ error: true, message: '...' }`.
+- [x] HTTP Status codes are respected (400, 404, 500).
+- [x] Automated testing suite tests for these codes and tests pass.
 
 ## Testing
 1. Trigger a 404.
