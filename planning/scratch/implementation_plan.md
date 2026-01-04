@@ -1,40 +1,31 @@
-# Project Initialization Plan
+# Setup Database Connection
 
-This plan outlines the steps to initialize the `scientist-ai` project structure as defined in Story 001.
-
-## User Review Required
-> [!NOTE]
-> I will be using `npx @angular/cli new` to create the frontend. I will assume default settings (CSS, with routing) unless otherwise specified. I will also add TailwindCSS as per SPEC.
+Configure Mongoose to connect to the MongoDB database using environment variables.
 
 ## Proposed Changes
 
-### Root Directory
-#### [NEW] [.gitignore](file:///home/andrew/Projects/Code/web/scientist-ai/.gitignore)
-- Standard node entries (`node_modules`, `dist`, `.env`, etc.)
-
-#### [NEW] [package.json](file:///home/andrew/Projects/Code/web/scientist-ai/package.json)
-- Check if needed for orchestration (e.g. `concurrently` to run both). I will add a basic one for now to manage dev scripts.
-
 ### Backend
-#### [NEW] [backend/package.json](file:///home/andrew/Projects/Code/web/scientist-ai/backend/package.json)
-- Initialize with `express`, `mongoose`, `dotenv`, `cors`, `helmet`, `morgan`, `dockerode`, `ollama`, `python-shell` or `execa` as dependencies.
-- Dev dependencies: `nodemon`, `jest`, `supertest`.
 
-#### [NEW] [backend/src/index.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/index.js)
-- Basic Express server setup.
+#### [NEW] [.env](file:///home/andrew/Projects/Code/web/scientist-ai/backend/.env)
+- Create a new .env file with `MONGO_URI` and `PORT`.
 
-### Frontend
-#### [NEW] [frontend/](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/)
-- Generate using Angular CLI.
-- Add TailwindCSS configuration.
+#### [MODIFY] [index.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/index.js)
+- Implement database connection logic using `mongoose.connect`.
+- Use `process.env.MONGO_URI`.
+- Add event listeners for `connected` and `error`.
+- Ensure graceful failure if connection fails on startup.
 
 ## Verification Plan
 
 ### Automated Tests
-- **Directory Structure Check**: I will run a script to verify that `frontend` and `backend` folders exist and contain `package.json`.
-- **Install Check**: Run `npm install` in both directories to ensure dependencies are resolvable.
-- **Start Check**: Try to start the backend server and ensure it listens on the port.
-- **Build Check**: Try to build the frontend (`ng build`) to ensure it's valid.
+- Run the backend server and check for successful connection log.
+- `cd backend && npm run start` (or `node src/index.js`)
 
 ### Manual Verification
-- Inspect the file tree.
+1.  **Positive Case**:
+    -   Start the server: `node src/index.js` in `backend` directory.
+    -   Observe console output for "Connected to MongoDB".
+2.  **Negative Case**:
+    -   Modify `.env` to have an invalid `MONGO_URI`.
+    -   Start the server.
+    -   Observe console output for error message and graceful exit (or error log).

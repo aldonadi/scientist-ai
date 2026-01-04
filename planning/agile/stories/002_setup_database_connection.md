@@ -1,6 +1,6 @@
 # Setup MongoDB Connection
 
-- **Status:** READY
+- **Status:** REVIEW
 - **Points:** 1
 - **Story ID:** 002
 - **Type:** Feature
@@ -14,11 +14,12 @@ Configure Mongoose to connect to the MongoDB database using environment variable
 **So that** I can store and persist data.
 
 ## Acceptance Criteria
-- [ ] Generate a standard default `.env` file
-- [ ] Before continuing, ask the Product Owner to update the default MONGO_URI, if they desire to.
-- [ ] Mongoose connected to `MONGO_URI` from `.env`.
-- [ ] Connection events (connected, error) are logged.
-- [ ] Application fails gracefully if DB is not reachable on startup.
+- [x] Generate a standard default `.env` file
+- [x] Before continuing, ask the Product Owner to update the default MONGO_URI, if they desire to.
+- [x] Mongoose connected to `MONGO_URI` from `.env`.
+- [x] Connection events (connected, error) are logged.
+- [x] Application fails gracefully if DB is not reachable on startup.
+- [X] Manually delete any existing artifacts in the MongoDB database.
 
 ## Testing
 1. Start the server with a valid MONGO_URI.
@@ -26,3 +27,6 @@ Configure Mongoose to connect to the MongoDB database using environment variable
 3. Start with invalid URI and verify error handling.
 
 ## Review
+**1/3/26**: Added an acceptance criteria for deleting existing artifacts in the MongoDB database.
+
+**1/3/26**: All acceptance criteria met. Accepted by Product Owner.
