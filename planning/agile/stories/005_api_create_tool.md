@@ -47,6 +47,6 @@ This story requires **Automated Unit Tests** (e.g., Jest + Supertest).
 4. **Duplicate Error:** POST the same valid tool payload twice. The second request should fail with `409 Conflict`.
 5. **Sanitization:** POST fields with potential script injection chars. Verify they are handled safely (stored as string definition, not executed).
 
-## Review
+## Review Log
 - Ensure the `Tool` Mongoose model matches the schema in `SPEC.md`.
 - Confirm that the `parameters` field is strictly validated as a JSON Schema object to prevent runtime errors in the LLM.

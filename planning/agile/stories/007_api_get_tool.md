@@ -66,7 +66,7 @@ Implement the `GET /api/tools/:id` endpoint to retrieve the details of a specifi
 3.  `curl http://localhost:3000/api/tools/000000000000000000000000` -> 404.
 4.  `curl http://localhost:3000/api/tools/bad-id` -> 400.
 
-## Review
+## Review Log
 - Ensure standard error format is used (e.g., `{ error: "Message" }`).
 **1/4/26** - Other tests failing now: fix regressions.
 **1/4/26** - Accepted by Product Owner.

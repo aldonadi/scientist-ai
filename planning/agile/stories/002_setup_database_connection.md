@@ -26,7 +26,7 @@ Configure Mongoose to connect to the MongoDB database using environment variable
 2. Verify 'Connected to MongoDB' log message.
 3. Start with invalid URI and verify error handling.
 
-## Review
+## Review Log
 **1/3/26**: Added an acceptance criteria for deleting existing artifacts in the MongoDB database.
 
 **1/3/26**: All acceptance criteria met. Accepted by Product Owner.

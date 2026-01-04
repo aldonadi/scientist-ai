@@ -59,5 +59,5 @@ Implement the `DELETE /api/tools/:id` endpoint to permanently remove a tool from
 2.  `curl -X DELETE http://localhost:3000/api/tools/<id>`.
 3.  Verify response and check DB to ensure it's gone.
 
-## Review
+## Review Log
 - Confirm if hard delete is desired or soft delete (status=deleted). SPEC implies removal ("Delete a tool"). So hard delete is assumed.

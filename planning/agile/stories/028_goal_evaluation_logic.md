@@ -20,4 +20,4 @@ Implement logic to evaluate Goal conditions (Python expressions) against the cur
 ## Testing
 1. Test with condition `money > 100` and changing variables.
 
-## Review
+## Review Log

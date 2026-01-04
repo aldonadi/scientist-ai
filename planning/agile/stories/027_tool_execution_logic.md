@@ -22,4 +22,4 @@ Implement the logic to handle a `TOOL_CALL` event: acquire container, run code, 
 1. Simulate a tool call event.
 2. Verify container invocation.
 
-## Review
+## Review Log

@@ -22,4 +22,4 @@ Implement the main loop of the orchestrator: Step Start -> Role Iteration -> Goa
 1. Run a dummy loop with 0 roles.
 2. Verify step counter increments.
 
-## Review
+## Review Log

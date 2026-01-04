@@ -48,5 +48,5 @@ The Mongoose Schema must be defined as follows:
 4. **Duplicate Error**: Insert a tool `test_tool` in `default`, then try to insert another `test_tool` in `default`. Assert that it fails with a duplicate key error.
 5. **Different Namespace**: Insert `test_tool` in `namespace_A`, then `test_tool` in `namespace_B`. Assert that both are saved successfully.
 
-## Review
+## Review Log
 - Ensure the schema matches the `Tool` object definition in `planning/SPEC.md`.

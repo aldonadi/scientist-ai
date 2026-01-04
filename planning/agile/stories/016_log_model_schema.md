@@ -20,4 +20,4 @@ Define Mongoose schema for `LogEntry`.
 ## Testing
 1. Create a log entry.
 
-## Review
+## Review Log

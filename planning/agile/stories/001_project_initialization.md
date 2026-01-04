@@ -25,6 +25,6 @@ Initialize the Git repository and set up the basic directory structure for the M
 1. Run `npm install` in backend and frontend.
 2. Verify directory structure matches standard MEAN layout.
 
-## Review
+## Review Log
 **1/3/26**: Ready for review.
 **1/3/26**: Accepted by Product Owner.

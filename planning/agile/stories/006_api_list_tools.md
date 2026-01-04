@@ -64,7 +64,7 @@ Implement the `GET /api/tools` endpoint to retrieve a list of all available tool
 2.  Use Postman or Curl: `curl http://localhost:3000/api/tools` -> Expect array.
 3.  `curl http://localhost:3000/api/tools?namespace=system` -> Expect filtered array.
 
-## Review
+## Review Log
 - Ensure the response shape matches the defined schema in Story 004.
 
 **1/4/2026** - Accepted by Product Owner.

@@ -20,4 +20,4 @@ Create the `EventBus` class extending Node.js EventEmitter, with typed events.
 ## Testing
 1. Unit test: Create bus, subscribe, emit, verify callback.
 
-## Review
+## Review Log
