@@ -1,6 +1,6 @@
 # Implement Global Error Handling
 
-- **Status:** READY
+- **Status:** REVIEW
 - **Points:** 2
 - **Story ID:** 003
 - **Type:** Feature
@@ -17,6 +17,7 @@ Implement a centralized error handling middleware for the Express application to
 - [ ] Middleware captures unhandled exceptions.
 - [ ] Standard JSON error format: `{ error: true, message: '...' }`.
 - [ ] HTTP Status codes are respected (400, 404, 500).
+- [ ] Automated testing suite tests for these codes and tests pass.
 
 ## Testing
 1. Trigger a 404.
@@ -24,3 +25,5 @@ Implement a centralized error handling middleware for the Express application to
 3. Verify JSON response format.
 
 ## Review
+
+**1/3/26**: Added acceptance criteria for automated testing.
