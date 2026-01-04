@@ -1,6 +1,6 @@
 # Create Tool Mongoose Model
 
-- **Status:** IN-PROGRESS
+- **Status:** REVIEW
 - **Points:** 1
 - **Story ID:** 004
 - **Type:** Feature

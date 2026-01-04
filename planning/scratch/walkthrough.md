@@ -1,42 +1,34 @@
-# Walkthrough - Backend Error Handling (Story 003)
+# Walkthrough - Tool Model Schema Implementation
 
-I have implemented a centralized error handling mechanism for the Express backend and added a permanent automated test suite.
+I have successfully implemented the `Tool` Mongoose model, adhering to the project specification and ensuring compatibility with OpenAI/Ollama tool calling formats.
 
 ## Changes
 
-### 1. New Middleware
-Created `backend/src/middleware/errorHandler.js` containing:
-- `notFoundHandler`: Captures requests to non-existent routes and forwards them as 404 errors.
-- `errorHandler`: Captures all exceptions, formats them into a standard JSON response, and sets the appropriate HTTP status code.
+### Backend
+- **Created** `backend/src/models/tool.model.js`:
+    - Defined schema with `namespace`, `name`, `description`, `parameters`, and `code`.
+    - Enforced alphanumeric + underscore validation on `name` for Python function safety.
+    - Used `Schema.Types.Mixed` for `parameters` to store flexible JSON Schema objects required by LLM Providers.
+    - Added a compound unique index on `{ namespace: 1, name: 1 }`.
+- **Created** `backend/tests/models/tool.model.test.js`:
+    - Implemented unit tests using `validateSync` to verify schema rules without needing a heavy database dependency.
+    - Verified all acceptance criteria: required fields, naming constraints, default values, and index definition.
 
-### 2. Application Update
-Modified `backend/src/index.js` to register the new middleware at the end of the middleware chain.
-
-### 3. Automated Testing
-Created `backend/test/middleware/errorHandler.test.js` to verify:
-- 404 for non-existent routes.
-- 400 for bad requests.
-- 500 for internal server errors.
-- Stack trace suppression in production.
-
-Added `test` script to `package.json` to run Jest.
-
-## verification Results
+## Verification Results
 
 ### Automated Tests
-Ran `npm test` which executes the Jest test suite.
+Ran `jest` on the new test file:
 
-**Result:**
-```
- PASS  test/middleware/errorHandler.test.js
-  Error Handling Middleware
-    ✓ should return 404 for non-existent routes
-    ✓ should return 400 for bad requests
-    ✓ should return 500 for internal server errors
-    ✓ should hide stack trace in production
+```bash
+> jest tests/models/tool.model.test.js
 
-Test Suites: 1 passed, 1 total
-Tests:       4 passed, 4 total
-Snapshots:   0 total
-Time:        1.234 s
+ PASS  tests/models/tool.model.test.js
+  Tool Model Schema Test              
+    ✓ should be valid with all required fields (13 ms)
+    ✓ should be invalid if required fields are missing (4 ms)
+    ✓ should be invalid if name contains special characters (3 ms)
+    ✓ should have default values (3 ms)
+    ✓ should define the unique compound index (1 ms)
 ```
+
+All tests passed, confirming the schema behaves as expected.
