@@ -1,6 +1,6 @@
 # ExperimentPlan Schema
 
-- **Status:** IN-PROGRESS
+- **Status:** DONE
 - **Points:** 3
 - **Story ID:** 043
 - **Type:** Feature
@@ -76,17 +76,17 @@ This schema imports and embeds:
 **So that** I can store complete experiment templates with all their components.
 
 ## Acceptance Criteria
-- [ ] Mongoose Schema created in `backend/src/models/experimentPlan.model.js`.
-- [ ] `name` field is defined as String and Required.
-- [ ] `description` field is defined as String.
-- [ ] `initialEnvironment` embeds the Environment schema.
-- [ ] `roles` field embeds array of Role schemas.
-- [ ] `goals` field embeds array of Goal schemas.
-- [ ] `scripts` field embeds array of Script schemas.
-- [ ] `maxSteps` field is defined as Number with default value.
-- [ ] Timestamps are enabled.
-- [ ] Unique index on `name` field.
-- [ ] Model is exported correctly.
+- [x] Mongoose Schema created in `backend/src/models/experimentPlan.model.js`.
+- [x] `name` field is defined as String and Required.
+- [x] `description` field is defined as String.
+- [x] `initialEnvironment` embeds the Environment schema.
+- [x] `roles` field embeds array of Role schemas.
+- [x] `goals` field embeds array of Goal schemas.
+- [x] `scripts` field embeds array of Script schemas.
+- [x] `maxSteps` field is defined as Number with default value.
+- [x] Timestamps are enabled.
+- [x] Unique index on `name` field.
+- [x] Model is exported correctly.
 
 ## Testing
 1. **Unit Test**: Create test file `backend/tests/models/experimentPlan.model.test.js`.
@@ -98,3 +98,4 @@ This schema imports and embeds:
 
 ## Review Log
 
+**1/4/26** - Accepted by Product Owner
