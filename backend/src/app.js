@@ -16,9 +16,11 @@ const { notFoundHandler } = require('./middleware/errorHandler');
 
 // Route Imports
 const toolRoutes = require('./routes/tool.routes');
+const planRoutes = require('./routes/plan.routes');
 
 // Routes
 app.use('/api/tools', toolRoutes);
+app.use('/api/plans', planRoutes);
 app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',

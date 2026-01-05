@@ -91,11 +91,11 @@ Returns the created plan document.
 - **500 Internal Server Error**: Database failures.
 
 ## Acceptance Criteria
-- [ ] **Schema Validation**: The endpoint validates strict Types (String, Number, etc.) and required fields.
-- [ ] **Reference Validation**: The backend explicitly verifies that the `modelConfig.provider` ID exists in the `Providers` collection and all `tools` IDs exist in the `Tools` collection. If any are missing, return 400/404 with a descriptive error message indicating which ID is invalid.
-- [ ] **Uniqueness**: Enforce unique `name` for plans.
-- [ ] **Persistence**: Valid plans are saved to the `ExperimentPlans` collection.
-- [ ] **No Orphans**: It should not create "partial" plans if validation fails.
+- [x] **Schema Validation**: The endpoint validates strict Types (String, Number, etc.) and required fields.
+- [x] **Reference Validation**: The backend explicitly verifies that the `modelConfig.provider` ID exists in the `Providers` collection and all `tools` IDs exist in the `Tools` collection. If any are missing, return 400/404 with a descriptive error message indicating which ID is invalid.
+- [x] **Uniqueness**: Enforce unique `name` for plans.
+- [x] **Persistence**: Valid plans are saved to the `ExperimentPlans` collection.
+- [x] **No Orphans**: It should not create "partial" plans if validation fails.
 
 ## Testing Rules
 - **Unit Tests**:

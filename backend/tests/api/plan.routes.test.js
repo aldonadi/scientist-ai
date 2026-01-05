@@ -1,0 +1,126 @@
+const request = require('supertest');
+const mongoose = require('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
+const app = require('../../src/app');
+const { Provider } = require('../../src/models/provider.model');
+const Tool = require('../../src/models/tool.model');
+const { ExperimentPlan } = require('../../src/models/experimentPlan.model');
+
+describe('Plan API Integration Tests', () => {
+    let mongoServer;
+    let validProviderId;
+    let validToolId;
+
+    beforeAll(async () => {
+        mongoServer = await MongoMemoryServer.create();
+        const mongoUri = mongoServer.getUri();
+        await mongoose.connect(mongoUri);
+
+        // Setup common data
+        const provider = await Provider.create({
+            name: 'Test Provider',
+            type: 'OPENAI',
+            baseUrl: 'http://test.com',
+            apiKey: 'sk-test'
+        });
+        validProviderId = provider._id;
+
+        const tool = await Tool.create({
+            name: 'test_tool',
+            namespace: 'test',
+            description: 'A test tool',
+            parameters: { type: 'object' },
+            code: 'print("hello")'
+        });
+        validToolId = tool._id;
+    });
+
+    afterAll(async () => {
+        await mongoose.disconnect();
+        await mongoServer.stop();
+    });
+
+    afterEach(async () => {
+        await ExperimentPlan.deleteMany({});
+    });
+
+    describe('POST /api/plans', () => {
+        const validPlanData = () => ({
+            name: 'Integration Test Plan',
+            description: 'Testing the API',
+            roles: [
+                {
+                    name: 'Test Role',
+                    systemPrompt: 'You are a test.',
+                    modelConfig: {
+                        provider: validProviderId,
+                        modelName: 'gpt-4'
+                    },
+                    tools: [validToolId]
+                }
+            ],
+            maxSteps: 10
+        });
+
+        it('should create a valid plan', async () => {
+            const res = await request(app)
+                .post('/api/plans')
+                .send(validPlanData());
+
+            expect(res.statusCode).toBe(201);
+            expect(res.body.name).toBe('Integration Test Plan');
+            expect(res.body._id).toBeDefined();
+
+            const dbPlan = await ExperimentPlan.findById(res.body._id);
+            expect(dbPlan).toBeTruthy();
+        });
+
+        it('should fail when provider ID does not exist', async () => {
+            const planData = validPlanData();
+            planData.roles[0].modelConfig.provider = new mongoose.Types.ObjectId(); // Random ID
+
+            const res = await request(app)
+                .post('/api/plans')
+                .send(planData);
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.error).toBe('Validation Error');
+            expect(res.body.messages[0]).toMatch(/Provider ID .* not found/);
+        });
+
+        it('should fail when tool ID does not exist', async () => {
+            const planData = validPlanData();
+            planData.roles[0].tools = [new mongoose.Types.ObjectId()]; // Random ID
+
+            const res = await request(app)
+                .post('/api/plans')
+                .send(planData);
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.error).toBe('Validation Error');
+            expect(res.body.messages[0]).toMatch(/Tool ID .* not found/);
+        });
+
+        it('should fail with duplicate plan name', async () => {
+            await ExperimentPlan.create(validPlanData());
+
+            const res = await request(app)
+                .post('/api/plans')
+                .send(validPlanData());
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.message).toBe('Plan name must be unique.');
+        });
+
+        it('should fail with missing required fields', async () => {
+            const res = await request(app)
+                .post('/api/plans')
+                .send({}); // Empty body
+
+            expect(res.statusCode).toBe(400);
+            // Expect mongoose validation errors structure (simplified check)
+            expect(res.body.error).toBe('Validation Error');
+            expect(res.body.messages).toBeDefined();
+        });
+    });
+});
