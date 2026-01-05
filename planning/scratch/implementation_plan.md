@@ -6,6 +6,8 @@ Define the Mongoose schema for `ModelConfig` which will be embedded into the `Ro
 
 > [!NOTE]
 > This schema is intended to be embedded, so it will export a `Schema` instance rather than a `Model`.
+>
+> **Clarification**: In Mongoose, a **Model** (e.g., `User`) corresponds to a standalone collection in the database that you can query directly. A **Schema** is just a definition of the structure. Since `ModelConfig` is only ever used *inside* a `Role` (it's a subdocument) and never exists on its own, we only need to define the **Schema** and export it. We don't need a `ModelConfig` model because we won't have a `model_configs` collection.
 
 ## Proposed Changes
 
