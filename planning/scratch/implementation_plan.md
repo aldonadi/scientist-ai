@@ -1,34 +1,58 @@
-# Implementation Plan - ModelConfig Schema
+# Implementation Plan - Role, Goal, and Script Schemas
 
-Define the Mongoose schema for `ModelConfig` which will be embedded into the `Role` schema.
+Implement Mongoose schemas for `Role`, `Goal`, and `Script` as embedded subdocuments to be used in `ExperimentPlan`.
 
 ## User Review Required
 
 > [!NOTE]
-> This schema is intended to be embedded, so it will export a `Schema` instance rather than a `Model`.
->
-> **Clarification**: In Mongoose, a **Model** (e.g., `User`) corresponds to a standalone collection in the database that you can query directly. A **Schema** is just a definition of the structure. Since `ModelConfig` is only ever used *inside* a `Role` (it's a subdocument) and never exists on its own, we only need to define the **Schema** and export it. We don't need a `ModelConfig` model because we won't have a `model_configs` collection.
+> These schemas are primarily definition-only at this stage. Logic methods described in the SPECs (like `constructPrompt` or `evaluate`) will be implemented in the Service layer or as instance methods in later stories, but for now we are focusing on the data structure and validation.
 
 ## Proposed Changes
 
-### Backend
+### Backend - Models
 
-#### [NEW] [modelConfig.schema.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/models/schemas/modelConfig.schema.js)
-- Define `ModelConfigSchema` with fields:
-    - `provider`: ObjectId (ref: 'Provider', required)
-    - `modelName`: String (required)
-    - `config`: Mixed (default: {})
-- Implement `isValid()` method (stubbed or logic if possible without full provider instance). *Note: The spec mentions `isValid()` checks if provider can be reached. This might belong strictly in the service layer or instance method if we load the provider. For the schema method, we can validation basic structure.*
-- Implement `chat()` method stub (to be fully implemented when connected to Service/Provider). *Actually, the spec says Logical Methods (Service Layer). I will define them as instance methods on the schema, but they will likely need dependencies injected or use the `Provider` model.*
+#### [NEW] [role.schema.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/models/schemas/role.schema.js)
+- Define `RoleSchema` with fields:
+    - `name` (String, Required)
+    - `modelConfig` (Embedded ModelConfigSchema, Required)
+    - `systemPrompt` (String)
+    - `tools` (Array of ObjectId refs to `Tool`)
+    - `variableWhitelist` (Array of Strings)
+
+#### [NEW] [goal.schema.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/models/schemas/goal.schema.js)
+- Define `GoalSchema` with fields:
+    - `description` (String, Required)
+    - `conditionScript` (String, Required)
+
+#### [NEW] [script.schema.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/models/schemas/script.schema.js)
+- Define `ScriptSchema` with fields:
+    - `hookType` (String, Required, Enum: ['EXPERIMENT_START', 'STEP_START', ...])
+    - `code` (String, Required)
+
+### Backend - Tests
+
+#### [NEW] [role.schema.test.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/tests/models/schemas/role.schema.test.js)
+- Test valid role creation.
+- Test missing required fields.
+- Test structure of embedded fields.
+
+#### [NEW] [goal.schema.test.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/tests/models/schemas/goal.schema.test.js)
+- Test valid goal creation.
+- Test missing fields.
+
+#### [NEW] [script.schema.test.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/tests/models/schemas/script.schema.test.js)
+- Test valid script creation.
+- Test invalid hook types (Enum validation).
 
 ## Verification Plan
 
 ### Automated Tests
-Run the new test file using `jest`.
-
+Run unit tests for the new schemas:
 ```bash
-npm test backend/tests/models/schemas/modelConfig.schema.test.js
+npm test backend/tests/models/schemas/role.schema.test.js
+npm test backend/tests/models/schemas/goal.schema.test.js
+npm test backend/tests/models/schemas/script.schema.test.js
 ```
 
 ### Manual Verification
-None required for this backend schema task.
+Review code to ensure Mongoose definitions match `SPEC.md`.
