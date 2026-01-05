@@ -35,7 +35,7 @@ Status can be:
 | 041_goal_schema                                    | 2      | READY       |
 | 042_script_schema                                  | 2      | READY       |
 | 043_experiment_plan_schema                         | 3      | READY       |
-| 044_secret_storage_interface                       | 3      | READY       |
+| 044_secret_storage_interface                       | 3      | REVIEW      |
 | 010_plan_model_schema                              | 9      | CANCELLED   |
 | 011_api_create_plan                                | 2      | NOT READY   |
 | 012_api_list_plans                                 | 2      | NOT READY   |

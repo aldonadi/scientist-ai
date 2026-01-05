@@ -1,6 +1,6 @@
 # Secret Storage Interface
 
-- **Status:** READY
+- **Status:** REVIEW
 - **Points:** 3
 - **Story ID:** 044
 - **Type:** Feature
@@ -53,7 +53,7 @@ class ISecretStore {
 ```
 
 ### Plaintext Implementation (Dev Only)
-Create `PlaintextSecretStore` in `backend/src/services/secrets/plaintext-secret-store.js`:
+Create `PlaintextInsecureNightmareSecretStore` in `backend/src/services/secrets/plaintext-insecure-nightmare-secret-store.js`:
 
 - Stores secrets directly in MongoDB in a `Secrets` collection.
 - **WARNING**: This is for development only. Secrets are stored in plaintext.
@@ -69,10 +69,10 @@ Create `SecretStoreFactory` in `backend/src/services/secrets/secret-store.factor
 ### Directory Structure
 ```
 backend/src/services/secrets/
-├── index.js                      # Re-exports
-├── secret-store.interface.js     # ISecretStore interface
-├── secret-store.factory.js       # Factory for creating store instances
-└── plaintext-secret-store.js     # Dev-only plaintext implementation
+├── index.js                                      # Re-exports
+├── secret-store.interface.js                     # ISecretStore interface
+├── secret-store.factory.js                       # Factory for creating store instances
+└── plaintext-insecure-nightmare-secret-store.js  # Dev-only plaintext implementation
 ```
 
 ## User Story
@@ -81,13 +81,13 @@ backend/src/services/secrets/
 **So that** I can store API keys securely with the flexibility to upgrade storage backends without changing consuming code.
 
 ## Acceptance Criteria
-- [ ] `ISecretStore` interface defined with `store()`, `retrieve()`, `delete()`, `exists()` methods.
-- [ ] `PlaintextSecretStore` class implements `ISecretStore`.
-- [ ] Plaintext implementation stores secrets in MongoDB `Secrets` collection.
-- [ ] `SecretStoreFactory.getStore()` returns the configured implementation.
-- [ ] Factory reads `SECRET_STORE_TYPE` environment variable.
-- [ ] Clear console warning logged when using plaintext store (dev safety).
-- [ ] Exported via index.js for easy importing.
+- [x] `ISecretStore` interface defined with `store()`, `retrieve()`, `delete()`, `exists()` methods.
+- [x] `PlaintextInsecureNightmareSecretStore` class implements `ISecretStore`.
+- [x] Plaintext implementation stores secrets in MongoDB `Secrets` collection.
+- [x] `SecretStoreFactory.getStore()` returns the configured implementation.
+- [x] Factory reads `SECRET_STORE_TYPE` environment variable.
+- [x] Clear console warning logged when using plaintext store (dev safety).
+- [x] Exported via index.js for easy importing.
 
 ## Testing
 1. **Unit Test**: Create test file `backend/tests/services/secrets/secret-store.test.js`.
