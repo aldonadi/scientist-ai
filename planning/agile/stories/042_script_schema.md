@@ -1,6 +1,6 @@
 # Script Schema
 
-- **Status:** NOT READY
+- **Status:** DONE
 - **Points:** 2
 - **Story ID:** 042
 - **Type:** Feature
@@ -49,10 +49,10 @@ When a Script runs, it receives a context object containing:
 **So that** I can attach custom logic to experiment lifecycle events.
 
 ## Acceptance Criteria
-- [ ] Script subdocument schema defined in `backend/src/models/schemas/script.schema.js`.
-- [ ] `hookType` field is defined as String with enum validation for all event types.
-- [ ] `code` field is defined as String and Required.
-- [ ] Schema is exported for embedding in `ExperimentPlan`.
+- [x] Script subdocument schema defined in `backend/src/models/schemas/script.schema.js`.
+- [x] `hookType` field is defined as String with enum validation for all event types.
+- [x] `code` field is defined as String and Required.
+- [x] Schema is exported for embedding in `ExperimentPlan`.
 
 ## Testing
 1. **Unit Test**: Create test file `backend/tests/models/schemas/script.schema.test.js`.
@@ -61,4 +61,5 @@ When a Script runs, it receives a context object containing:
 4. **Missing Code**: Verify validation error when code is missing.
 
 ## Review Log
+**1/4/2026** - Accepted by Product Owner
 

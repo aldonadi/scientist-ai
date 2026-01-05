@@ -1,22 +1,22 @@
 # Task: Implement Role, Goal, and Script Schemas
 
-- [ ] Implementation Plan <!-- id: 8 -->
-    - [ ] Create implementation_plan.md <!-- id: 9 -->
-    - [ ] Review with user <!-- id: 10 -->
-- [ ] Implement Role Schema (Story 040) <!-- id: 11 -->
-    - [ ] Create backend/src/models/schemas/role.schema.js <!-- id: 12 -->
-    - [ ] Create backend/tests/models/schemas/role.schema.test.js <!-- id: 13 -->
-    - [ ] Run tests and verify <!-- id: 14 -->
-    - [ ] Update story checklist <!-- id: 15 -->
-- [ ] Implement Goal Schema (Story 041) <!-- id: 16 -->
-    - [ ] Create backend/src/models/schemas/goal.schema.js <!-- id: 17 -->
-    - [ ] Create backend/tests/models/schemas/goal.schema.test.js <!-- id: 18 -->
-    - [ ] Run tests and verify <!-- id: 19 -->
-    - [ ] Update story checklist <!-- id: 20 -->
-- [ ] Implement Script Schema (Story 042) <!-- id: 21 -->
-    - [ ] Create backend/src/models/schemas/script.schema.js <!-- id: 22 -->
-    - [ ] Create backend/tests/models/schemas/script.schema.test.js <!-- id: 23 -->
-    - [ ] Run tests and verify <!-- id: 24 -->
-    - [ ] Update story checklist <!-- id: 25 -->
-- [ ] Finalization <!-- id: 26 -->
-    - [ ] Update backlog.md <!-- id: 27 -->
+- [x] Implementation Plan <!-- id: 8 -->
+    - [x] Create implementation_plan.md <!-- id: 9 -->
+    - [x] Review with user <!-- id: 10 -->
+- [x] Implement Role Schema (Story 040) <!-- id: 11 -->
+    - [x] Create backend/src/models/schemas/role.schema.js <!-- id: 12 -->
+    - [x] Create backend/tests/models/schemas/role.schema.test.js <!-- id: 13 -->
+    - [x] Run tests and verify <!-- id: 14 -->
+    - [x] Update story checklist <!-- id: 15 -->
+- [x] Implement Goal Schema (Story 041) <!-- id: 16 -->
+    - [x] Create backend/src/models/schemas/goal.schema.js <!-- id: 17 -->
+    - [x] Create backend/tests/models/schemas/goal.schema.test.js <!-- id: 18 -->
+    - [x] Run tests and verify <!-- id: 19 -->
+    - [x] Update story checklist <!-- id: 20 -->
+- [x] Implement Script Schema (Story 042) <!-- id: 21 -->
+    - [x] Create backend/src/models/schemas/script.schema.js <!-- id: 22 -->
+    - [x] Create backend/tests/models/schemas/script.schema.test.js <!-- id: 23 -->
+    - [x] Run tests and verify <!-- id: 24 -->
+    - [x] Update story checklist <!-- id: 25 -->
+- [x] Finalization <!-- id: 26 -->
+    - [x] Update backlog.md <!-- id: 27 -->

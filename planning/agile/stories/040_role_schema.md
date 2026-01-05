@@ -1,6 +1,6 @@
 # Role Schema
 
-- **Status:** NOT READY
+- **Status:** DONE
 - **Points:** 3
 - **Story ID:** 040
 - **Type:** Feature
@@ -41,13 +41,13 @@ Define the schema structure for the `Role` object. A Role defines an Agent's ide
 **So that** I can define agent identities with specific model configurations and capabilities.
 
 ## Acceptance Criteria
-- [ ] Role subdocument schema defined in `backend/src/models/schemas/role.schema.js`.
-- [ ] `name` field is defined as String and Required.
-- [ ] `modelConfig` embeds the ModelConfig schema.
-- [ ] `systemPrompt` field is defined as String.
-- [ ] `tools` field is defined as array of ObjectId references to `Tool`.
-- [ ] `variableWhitelist` field is defined as array of Strings.
-- [ ] Schema is exported for embedding in `ExperimentPlan`.
+- [x] Role subdocument schema defined in `backend/src/models/schemas/role.schema.js`.
+- [x] `name` field is defined as String and Required.
+- [x] `modelConfig` embeds the ModelConfig schema.
+- [x] `systemPrompt` field is defined as String.
+- [x] `tools` field is defined as array of ObjectId references to `Tool`.
+- [x] `variableWhitelist` field is defined as array of Strings.
+- [x] Schema is exported for embedding in `ExperimentPlan`.
 
 ## Testing
 1. **Unit Test**: Create test file `backend/tests/models/schemas/role.schema.test.js`.
@@ -57,4 +57,4 @@ Define the schema structure for the `Role` object. A Role defines an Agent's ide
 5. **Whitelist**: Test with various whitelist configurations.
 
 ## Review Log
-
+**1/4/2026** - Accepted by Product Owner
