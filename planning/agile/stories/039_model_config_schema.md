@@ -1,6 +1,6 @@
 # ModelConfig Schema
 
-- **Status:** IN-PROGRESS
+- **Status:** DONE
 - **Points:** 2
 - **Story ID:** 039
 - **Type:** Feature
@@ -43,11 +43,11 @@ Define the schema structure for the `ModelConfig` object. A ModelConfig specifie
 **So that** I can configure which model and settings each Role uses for inference.
 
 ## Acceptance Criteria
-- [ ] ModelConfig subdocument schema defined in `backend/src/models/schemas/modelConfig.schema.js`.
-- [ ] `provider` field is defined as ObjectId reference to `Provider`.
-- [ ] `modelName` field is defined as String and Required.
-- [ ] `config` field is defined as Mixed type for flexible configuration.
-- [ ] Schema is exported for embedding in `Role` schema.
+- [x] ModelConfig subdocument schema defined in `backend/src/models/schemas/modelConfig.schema.js`.
+- [x] `provider` field is defined as ObjectId reference to `Provider`.
+- [x] `modelName` field is defined as String and Required.
+- [x] `config` field is defined as Mixed type for flexible configuration.
+- [x] Schema is exported for embedding in `Role` schema.
 
 ## Testing
 1. **Unit Test**: Create test file `backend/tests/models/schemas/modelConfig.schema.test.js`.
@@ -56,4 +56,4 @@ Define the schema structure for the `ModelConfig` object. A ModelConfig specifie
 4. **Flexible Config**: Test that various config shapes (nested objects, arrays) can be stored.
 
 ## Review Log
-
+**1/4/026** - Accepted by Product Owner
