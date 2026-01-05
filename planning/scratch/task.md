@@ -1,27 +1,20 @@
-# Story 038: Provider Schema Implementation
+# Task: Implement ModelConfig Schema
 
-## Tasks
-
-- [x] Create Provider Model
-  - [x] Create `provider.model.js` with Mongoose schema
-  - [x] Define provider types enum as single source of truth
-  - [x] Add URL validation for `baseUrl` field
-  - [x] Create unique index on `name` field
-  - [x] Enable timestamps
-
-- [x] Create Provider Zod Schema
-  - [x] Create `provider.schema.js` with Zod validation
-  - [x] Create schema for Provider creation
-  - [x] Create schema for Provider updates
-
-- [x] Create Provider Model Tests
-  - [x] Test success case with all required fields
-  - [x] Test validation error for missing required fields
-  - [x] Test enum validation for invalid `type` values
-  - [x] Test duplicate name error (requires DB)
-  - [x] Test optional `apiKeyRef` field handling
-  - [x] Test URL validation
-
-- [x] Update story file and backlog
-  - [x] Mark acceptance criteria checkboxes
-  - [x] Update backlog status to REVIEW
+- [x] Read and understand requirements <!-- id: 0 -->
+    - [x] Read `planning/SPEC.md` <!-- id: 1 -->
+    - [x] Read `planning/agile/stories/039_model_config_schema.md` <!-- id: 2 -->
+- [ ] Update Backlog <!-- id: 3 -->
+    - [ ] Mark story `039_model_config_schema` as IN-PROGRESS in `planning/agile/backlog.md` <!-- id: 4 -->
+- [ ] Planning <!-- id: 5 -->
+    - [ ] Create `implementation_plan.md` <!-- id: 6 -->
+- [ ] Implementation <!-- id: 7 -->
+    - [ ] Create `backend/src/models/modelConfig.model.js` <!-- id: 8 -->
+    - [ ] Define Mongoose schema for `ModelConfig` <!-- id: 9 -->
+- [ ] Testing <!-- id: 10 -->
+    - [ ] Create `backend/tests/models/modelConfig.model.test.js` <!-- id: 11 -->
+    - [ ] Implement unit tests for schema validation and fields <!-- id: 12 -->
+    - [ ] Run tests and ensure they pass <!-- id: 13 -->
+- [ ] Verification and Cleanup <!-- id: 14 -->
+    - [ ] Verify implementation against requirements <!-- id: 15 -->
+    - [ ] Mark checkboxes in user story `039_model_config_schema.md` <!-- id: 16 -->
+    - [ ] Mark story `039_model_config_schema` as REVIEW in `planning/agile/backlog.md` <!-- id: 17 -->

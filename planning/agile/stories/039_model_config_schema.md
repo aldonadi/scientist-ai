@@ -1,6 +1,6 @@
 # ModelConfig Schema
 
-- **Status:** NOT READY
+- **Status:** IN-PROGRESS
 - **Points:** 2
 - **Story ID:** 039
 - **Type:** Feature
