@@ -2,26 +2,26 @@
 
 ## Tasks
 
-- [/] Create Provider Model
-  - [/] Create `provider.model.js` with Mongoose schema
-  - [ ] Define provider types enum as single source of truth
-  - [ ] Add URL validation for `baseUrl` field
-  - [ ] Create unique index on `name` field
-  - [ ] Enable timestamps
+- [x] Create Provider Model
+  - [x] Create `provider.model.js` with Mongoose schema
+  - [x] Define provider types enum as single source of truth
+  - [x] Add URL validation for `baseUrl` field
+  - [x] Create unique index on `name` field
+  - [x] Enable timestamps
 
-- [ ] Create Provider Zod Schema
-  - [ ] Create `provider.schema.js` with Zod validation
-  - [ ] Create schema for Provider creation
-  - [ ] Create schema for Provider updates
+- [x] Create Provider Zod Schema
+  - [x] Create `provider.schema.js` with Zod validation
+  - [x] Create schema for Provider creation
+  - [x] Create schema for Provider updates
 
-- [ ] Create Provider Model Tests
-  - [ ] Test success case with all required fields
-  - [ ] Test validation error for missing required fields
-  - [ ] Test enum validation for invalid `type` values
-  - [ ] Test duplicate name error (requires DB)
-  - [ ] Test optional `apiKeyRef` field handling
-  - [ ] Test URL validation
+- [x] Create Provider Model Tests
+  - [x] Test success case with all required fields
+  - [x] Test validation error for missing required fields
+  - [x] Test enum validation for invalid `type` values
+  - [x] Test duplicate name error (requires DB)
+  - [x] Test optional `apiKeyRef` field handling
+  - [x] Test URL validation
 
-- [ ] Update story file and backlog
-  - [ ] Mark acceptance criteria checkboxes
-  - [ ] Update backlog status
+- [x] Update story file and backlog
+  - [x] Mark acceptance criteria checkboxes
+  - [x] Update backlog status to REVIEW

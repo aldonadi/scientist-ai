@@ -1,6 +1,6 @@
 # Provider Schema
 
-- **Status:** READY
+- **Status:** REVIEW
 - **Points:** 2
 - **Story ID:** 038
 - **Type:** Feature
@@ -62,15 +62,15 @@ This decoupling allows swapping secret storage backends (plaintext dev, encrypte
 **So that** I can configure and persist connections to different AI backends.
 
 ## Acceptance Criteria
-- [ ] Mongoose Schema created in `backend/src/models/provider.model.js`.
-- [ ] `name` field is defined as String and Required.
-- [ ] `type` field is defined as String with enum validation for: `OLLAMA`, `OPENAI`, `ANTHROPIC`, `GENERIC_OPENAI`.
-- [ ] `baseUrl` field is defined as String and Required.
-- [ ] `apiKeyRef` field is defined as String (optional).
-- [ ] Timestamps are enabled.
-- [ ] Unique index on `name` field.
-- [ ] Model is exported correctly.
-- [ ] Zod validation schema created alongside Mongoose schema (following existing patterns).
+- [x] Mongoose Schema created in `backend/src/models/provider.model.js`.
+- [x] `name` field is defined as String and Required.
+- [x] `type` field is defined as String with enum validation for: `OLLAMA`, `OPENAI`, `ANTHROPIC`, `GENERIC_OPENAI`.
+- [x] `baseUrl` field is defined as String and Required.
+- [x] `apiKeyRef` field is defined as String (optional).
+- [x] Timestamps are enabled.
+- [x] Unique index on `name` field.
+- [x] Model is exported correctly.
+- [x] Zod validation schema created alongside Mongoose schema (following existing patterns).
 
 ## Dependencies
 - **Story 044**: Secret Storage Interface (should be implemented first for full integration, but schema can be created independently).
