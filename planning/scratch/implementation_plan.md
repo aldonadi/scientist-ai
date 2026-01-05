@@ -1,45 +1,32 @@
-# Implement Create Plan API (Story 011)
+# Implementation Plan - List Plans API
 
-## Goal
-Implement the `POST /api/plans` endpoint to allow users to save Experiment Plans, ensuring data integrity by validating referenced `Provider` and `Tool` IDs.
+Implement `GET /api/plans` to retrieve a list of experiment plans.
 
 ## User Review Required
-> [!IMPORTANT]
-> This implementation assumes that `Provider` and `Tool` IDs passed in the plan MUST exist in the database. If they don't, the plan creation will fail with a 400 error.
+
+> [!NOTE]
+> The acceptance criteria mentions "maybe minimal fields". I will return a summary object for each plan including: `_id`, `name`, `description`, `createdAt`, `updatedAt`, `roles` (count), `goals` (count).
 
 ## Proposed Changes
 
 ### Backend
 
-#### [NEW] [plan.controller.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/controllers/plan.controller.js)
-- Implement `createPlan` function.
-- **Validation Logic**:
-    - Iterate through `roles`.
-    - Check if `role.modelConfig.provider` exists in `Providers` collection.
-    - Check if all `role.tools` IDs exist in `Tools` collection.
-    - If valid, save `ExperimentPlan`.
-    - Handle `duplicate key` error for `name` field.
+#### [MODIFY] [plan.controller.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/controllers/plan.controller.js)
+- Add `listPlans` function.
+- Fetch all plans from `ExperimentPlan` model.
+- Select checks: `_id name description roles goals createdAt updatedAt`.
+- Map results to summary format (adding counts for roles and goals).
 
-#### [NEW] [plan.routes.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/routes/plan.routes.js)
-- Define `POST /` route pointing to `planController.createPlan`.
-
-#### [MODIFY] [app.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/app.js)
-- Import `planRoutes`.
-- Mount at `/api/plans`.
+#### [MODIFY] [plan.routes.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/routes/plan.routes.js)
+- Add `GET /` route mapping to `planController.listPlans`.
 
 ## Verification Plan
 
 ### Automated Tests
-I will create a new test file: `backend/tests/api/plan.routes.test.js`.
+Run `npm test backend/tests/api/plan.routes.test.js`
 
-**Test Scenarios:**
-1.  **Happy Path**: Create a valid plan with existing Provider and Tools. Verify 201 status and DB persistence.
-2.  **Duplicate Name**: Try to create a plan with a name that already exists. Verify 400/409 status.
-3.  **Invalid Provider**: Try to create a plan with a non-existent Provider ID. Verify 400 status and specific error message.
-4.  **Invalid Tool**: Try to create a plan with a non-existent Tool ID. Verify 400 status and specific error message.
-5.  **Schema Validation**: Try to create a plan with missing required fields (e.g., `name`, `maxSteps`). Verify 400 status.
-
-**Command to Run Tests:**
-```bash
-npm test backend/tests/api/plan.routes.test.js
-```
+- **[NEW] GET /api/plans**
+    - Should return a list of plans.
+    - Should support optional pagination (if easy, otherwise just list all as per agile story saying "optional for now"). *Decision: I will implement basic retrieval first. If time permits, simple limit/skip.*
+    - Should return 200 OK.
+    - Validate response structure (summary fields).

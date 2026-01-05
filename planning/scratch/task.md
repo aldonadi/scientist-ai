@@ -1,19 +1,18 @@
-# Task: Implement API Create Plan (Story 011)
+# Task: Implement List Plans API
 
-- [x] Analyze Requirements & Codebase `[x]` <!-- id: 0 -->
-    - [x] Read Story and Spec <!-- id: 1 -->
-    - [x] Check existing API structure (routes, app.js) <!-- id: 2 -->
-- [x] Create Implementation Plan <!-- id: 3 -->
-- [x] Implement `POST /api/plans` <!-- id: 4 -->
-    - [x] Create/Update Controller `backend/src/controllers/plan.controller.js` <!-- id: 5 -->
-    - [x] Register Routes `backend/src/routes/plan.routes.js` <!-- id: 6 -->
-- [x] Implement Validation & Logic <!-- id: 7 -->
-    - [x] Validate `roles.modelConfig.provider` existence <!-- id: 8 -->
-    - [x] Validate `roles.tools` existence <!-- id: 9 -->
-- [x] Automated Testing <!-- id: 10 -->
-    - [x] Create `backend/tests/api/plan.routes.test.js` <!-- id: 11 -->
-    - [x] Test Success Case (valid plan) <!-- id: 12 -->
-    - [x] Test Failure Cases (invalid IDs, missing fields) <!-- id: 13 -->
-- [x] Finalize <!-- id: 14 -->
-    - [x] Update Story Checkboxes <!-- id: 15 -->
-    - [x] Update Backlog Status <!-- id: 16 -->
+- [ ] Requirements Analysis <!-- id: 0 -->
+    - [/] Read `planning/SPEC.md` <!-- id: 1 -->
+    - [/] Read `planning/agile/stories/012_api_list_plans.md` <!-- id: 2 -->
+    - [/] Read `planning/agile/backlog.md` <!-- id: 3 -->
+- [ ] Planning <!-- id: 4 -->
+    - [/] Update `planning/agile/backlog.md` to IN-PROGRESS <!-- id: 5 -->
+    - [/] Create `implementation_plan.md` <!-- id: 6 -->
+- [ ] Implementation <!-- id: 7 -->
+    - [ ] Implement `listPlans` in `plan.controller.js` <!-- id: 8 -->
+    - [ ] Add route to `plan.routes.js` <!-- id: 9 -->
+- [ ] Verification <!-- id: 10 -->
+    - [ ] Implement automated tests in `plan.routes.test.js` <!-- id: 11 -->
+    - [ ] Run tests and ensure coverage <!-- id: 12 -->
+- [ ] Finalization <!-- id: 13 -->
+    - [ ] Mark checkboxes in `012_api_list_plans.md` <!-- id: 14 -->
+    - [ ] Update `planning/agile/backlog.md` to REVIEW <!-- id: 15 -->
