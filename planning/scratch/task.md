@@ -1,28 +1,27 @@
-# Task: Implement Secret Storage Interface (Story 044)
+# Story 038: Provider Schema Implementation
 
-## Overview
-Create an abstraction layer for secret storage with a dev-only plaintext implementation.
+## Tasks
 
-## Checklist
+- [/] Create Provider Model
+  - [/] Create `provider.model.js` with Mongoose schema
+  - [ ] Define provider types enum as single source of truth
+  - [ ] Add URL validation for `baseUrl` field
+  - [ ] Create unique index on `name` field
+  - [ ] Enable timestamps
 
-### Planning
-- [x] Review story requirements and codebase patterns
-- [x] Create implementation plan
+- [ ] Create Provider Zod Schema
+  - [ ] Create `provider.schema.js` with Zod validation
+  - [ ] Create schema for Provider creation
+  - [ ] Create schema for Provider updates
 
-### Implementation
-- [x] Create `services/secrets` directory structure
-- [x] Implement `ISecretStore` interface
-- [x] Implement `PlaintextInsecureNightmareSecretStore` with internal Mongoose schema
-- [x] Implement `SecretStoreFactory` with singleton pattern
-- [x] Create `index.js` re-exports
+- [ ] Create Provider Model Tests
+  - [ ] Test success case with all required fields
+  - [ ] Test validation error for missing required fields
+  - [ ] Test enum validation for invalid `type` values
+  - [ ] Test duplicate name error (requires DB)
+  - [ ] Test optional `apiKeyRef` field handling
+  - [ ] Test URL validation
 
-### Testing
-- [x] Create test file with mongodb-memory-server setup
-- [x] Test store and retrieve functionality
-- [x] Test exists check (positive and negative)
-- [x] Test delete functionality
-- [x] Test factory returns PlaintextInsecureNightmareSecretStore
-
-### Finalization
-- [x] Update story checkboxes
-- [x] Update backlog status
+- [ ] Update story file and backlog
+  - [ ] Mark acceptance criteria checkboxes
+  - [ ] Update backlog status
