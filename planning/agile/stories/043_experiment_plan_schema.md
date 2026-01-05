@@ -1,6 +1,6 @@
 # ExperimentPlan Schema
 
-- **Status:** NOT READY
+- **Status:** IN-PROGRESS
 - **Points:** 3
 - **Story ID:** 043
 - **Type:** Feature
