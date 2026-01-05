@@ -1,27 +1,7 @@
 const { z } = require('zod');
 const mongoose = require('mongoose');
 const Tool = require('../models/tool.model');
-
-// Zod schema for tool validation
-const toolSchema = z.object({
-    namespace: z.string()
-        .min(1, 'Namespace is required')
-        .regex(/^[a-zA-Z0-9_]+$/, 'Namespace must be alphanumeric with underscores'),
-    name: z.string()
-        .min(1, 'Name is required')
-        .regex(/^[a-zA-Z0-9_]+$/, 'Name must be alphanumeric with underscores'),
-    description: z.string()
-        .min(1, 'Description is required'),
-    parameters: z.object({}).passthrough()
-        .refine((data) => {
-            // Basic JSON Schema structure check
-            return typeof data === 'object' && data !== null;
-        }, {
-            message: "Parameters must be a valid JSON Schema object"
-        }),
-    code: z.string()
-        .min(1, 'Code is required')
-});
+const { toolSchema, toolUpdateSchema } = require('../models/schemas/tool.schema');
 
 const createTool = async (req, res, next) => {
     try {
@@ -99,27 +79,6 @@ const getTool = async (req, res, next) => {
         next(error);
     }
 };
-
-// Partial schema for updates - all fields optional but validated if present
-const toolUpdateSchema = z.object({
-    namespace: z.string()
-        .min(1, 'Namespace cannot be empty')
-        .regex(/^[a-zA-Z0-9_]+$/, 'Namespace must be alphanumeric with underscores')
-        .optional(),
-    name: z.string()
-        .min(1, 'Name cannot be empty')
-        .regex(/^[a-zA-Z0-9_]+$/, 'Name must be alphanumeric with underscores')
-        .optional(),
-    description: z.string().optional(),
-    parameters: z.object({}).passthrough()
-        .refine((data) => {
-            return typeof data === 'object' && data !== null;
-        }, {
-            message: "Parameters must be a valid JSON Schema object"
-        })
-        .optional(),
-    code: z.string().optional()
-});
 
 const updateTool = async (req, res, next) => {
     try {
