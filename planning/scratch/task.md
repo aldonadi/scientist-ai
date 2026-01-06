@@ -1,13 +1,14 @@
-# Task: Implement Logger Service (Story 019)
+# Task: Implement Container Pool Manager
 
-- [ ] Planning <!-- id: 0 -->
-    - [x] Research existing EventBus implementation <!-- id: 1 -->
-    - [x] Create Implementation Plan <!-- id: 2 -->
-- [ ] Execution <!-- id: 3 -->
-    - [x] Update Backlog Status to IN-PROGRESS <!-- id: 4 -->
-    - [x] Implement `Logger` service <!-- id: 5 -->
-    - [x] Create Unit/Integration Tests for Logger <!-- id: 6 -->
-- [x] Verification <!-- id: 7 -->
-    - [x] Run Tests and Ensure Pass <!-- id: 8 -->
-    - [x] Mark User Story Checkboxes <!-- id: 9 -->
-    - [x] Update Backlog Status to REVIEW <!-- id: 10 -->
+- [x] Update backlog status to IN-PROGRESS <!-- id: 0 -->
+- [x] Create implementation plan <!-- id: 1 -->
+- [x] Implement `ContainerPoolManager` class <!-- id: 2 -->
+    - [x] Implement `Container` domain class <!-- id: 7 -->
+    - [x] Singleton pattern <!-- id: 3 -->
+    - [x] `getContainer(envConfig)` method <!-- id: 4 -->
+    - [x] `releaseContainer(containerId)` method <!-- id: 5 -->
+    - [x] `prune()` method <!-- id: 6 -->
+
+- [x] Add unit tests for `ContainerPoolManager` <!-- id: 8 -->
+- [x] Mark story checkboxes <!-- id: 9 -->
+- [x] Update backlog status to REVIEW <!-- id: 10 -->

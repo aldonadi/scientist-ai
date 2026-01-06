@@ -1,31 +1,48 @@
-# Walkthrough - Logger Service (Story 019)
+# Container Pool Manager Implementation Walkthrough
 
-I have implemented the persistent `Logger` service as requested.
+I have implemented the `ContainerPoolManager` to effectively manage a pool of warm Docker containers, ensuring fast tool execution start times.
 
 ## Changes
 
-### 1. Logger Service
-Implemented `Logger` class in `backend/src/services/logger.service.js`.
-- It subscribes to the `EventBus` for the `LOG` event and writes to MongoDB using the `Log` model.
-- It also subscribes to `EXPERIMENT_START`, `STEP_START`, and `EXPERIMENT_END` events to automatically generate system logs without explicit calls from the business logic.
+### 1. `Container` Domain Object
+A wrapper class `Container` ([backend/src/domain/container.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/domain/container.js)) was created to encapsulate the Docker container instance. 
+- It tracks status (`READY`, `BUSY`, `TERMINATED`).
+- It provides an `execute(cmd)` method for running commands inside the container.
+- It provides a `destroy()` method for cleanup.
 
-### 2. Tests
-Created `backend/test/services/logger.service.test.js`.
-- Verified that `LOG` events create database entries.
-- Verified that lifecycle events (`EXPERIMENT_START`, etc.) create database entries with correct formatting.
-- Verified error handling (silent failure on DB error to avoid crashing the process).
+### 2. `ContainerPoolManager` Service
+The `ContainerPoolManager` ([backend/src/services/container-pool.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/container-pool.service.js)) implements the singleton pattern to manage the pool.
+- `initialize()`: Pre-warms the pool to the configured size (default 2).
+- `acquire()`: Returns a ready container immediately and triggers an async replenishment.
+- `_createContainer()`: Spawns new containers with:
+    - `NetworkMode: 'none'` (Security)
+    - `Memory: 128MB` (Resource Limit)
+    - `Image: 'python:3.9-slim'`
+
+### 3. Queue Logic
+- If the pool is empty, `acquire()` automatically creates a new container on-demand (fallback).
+- Replenishment happens in the background to ensure subsequent requests are fast.
 
 ## Verification Results
 
 ### Automated Tests
-Ran `jest test/services/logger.service.test.js` in the backend directory.
+I implemented unit tests in `container-pool.service.test.js` covering:
+- Initialization and Image Pulling.
+- Acquisition and Async Replenishment.
+- On-demand creation when pool is empty.
+- Shutdown/Cleanup.
 
+Tests passed successfully:
 ```
- PASS  test/services/logger.service.test.js
-  Logger Service
-    ✓ should create a log entry when LOG event is emitted (150 ms)
-    ✓ should invalid log entry fail silently (console error) but not crash (117 ms)
-    ✓ should auto-log EXPERIMENT_START (116 ms)
-    ✓ should auto-log STEP_START (112 ms)
-    ✓ should auto-log EXPERIMENT_END (111 ms)
+ PASS  src/services/container-pool.service.test.js
+  ContainerPoolManager
+    initialize
+      ✓ should pre-warm the pool to the configured size (59 ms)
+      ✓ should pull image if not present (26 ms)
+    acquire 
+      ✓ should return a container from the pool immediately (14 ms)
+      ✓ should trigger replenishment asynchronously (46 ms)
+      ✓ should create a container on-demand if pool is empty (46 ms)
+    shutdown
+      ✓ should destroy all containers in the pool (14 ms)
 ```
