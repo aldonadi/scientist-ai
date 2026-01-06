@@ -43,7 +43,7 @@ Status can be:
 | 014_api_update_plan                                | 3      | DONE        |
 | 045_api_delete_plan                                | 1      | DONE        |
 | 015_experiment_model_schema                        | 1      | DONE        |
-| 016_log_model_schema                               | 1      | NOT READY   |
+| 016_log_model_schema                               | 1      | DONE        |
 | 017_api_launch_experiment                          | 3      | NOT READY   |
 | 018_event_bus_system                               | 3      | NOT READY   |
 | 019_logger_service                                 | 3      | NOT READY   |
