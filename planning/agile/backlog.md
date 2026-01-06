@@ -44,13 +44,13 @@ Status can be:
 | 045_api_delete_plan                                | 1      | DONE        |
 | 015_experiment_model_schema                        | 1      | DONE        |
 | 016_log_model_schema                               | 1      | DONE        |
-| 017_api_launch_experiment                          | 3      | NOT READY   |
-| 018_event_bus_system                               | 3      | NOT READY   |
-| 019_logger_service                                 | 3      | NOT READY   |
-| 020_container_pool_manager                         | 8      | NOT READY   |
-| 021_container_execution_wrapper                    | 5      | NOT READY   |
-| 022_llm_provider_interface                         | 3      | NOT READY   |
-| 023_ollama_integration                             | 3      | NOT READY   |
+| 017_api_launch_experiment                          | 3      | READY       |
+| 018_event_bus_system                               | 3      | READY       |
+| 019_logger_service                                 | 3      | READY       |
+| 020_container_pool_manager                         | 8      | READY       |
+| 021_container_execution_wrapper                    | 5      | READY       |
+| 022_llm_provider_interface                         | 3      | READY       |
+| 023_ollama_integration                             | 3      | READY       |
 | 024_orchestrator_initialization                    | 5      | NOT READY   |
 | 025_orchestrator_step_loop                         | 8      | NOT READY   |
 | 026_role_prompt_construction                       | 5      | NOT READY   |
