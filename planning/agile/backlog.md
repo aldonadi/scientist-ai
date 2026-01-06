@@ -40,7 +40,7 @@ Status can be:
 | 011_api_create_plan                                | 2      | DONE        |
 | 012_api_list_plans                                 | 2      | DONE        |
 | 013_api_get_plan                                   | 1      | DONE        |
-| 014_api_update_plan                                | 3      | READY       |
+| 014_api_update_plan                                | 3      | DONE        |
 | 015_experiment_model_schema                        | 1      | NOT READY   |
 | 016_log_model_schema                               | 1      | NOT READY   |
 | 017_api_launch_experiment                          | 3      | NOT READY   |

@@ -1,6 +1,6 @@
 # Implement Update Plan API
 
-- **Status:** NOT READY
+- **Status:** DONE
 - **Points:** 3
 - **Story ID:** 014
 - **Type:** Feature
@@ -14,7 +14,7 @@ Implement PUT /api/plans/:id.
 **So that** I can refine my experiment.
 
 ## Acceptance Criteria
-- [ ] Updates full structure.
+- [x] Updates full structure.
 
 ## Testing
 1. Modify a role in a plan.
@@ -22,3 +22,4 @@ Implement PUT /api/plans/:id.
 3. Verify update.
 
 ## Review Log
+**1/5/2026** - Accepted by Product Owner

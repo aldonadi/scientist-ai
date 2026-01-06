@@ -130,3 +130,54 @@ exports.getPlan = async (req, res, next) => {
         next(error);
     }
 };
+
+/**
+ * Update a plan by ID.
+ * PUT /api/plans/:id
+ */
+exports.updatePlan = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ error: 'Invalid ID format' });
+        }
+
+        // 1. Validate References (Provider, Tools)
+        const referenceErrors = await validateReferences(req.body);
+        if (referenceErrors.length > 0) {
+            return res.status(400).json({
+                error: 'Validation Error',
+                messages: referenceErrors
+            });
+        }
+
+        // 2. Update Plan
+        const updatedPlan = await ExperimentPlan.findByIdAndUpdate(
+            id,
+            req.body,
+            { new: true, runValidators: true, context: 'query' }
+        );
+
+        if (!updatedPlan) {
+            return res.status(404).json({ error: 'Plan not found' });
+        }
+
+        res.status(200).json(updatedPlan);
+    } catch (error) {
+        if (error.code === 11000) {
+            return res.status(400).json({
+                error: 'Validation Error',
+                message: 'Plan name must be unique.'
+            });
+        }
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(val => val.message);
+            return res.status(400).json({
+                error: 'Validation Error',
+                messages: messages
+            });
+        }
+        next(error);
+    }
+};

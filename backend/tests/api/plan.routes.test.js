@@ -202,4 +202,110 @@ describe('Plan API Integration Tests', () => {
             expect(res.body.error).toBe('Invalid ID format');
         });
     });
+
+    describe('PUT /api/plans/:id', () => {
+        let planId;
+
+        beforeEach(async () => {
+            const plan = await ExperimentPlan.create({
+                name: 'Original Plan',
+                description: 'Original Description',
+                roles: [],
+                maxSteps: 5
+            });
+            planId = plan._id;
+        });
+
+        it('should successfully update a plan', async () => {
+            const updateData = {
+                name: 'Updated Plan',
+                description: 'Updated Description',
+                maxSteps: 20
+            };
+
+            const res = await request(app)
+                .put(`/api/plans/${planId}`)
+                .send(updateData);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.name).toBe('Updated Plan');
+            expect(res.body.description).toBe('Updated Description');
+            expect(res.body.maxSteps).toBe(20);
+
+            // Verify in DB
+            const dbPlan = await ExperimentPlan.findById(planId);
+            expect(dbPlan.name).toBe('Updated Plan');
+        });
+
+        it('should update roles and validate references', async () => {
+            const updateData = {
+                roles: [
+                    {
+                        name: 'Updated Role',
+                        systemPrompt: 'sys prompt',
+                        tools: [validToolId],
+                        modelConfig: { provider: validProviderId, modelName: 'test-model' }
+                    }
+                ]
+            };
+
+            const res = await request(app)
+                .put(`/api/plans/${planId}`)
+                .send(updateData);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.roles.length).toBe(1);
+            expect(res.body.roles[0].name).toBe('Updated Role');
+        });
+
+        it('should fail when provider ID does not exist in update', async () => {
+            const updateData = {
+                roles: [
+                    {
+                        name: 'Role',
+                        systemPrompt: 'sys',
+                        modelConfig: { provider: new mongoose.Types.ObjectId(), modelName: 'test' }
+                    }
+                ]
+            };
+
+            const res = await request(app)
+                .put(`/api/plans/${planId}`)
+                .send(updateData);
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.error).toBe('Validation Error');
+        });
+
+        it('should fail with duplicate plan name', async () => {
+            await ExperimentPlan.create({
+                name: 'Existing Plan',
+                roles: [],
+                maxSteps: 5
+            });
+
+            const res = await request(app)
+                .put(`/api/plans/${planId}`)
+                .send({ name: 'Existing Plan' });
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.message).toBe('Plan name must be unique.');
+        });
+
+        it('should return 404 if plan does not exist', async () => {
+            const nonExistentId = new mongoose.Types.ObjectId();
+            const res = await request(app)
+                .put(`/api/plans/${nonExistentId}`)
+                .send({ name: 'New Name' });
+
+            expect(res.statusCode).toBe(404);
+            expect(res.body.error).toBe('Plan not found');
+        });
+
+        it('should return 400 if ID is invalid', async () => {
+            const res = await request(app).put('/api/plans/invalid-id');
+            expect(res.statusCode).toBe(400);
+            expect(res.body.error).toBe('Invalid ID format');
+        });
+    });
 });
