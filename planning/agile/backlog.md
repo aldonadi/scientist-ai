@@ -48,7 +48,7 @@ Status can be:
 | 018_event_bus_system                               | 3      | DONE        |
 | 019_logger_service                                 | 3      | DONE        |
 | 020_container_pool_manager                         | 8      | REVIEW      |
-| 021_container_execution_wrapper                    | 5      | READY       |
+| 021_container_execution_wrapper                    | 5      | IN-PROGRESS |
 | 022_llm_provider_interface                         | 3      | READY       |
 | 023_ollama_integration                             | 3      | READY       |
 | 024_orchestrator_initialization                    | 5      | NOT READY   |

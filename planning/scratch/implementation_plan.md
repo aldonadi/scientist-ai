@@ -1,52 +1,43 @@
-# Container Pool Manager Implementation Plan
+# Implementation Plan - Container Execution Wrapper (Story 021)
 
-Implement the `ContainerPoolManager` to manage a warm pool of Docker containers for executing tools efficiently.
+## Goal Description
+Implement the `Container` class which serves as a wrapper around Docker containers, providing a safe sandbox for executing Python scripts. This corresponds to User Story 021.
 
 ## User Review Required
-
-> [!IMPORTANT]
-> This implementation requires the `docker` daemon to be running and accessible by the backend process.
-> The `ContainerPoolManager` will automatically pull the standard python image (e.g., `python:3.9-slim`) if not present, which might take time on first run.
+> [!WARNING]
+> The `docker` CLI was not found in the current environment. Integration tests requiring actual Docker execution may fail or be skipped. The implementation will rely primarily on `dockerode` and unit tests with mocks. I will still implement the integration tests for future use when Docker is available.
 
 ## Proposed Changes
 
 ### Backend
 
-#### [NEW] [container-pool.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/container-pool.service.js)
+#### [NEW] [container.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/execution/container.js)
+- Implement `Container` class.
+- **Dependencies**: `dockerode`, `fs/promises` (or `tmp` file usage), `path`.
+- **Members**: `id`, `status` (Enum), `expiry`.
+- **Methods**:
+  - `constructor(dockerClient, id)`
+  - `execute(script, env, args)`: Handles file creation, container execution, output capturing.
+  - `destroy()`: Cleans up the container.
 
-- **Class**: `ContainerPoolManager`
-- **Responsibilities**:
-    - Manage a pool of "warm" Docker containers.
-    - Provide `acquire()` method to get a container.
-    - Provide `replenish()` method to maintain pool size.
-    - Provide `shutdown()` to clean up.
-- **Dependencies**: `dockerode`, `uuid`, `config` (if available, else process.env).
-- **Structure**:
-    - `constructor()`: Initialize docker client, pool array.
-    - `async initialize()`: Start initial replenishment.
-    - `async acquire()`: Return a container object. If pool empty, spark creation (blocking or fast-path).
-    - `async _createContainer()`: Internal method to spawn a container with limits (network disabled/restricted, default user, memory limits).
-    - `async _replenish()`: Fill pool to `poolSize`.
-    - `async shutdown()`: cleanup.
+#### [NEW] [container.test.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/execution/container.test.js)
+- Unit tests using a mocked `dockerode` instance.
+- Verify `execute` flow (file copy, exec start, stream handling).
+- Verify `destroy` flow.
 
-#### [NEW] [container.domain.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/domain/container.js) (Optional)
-
-The spec mentions `Container` as a domain object. I might define a simple wrapper class or just use the raw dockerode container object enriched with metadata. A wrapper is cleaner.
-- **Class**: `Container`
-- **Properties**: `id`, `dockerContainer` (dockerode instance), `expiry`.
-- **Methods**: `destroy()`, `execute(cmd)`.
+#### [NEW] [container.integration.test.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/execution/container.integration.test.js)
+- Real docker tests (will likely fail in current env but good to have).
+- Run simple python scripts and verify output.
 
 ## Verification Plan
 
 ### Automated Tests
-- **Unit Tests**: Create `backend/src/services/container-pool.service.test.js` using `jest` and mocking `dockerode`.
-    - Test `acquire` gets a container.
-    - Test `replenish` calls docker create.
-    - Test `shutdown` removes containers.
-    - Test error handling (docker daemon down).
+- **Unit Tests**: `npm test src/execution/container.test.js`
+    - Creates a mock Docker client.
+    - Simulates success and error paths.
+- **Integration Tests**: `npm test src/execution/container.integration.test.js`
+    - Tries to connect to real Docker daemon.
+    - **Note**: Expected to fail if Docker is not present.
 
 ### Manual Verification
-1.  Start the backend (ensure docker is running).
-2.  Check docker stats (`docker ps`) to see warm containers (e.g. 2 idle python containers).
-3.  (Ideally) Hit an endpoint that triggers a tool execution (but tool execution is not yet implemented, so we verify via logs or unit tests mainly).
-4.  Kill the backend; verify containers are cleaned up (via `shutdown` hook if integrated, otherwise manual cleanup might be needed during dev).
+- None required beyond automated tests as this is a backend service component.

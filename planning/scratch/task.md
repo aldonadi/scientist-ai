@@ -1,14 +1,11 @@
-# Task: Implement Container Pool Manager
+# Task: Implement Container Execution Wrapper (Story 021)
 
-- [x] Update backlog status to IN-PROGRESS <!-- id: 0 -->
-- [x] Create implementation plan <!-- id: 1 -->
-- [x] Implement `ContainerPoolManager` class <!-- id: 2 -->
-    - [x] Implement `Container` domain class <!-- id: 7 -->
-    - [x] Singleton pattern <!-- id: 3 -->
-    - [x] `getContainer(envConfig)` method <!-- id: 4 -->
-    - [x] `releaseContainer(containerId)` method <!-- id: 5 -->
-    - [x] `prune()` method <!-- id: 6 -->
-
-- [x] Add unit tests for `ContainerPoolManager` <!-- id: 8 -->
-- [x] Mark story checkboxes <!-- id: 9 -->
-- [x] Update backlog status to REVIEW <!-- id: 10 -->
+- [x] Update `planning/agile/backlog.md` status to IN-PROGRESS <!-- id: 0 -->
+- [x] Check environment (Docker availability, package.json dependencies) <!-- id: 1 -->
+- [x] Create `implementation_plan.md` <!-- id: 2 -->
+- [ ] Implement `backend/src/execution/container.js` <!-- id: 3 -->
+- [ ] Implement `backend/src/execution/container.test.js` <!-- id: 4 -->
+- [ ] Implement `backend/src/execution/container.integration.test.js` <!-- id: 5 -->
+- [ ] Run verification (unit and integration tests) <!-- id: 6 -->
+- [ ] Update story checkboxes in `planning/agile/stories/021_container_execution_wrapper.md` <!-- id: 7 -->
+- [ ] Update `planning/agile/backlog.md` status to REVIEW <!-- id: 8 -->
