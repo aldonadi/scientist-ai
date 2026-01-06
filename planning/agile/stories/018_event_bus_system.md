@@ -1,6 +1,6 @@
 # Implement Internal Event Bus
 
-- **Status:** NOT READY
+- **Status:** DONE
 - **Points:** 3
 - **Story ID:** 018
 - **Type:** Feature
@@ -21,3 +21,4 @@ Create the `EventBus` class extending Node.js EventEmitter, with typed events.
 1. Unit test: Create bus, subscribe, emit, verify callback.
 
 ## Review Log
+**1/6/2026** - Accepted by Product Owner
