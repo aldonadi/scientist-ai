@@ -1,6 +1,6 @@
 # Create Experiment Model
 
-- **Status:** NOT READY
+- **Status:** DONE
 - **Points:** 1
 - **Story ID:** 015
 - **Type:** Feature
