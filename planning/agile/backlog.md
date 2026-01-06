@@ -41,7 +41,7 @@ Status can be:
 | 012_api_list_plans                                 | 2      | DONE        |
 | 013_api_get_plan                                   | 1      | DONE        |
 | 014_api_update_plan                                | 3      | DONE        |
-| 045_api_delete_plan                                | 1      | NOT READY   |
+| 045_api_delete_plan                                | 1      | IN-PROGRESS |
 | 015_experiment_model_schema                        | 1      | NOT READY   |
 | 016_log_model_schema                               | 1      | NOT READY   |
 | 017_api_launch_experiment                          | 3      | NOT READY   |

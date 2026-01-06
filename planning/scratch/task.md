@@ -1,0 +1,9 @@
+- [ ] Read requirements in `planning/SPEC.md` and `planning/agile/stories/045_api_delete_plan.md` <!-- id: 0 -->
+- [ ] Update `planning/agile/backlog.md` to mark story 045 as IN-PROGRESS <!-- id: 1 -->
+- [ ] Create implementation plan <!-- id: 2 -->
+- [ ] Implement `deletePlan` controller method in `backend/src/controllers/plan.controller.js` <!-- id: 3 -->
+- [ ] Add DELETE route in `backend/src/routes/plan.routes.js` <!-- id: 4 -->
+- [ ] Add integration tests in `backend/test/plan.routes.test.js` <!-- id: 5 -->
+- [ ] Verify implementation with tests <!-- id: 6 -->
+- [ ] Mark checklist items in `planning/agile/stories/045_api_delete_plan.md` <!-- id: 7 -->
+- [ ] Update `planning/agile/backlog.md` to mark story 045 as REVIEW <!-- id: 8 -->
