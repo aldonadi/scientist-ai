@@ -1,6 +1,6 @@
 # Implement Delete Plan API
 
-- **Status:** NOT READY
+- **Status:** READY
 - **Points:** 1
 - **Story ID:** 045
 - **Type:** Feature
@@ -19,7 +19,7 @@ Implement the `DELETE /api/plans/:id` endpoint to allow users to permanently rem
 ### constraints
 - **Referential Integrity**: 
     - Ideally, we should check if any **Experiments** reference this plan.
-    - If an Experiment references this plan, we should **Prevent Deletion** (Return 409 Conflict) OR **Soft Delete** (mark as archived).
+    - If an Experiment references this plan, we should **Soft Delete** (mark as archived).
     - *Decision for MVP*: Hard Delete is acceptable, but logging a warning if experiments exist is a plus. For strict safety, if `Experiments` exist with this `planId`, return 400 or 409.
 
 ## Response Specification
@@ -36,20 +36,20 @@ Returns the deleted document or a success message.
 ### Errors
 - **400 Bad Request**: Invalid ID format.
 - **404 Not Found**: Plan ID does not exist.
-- **409 Conflict**: (Optional but recommended) Plan is in use by an Experiment.
+- **409 Conflict**: Plan is in use by an Experiment.
 - **500 Internal Server Error**: Database failures.
 
 ## Acceptance Criteria
 - [ ] Returns 200 OK on successful deletion.
 - [ ] Returns 404 if plan not found.
 - [ ] Returns 400 if ID is invalid.
-- [ ] (Bonus) Returns 409 if active experiments are using this plan.
+- [ ] Returns 409 if active experiments are using this plan.
 
 ## Testing Rules
 1. **Unit/Integration Tests**:
     - `DELETE /api/plans/:id` with valid, unused ID -> 200.
     - `DELETE /api/plans/:id` with non-existent ID -> 404.
     - `DELETE /api/plans/:id` with invalid ID -> 400.
-    - (If implemented) `DELETE` with ID used by an Experiment -> 409.
+    - `DELETE` with ID used by an Experiment -> 409.
 
 ## Review Log
