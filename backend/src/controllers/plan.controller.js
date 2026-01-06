@@ -103,3 +103,30 @@ exports.listPlans = async (req, res, next) => {
         next(error);
     }
 };
+
+/**
+ * Get a single plan by ID.
+ * GET /api/plans/:id
+ */
+exports.getPlan = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        // Basic ID validation is handled by mongoose usually, but explicit check is good
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ error: 'Invalid ID format' });
+        }
+
+        const plan = await ExperimentPlan.findById(id)
+            .populate('roles.tools') // Populate tool details
+            .lean();
+
+        if (!plan) {
+            return res.status(404).json({ error: 'Plan not found' });
+        }
+
+        res.status(200).json(plan);
+    } catch (error) {
+        next(error);
+    }
+};

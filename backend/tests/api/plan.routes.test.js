@@ -159,4 +159,47 @@ describe('Plan API Integration Tests', () => {
             expect(planA.updatedAt).toBeDefined();
         });
     });
+
+    describe('GET /api/plans/:id', () => {
+        let planId;
+
+        beforeEach(async () => {
+            const plan = await ExperimentPlan.create({
+                name: 'Detail Test Plan',
+                description: 'For testing get by ID',
+                roles: [{
+                    name: 'Test Role',
+                    systemPrompt: 'sys prompt',
+                    tools: [validToolId],
+                    modelConfig: { provider: validProviderId, modelName: 'test-model' }
+                }],
+                maxSteps: 5
+            });
+            planId = plan._id;
+        });
+
+        it('should return a valid plan with populated tools', async () => {
+            const res = await request(app).get(`/api/plans/${planId}`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.name).toBe('Detail Test Plan');
+            expect(res.body.roles[0].tools[0]).toHaveProperty('name', 'test_tool');
+            expect(res.body.roles[0].tools[0]).toHaveProperty('namespace', 'test');
+        });
+
+        it('should return 404 if plan does not exist', async () => {
+            const nonExistentId = new mongoose.Types.ObjectId();
+            const res = await request(app).get(`/api/plans/${nonExistentId}`);
+
+            expect(res.statusCode).toBe(404);
+            expect(res.body.error).toBe('Plan not found');
+        });
+
+        it('should return 400 if ID is invalid', async () => {
+            const res = await request(app).get('/api/plans/invalid-id-format');
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.error).toBe('Invalid ID format');
+        });
+    });
 });

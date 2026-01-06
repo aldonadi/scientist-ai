@@ -8,4 +8,7 @@ router.post('/', planController.createPlan);
 // GET /api/plans - List all experiment plans
 router.get('/', planController.listPlans);
 
+// GET /api/plans/:id - Get a single experiment plan
+router.get('/:id', planController.getPlan);
+
 module.exports = router;
