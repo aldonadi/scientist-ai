@@ -5,7 +5,58 @@ Implement the `Container` class which serves as a wrapper around Docker containe
 
 ## User Review Required
 > [!WARNING]
-> The `docker` CLI was not found in the current environment. Integration tests requiring actual Docker execution may fail or be skipped. The implementation will rely primarily on `dockerode` and unit tests with mocks. I will still implement the integration tests for future use when Docker is available.
+> The `docker` CLI was not found in the current environment. Please refer to the **Prerequisite: Docker Installation** section below for setup instructions.
+
+### Prerequisite: Docker Installation (Ubuntu 24.04 LTS)
+
+**Note:** This procedure installs the latest stable version of Docker Engine (Community Edition) from the official Docker repository, which is the recommended approach for Ubuntu.
+
+1.  **Remove conflicting packages (if any):**
+    *   *Theory:* Ensure no unofficial or old versions clash with the new installation.
+    ```bash
+    for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg; done
+    ```
+
+2.  **Set up Docker's `apt` repository:**
+    *   *Theory:* Add Docker's official GPG key and repository URL to your system's package source list so `apt` knows where to trust and download the packages from.
+    ```bash
+    # Add Docker's official GPG key:
+    sudo apt-get update
+    sudo apt-get install ca-certificates curl
+    sudo install -m 0755 -d /etc/apt/keyrings
+    sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+    sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+    # Add the repository to Apt sources:
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+      $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+      sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    sudo apt-get update
+    ```
+    *   *Expected Output (Final step):* You should see lines hitting `https://download.docker.com/linux/ubuntu` in the `apt-get update` output.
+
+3.  **Install the specific packages:**
+    *   *Theory:* We install the core engine (`docker-ce`), the CLI tool (`docker-ce-cli`), the runtime (`containerd.io`), and standard plugins.
+    ```bash
+    sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    ```
+
+4.  **Verify the installation:**
+    *   *Theory:* Run the "hello-world" image to check if the daemon is running and can pull images.
+    ```bash
+    sudo docker run hello-world
+    ```
+    *   *Expected Output:* A message saying "Hello from Docker! This message shows that your installation appears to be working correctly."
+
+5.  **(Optional but Recommended) Post-installation steps for Linux:**
+    *   *Theory:* Improve usability by allowing you to run docker commands without `sudo`.
+    ```bash
+    sudo groupadd docker
+    sudo usermod -aG docker $USER
+    newgrp docker
+    ```
+    *   *Verification:* Run `docker run hello-world` (without `sudo`).
 
 ## Proposed Changes
 

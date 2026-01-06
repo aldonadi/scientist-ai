@@ -1,6 +1,7 @@
 # Task: Implement Container Execution Wrapper (Story 021)
 
 - [x] Update `planning/agile/backlog.md` status to IN-PROGRESS <!-- id: 0 -->
+- [x] Research and document Docker installation procedure for Ubuntu 24.04 <!-- id: 10 -->
 - [x] Check environment (Docker availability, package.json dependencies) <!-- id: 1 -->
 - [x] Create `implementation_plan.md` <!-- id: 2 -->
 - [ ] Implement `backend/src/execution/container.js` <!-- id: 3 -->
