@@ -123,4 +123,40 @@ describe('Plan API Integration Tests', () => {
             expect(res.body.messages).toBeDefined();
         });
     });
+
+    describe('GET /api/plans', () => {
+        const createPlan = async (name) => {
+            return ExperimentPlan.create({
+                name,
+                description: 'Test Description',
+                roles: [],
+                maxSteps: 5,
+                goals: [{ description: 'Goal 1', conditionScript: 'True' }]
+            });
+        };
+
+        it('should return an empty list when no plans exist', async () => {
+            const res = await request(app).get('/api/plans');
+            expect(res.statusCode).toBe(200);
+            expect(res.body).toEqual([]);
+        });
+
+        it('should return a list of plans with summary fields', async () => {
+            await createPlan('Plan A');
+            await createPlan('Plan B');
+
+            const res = await request(app).get('/api/plans');
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.length).toBe(2);
+
+            const planA = res.body.find(p => p.name === 'Plan A');
+            expect(planA).toBeDefined();
+            expect(planA.description).toBe('Test Description');
+            expect(planA.roleCount).toBe(0);
+            expect(planA.goalCount).toBe(1);
+            expect(planA.createdAt).toBeDefined();
+            expect(planA.updatedAt).toBeDefined();
+        });
+    });
 });

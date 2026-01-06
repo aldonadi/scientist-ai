@@ -1,6 +1,6 @@
 # Implement List Plans API
 
-- **Status:** NOT READY
+- **Status:** DONE
 - **Points:** 2
 - **Story ID:** 012
 - **Type:** Feature
@@ -14,10 +14,11 @@ Implement GET /api/plans.
 **So that** I can select one to run.
 
 ## Acceptance Criteria
-- [ ] Returns summary list (maybe minimal fields to save bandwidth).
-- [ ] Pagination (optional for now).
+- [x] Returns summary list (maybe minimal fields to save bandwidth).
+- [x] Pagination (optional for now).
 
 ## Testing
 1. Call GET /api/plans.
 
 ## Review Log
+**1/5/26** - Accepted by Product Owner

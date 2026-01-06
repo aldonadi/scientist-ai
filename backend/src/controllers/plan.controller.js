@@ -76,3 +76,30 @@ exports.createPlan = async (req, res, next) => {
         next(error);
     }
 };
+
+/**
+ * List all plans with summary details.
+ * GET /api/plans
+ */
+exports.listPlans = async (req, res, next) => {
+    try {
+        const plans = await ExperimentPlan.find()
+            .select('name description roles goals createdAt updatedAt')
+            .lean();
+
+        // Transform results to add counts
+        const summary = plans.map(plan => ({
+            _id: plan._id,
+            name: plan.name,
+            description: plan.description,
+            roleCount: plan.roles ? plan.roles.length : 0,
+            goalCount: plan.goals ? plan.goals.length : 0,
+            createdAt: plan.createdAt,
+            updatedAt: plan.updatedAt
+        }));
+
+        res.status(200).json(summary);
+    } catch (error) {
+        next(error);
+    }
+};

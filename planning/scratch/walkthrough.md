@@ -1,40 +1,53 @@
-# Walkthrough - Create Plan API (Story 011)
+# Walkthrough - List Plans API
 
-I have implemented the `POST /api/plans` endpoint, enabling users to save Experiment Plans.
+Implemented `GET /api/plans` to retrieve a list of experiment plans with summary details.
 
 ## Changes
 
-### Endpoint
-- **POST /api/plans**: Accepts a JSON body validating against the `ExperimentPlan` schema.
-- **Validation**: Enforces that referenced `Provider` and `Tool` IDs exist in the database before saving.
+### 1. Controller Update
+Modified `backend/src/controllers/plan.controller.js` to add `listPlans`.
 
-### Codebase
-- **New Controller**: `backend/src/controllers/plan.controller.js`
-- **New Routes**: `backend/src/routes/plan.routes.js`
-- **App Update**: Registered routes in `backend/src/app.js`
+```javascript
+exports.listPlans = async (req, res, next) => {
+    try {
+        const plans = await ExperimentPlan.find()
+            .select('name description roles goals createdAt updatedAt')
+            .lean();
+
+        // Transform results to add counts
+        const summary = plans.map(plan => ({
+            _id: plan._id,
+            name: plan.name,
+            description: plan.description,
+            roleCount: plan.roles ? plan.roles.length : 0,
+            goalCount: plan.goals ? plan.goals.length : 0,
+            createdAt: plan.createdAt,
+            updatedAt: plan.updatedAt
+        }));
+
+        res.status(200).json(summary);
+    } catch (error) {
+        next(error);
+    }
+};
+```
+
+### 2. Route Update
+Modified `backend/src/routes/plan.routes.js`.
+
+```javascript
+router.get('/', planController.listPlans);
+```
 
 ## Verification Results
 
 ### Automated Tests
-I created comprehensive integration tests in `backend/tests/api/plan.routes.test.js`.
+Ran `npm test tests/api/plan.routes.test.js` passed successfully.
 
-**Test Suite Results:**
 ```
-PASS  backend/tests/api/plan.routes.test.js
+PASS  tests/api/plan.routes.test.js
   Plan API Integration Tests
-    ✓ should create a valid plan (112 ms)
-    ✓ should fail when provider ID does not exist (23 ms)
-    ✓ should fail when tool ID does not exist (22 ms)
-    ✓ should fail with duplicate plan name (56 ms)
-    ✓ should fail with missing required fields (17 ms)
+    GET /api/plans
+      ✓ should return an empty list when no plans exist (18 ms)
+      ✓ should return a list of plans with summary fields (36 ms)
 ```
-
-### Manual Verification Steps
-1.  **Valid Plan**:
-    - Creation of a plan with a valid `Provider` (OpenAI type) and `Tool`.
-    - Response: `201 Created` with full plan object.
-2.  **Invalid References**:
-    - Sending a plan with a non-existent `Provider` ID returns `400 Bad Request` with message: `"Role[0] '...' : Provider ID '...' not found."`
-    - Sending a plan with a non-existent `Tool` ID returns `400 Bad Request`.
-3.  **Schema Validation**:
-    - Missing required fields returns `400 Bad Request`.

@@ -38,7 +38,7 @@ Status can be:
 | 044_secret_storage_interface                       | 3      | DONE        |
 | 010_plan_model_schema                              | 9      | CANCELLED   |
 | 011_api_create_plan                                | 2      | DONE        |
-| 012_api_list_plans                                 | 2      | IN-PROGRESS |
+| 012_api_list_plans                                 | 2      | DONE        |
 | 013_api_get_plan                                   | 1      | NOT READY   |
 | 014_api_update_plan                                | 3      | NOT READY   |
 | 015_experiment_model_schema                        | 1      | NOT READY   |
