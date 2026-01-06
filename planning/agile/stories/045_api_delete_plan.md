@@ -40,10 +40,10 @@ Returns the deleted document or a success message.
 - **500 Internal Server Error**: Database failures.
 
 ## Acceptance Criteria
-- [ ] Returns 200 OK on successful deletion.
-- [ ] Returns 404 if plan not found.
-- [ ] Returns 400 if ID is invalid.
-- [ ] Returns 409 if active experiments are using this plan.
+- [x] Returns 200 OK on successful deletion.
+- [x] Returns 404 if plan not found.
+- [x] Returns 400 if ID is invalid.
+- [x] Returns 409 if active experiments are using this plan.
 
 ## Testing Rules
 1. **Unit/Integration Tests**:
@@ -53,3 +53,4 @@ Returns the deleted document or a success message.
     - `DELETE` with ID used by an Experiment -> 409.
 
 ## Review Log
+- Implemented `DELETE /api/plans/:id` with referential integrity check against Experiments.

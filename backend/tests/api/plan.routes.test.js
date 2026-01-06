@@ -5,6 +5,7 @@ const app = require('../../src/app');
 const { Provider } = require('../../src/models/provider.model');
 const Tool = require('../../src/models/tool.model');
 const { ExperimentPlan } = require('../../src/models/experimentPlan.model');
+const { Experiment } = require('../../src/models/experiment.model');
 
 describe('Plan API Integration Tests', () => {
     let mongoServer;
@@ -304,6 +305,68 @@ describe('Plan API Integration Tests', () => {
 
         it('should return 400 if ID is invalid', async () => {
             const res = await request(app).put('/api/plans/invalid-id');
+            expect(res.statusCode).toBe(400);
+            expect(res.body.error).toBe('Invalid ID format');
+        });
+    });
+
+    describe('DELETE /api/plans/:id', () => {
+        let planId;
+
+        beforeEach(async () => {
+            const plan = await ExperimentPlan.create({
+                name: 'Delete Test Plan',
+                description: 'To be deleted',
+                roles: [],
+                maxSteps: 5
+            });
+            planId = plan._id;
+        });
+
+        afterEach(async () => {
+            await Experiment.deleteMany({});
+        });
+
+        it('should successfully delete an unused plan', async () => {
+            const res = await request(app).delete(`/api/plans/${planId}`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.message).toBe('Plan deleted successfully');
+            expect(res.body.id.toString()).toBe(planId.toString());
+
+            const dbPlan = await ExperimentPlan.findById(planId);
+            expect(dbPlan).toBeNull();
+        });
+
+        it('should return 409 if plan is used by an experiment', async () => {
+            // Create a referencing experiment
+            await Experiment.create({
+                planId: planId,
+                status: 'INITIALIZING',
+                currentStep: 0
+            });
+
+            const res = await request(app).delete(`/api/plans/${planId}`);
+
+            expect(res.statusCode).toBe(409);
+            expect(res.body.error).toBe('Conflict');
+            expect(res.body.message).toMatch(/being used by 1 experiment/);
+
+            // Verify plan still exists
+            const dbPlan = await ExperimentPlan.findById(planId);
+            expect(dbPlan).toBeTruthy();
+        });
+
+        it('should return 404 if plan does not exist', async () => {
+            const nonExistentId = new mongoose.Types.ObjectId();
+            const res = await request(app).delete(`/api/plans/${nonExistentId}`);
+
+            expect(res.statusCode).toBe(404);
+            expect(res.body.error).toBe('Plan not found');
+        });
+
+        it('should return 400 if ID is invalid', async () => {
+            const res = await request(app).delete('/api/plans/invalid-id');
             expect(res.statusCode).toBe(400);
             expect(res.body.error).toBe('Invalid ID format');
         });

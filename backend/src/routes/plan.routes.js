@@ -14,4 +14,7 @@ router.get('/:id', planController.getPlan);
 // PUT /api/plans/:id - Update an experiment plan
 router.put('/:id', planController.updatePlan);
 
+// DELETE /api/plans/:id - Delete an experiment plan
+router.delete('/:id', planController.deletePlan);
+
 module.exports = router;

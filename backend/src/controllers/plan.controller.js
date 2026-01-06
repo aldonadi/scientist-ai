@@ -1,5 +1,6 @@
 const { ExperimentPlan } = require('../models/experimentPlan.model');
 const { Provider } = require('../models/provider.model');
+const { Experiment } = require('../models/experiment.model');
 const Tool = require('../models/tool.model');
 
 
@@ -178,6 +179,43 @@ exports.updatePlan = async (req, res, next) => {
                 messages: messages
             });
         }
+        next(error);
+    }
+};
+/**
+ * Delete a plan by ID.
+ * DELETE /api/plans/:id
+ */
+exports.deletePlan = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        // Basic ID validation
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ error: 'Invalid ID format' });
+        }
+
+        // 1. Check Referential Integrity (Experiment)
+        const activeExperimentsCount = await Experiment.countDocuments({ planId: id });
+        if (activeExperimentsCount > 0) {
+            return res.status(409).json({
+                error: 'Conflict',
+                message: `Cannot delete plan. It is being used by ${activeExperimentsCount} experiment(s).`
+            });
+        }
+
+        // 2. Delete Plan
+        const deletedPlan = await ExperimentPlan.findByIdAndDelete(id);
+
+        if (!deletedPlan) {
+            return res.status(404).json({ error: 'Plan not found' });
+        }
+
+        res.status(200).json({
+            message: 'Plan deleted successfully',
+            id: deletedPlan._id
+        });
+    } catch (error) {
         next(error);
     }
 };

@@ -1,41 +1,43 @@
-# Walkthrough - Implement Experiment Model Schema
+# Walkthrough - Implement Delete Plan API
 
-I have implemented the mongoose schema for the `Experiment` model.
+I have implemented the `DELETE /api/plans/:id` endpoint.
 
 ## Changes
 
-### 1. Created [experiment.model.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/models/experiment.model.js)
+### 1. Controller Update ([plan.controller.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/controllers/plan.controller.js))
 
-The schema includes:
-- `planId`: Reference to `ExperimentPlan` (Required, Indexed).
-- `status`: Enum string ['INITIALIZING', 'RUNNING', 'PAUSED', 'COMPLETED', 'FAILED'] (Required, Indexed).
-- `currentStep`: Number, tracks progress.
-- `currentEnvironment`: Embedded `environmentSchema`.
-- `startTime`: Date (Defaults to now).
-- `endTime`: Date.
-- `result`: String.
+Added `deletePlan` method which:
+1.  Validates the ID format (returns 400 if invalid).
+2.  Checks for Referential Integrity: Queries the `Experiment` collection. If any experiments are using the plan, it returns `409 Conflict`.
+3.  Deletes the plan using `findByIdAndDelete`.
+4.  Returns 200 if successful, 404 if not found.
 
-### 2. Created [experiment.model.test.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/tests/models/experiment.model.test.js)
+### 2. Route Update ([plan.routes.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/routes/plan.routes.js))
 
-Tests cover:
-- Successful validation of a correct object.
-- Validation failure when required fields (`planId`, `status`) are missing.
-- Validation failure when `status` is not in the allowed enum.
-- Default value checking for `startTime` and `currentStep`.
+Mapped `DELETE /:id` to the new controller method.
+
+### 3. Tests ([plan.routes.test.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/tests/api/plan.routes.test.js))
+
+Added a new describe block `DELETE /api/plans/:id` covering:
+- Successful deletion (200).
+- Conflict when plan is in use (409).
+- Plan not found (404).
+- Invalid ID format (400).
 
 ## Verification Results
 
 ### Automated Tests
-Ran `npm test tests/models/experiment.model.test.js`
+Ran `npm test tests/api/plan.routes.test.js`
 
 ```
-PASS  tests/models/experiment.model.test.js
-  Experiment Model Test
-    ✓ should create & save experiment successfully (15 ms)
-    ✓ should fail schema validation without required fields (3 ms)
-    ✓ should fail schema validation with invalid status enum (2 ms)
-    ✓ should default startTime to now (1 ms)
+PASS  tests/api/plan.routes.test.js
+  ...
+  DELETE /api/plans/:id
+    ✓ should successfully delete an unused plan (30 ms)
+    ✓ should return 409 if plan is used by an experiment (31 ms)
+    ✓ should return 404 if plan does not exist (23 ms)
+    ✓ should return 400 if ID is invalid (19 ms)
 
 Test Suites: 1 passed, 1 total
-Tests:       4 passed, 4 total
+Tests:       20 passed, 20 total
 ```
