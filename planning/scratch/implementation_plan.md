@@ -1,34 +1,26 @@
-# Implement Launch Experiment API
+# Implementation Plan - Event Bus System
 
-## User Review Required
-No breaking changes.
+## Goal Description
+Implement the internal Event Bus system to decouple the execution engine from side effects like logging and UI updates. This involves creating a standard `EventBus` class extending Node.js `EventEmitter` and defining standard event types.
 
 ## Proposed Changes
+
 ### Backend
-#### [NEW] [experiment.controller.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/controllers/experiment.controller.js)
-- Implement `launchExperiment` function:
-    - Validate `planId` in body.
-    - Fetch `ExperimentPlan`.
-    - Create `Experiment` with status `INITIALIZING`.
-    - Copy `initialEnvironment` from plan.
-    - Save and return.
 
-#### [NEW] [experiment.routes.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/routes/experiment.routes.js)
-- Define `POST /` mapped to `launchExperiment`.
-
-#### [MODIFY] [app.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/app.js)
-- Import `experimentRoutes`.
-- Mount at `/api/experiments`.
-
-### Tests
-#### [NEW] [experiment.routes.test.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/tests/api/experiment.routes.test.js)
-- Test `POST /api/experiments`:
-    - Success case: Verify 201, returned ID, status INITIALIZING, environment copied.
-    - Error cases:
-        - Missing `planId` (400).
-        - Invalid `planId` format (400).
-        - Plan not found (404).
+#### [NEW] [event-bus.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/event-bus.js)
+- Create `EventBus` class extending `EventEmitter`.
+- Define `EventTypes` constants as specified in SPEC.
+- Export `EventBus` class and `EventTypes`.
 
 ## Verification Plan
+
 ### Automated Tests
-- Run `npm test backend/tests/api/experiment.routes.test.js`
+- Create a new test file `backend/tests/services/event-bus.test.js`.
+- Test cases:
+    - Verify `EventBus` can be instantiated.
+    - Verify `emit` triggers `on` callbacks.
+    - Verify all required event types are defined.
+- Run tests using:
+    ```bash
+    npm test tests/services/event-bus.test.js
+    ```

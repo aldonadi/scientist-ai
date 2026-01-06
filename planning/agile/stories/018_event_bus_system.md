@@ -14,8 +14,8 @@ Create the `EventBus` class extending Node.js EventEmitter, with typed events.
 **So that** I can decouple execution logic from side effects.
 
 ## Acceptance Criteria
-- [ ] Supports `emit` and `on`.
-- [ ] Defines string constants for all event types (STEP_START, LOG, etc).
+- [x] Supports `emit` and `on`.
+- [x] Defines string constants for all event types (STEP_START, LOG, etc).
 
 ## Testing
 1. Unit test: Create bus, subscribe, emit, verify callback.
