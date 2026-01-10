@@ -2,19 +2,17 @@ const providerService = require('../../../src/services/provider/provider.service
 const SecretStoreFactory = require('../../../src/services/secrets/secret-store.factory');
 const OpenAI = require('openai');
 const Anthropic = require('@anthropic-ai/sdk');
+const { Ollama } = require('ollama');
 
 // Mock dependencies
 jest.mock('../../../src/services/secrets/secret-store.factory');
 jest.mock('openai');
 jest.mock('@anthropic-ai/sdk');
-
-// Mock global fetch for Ollama (since we kept it as fetch)
-global.fetch = jest.fn();
+jest.mock('ollama');
 
 describe('ProviderService', () => {
 
     beforeEach(() => {
-        global.fetch.mockClear();
         jest.clearAllMocks();
 
         // Mock Secret Store
@@ -29,15 +27,20 @@ describe('ProviderService', () => {
             baseUrl: 'http://localhost:11434'
         };
 
-        it('should list models successfully', async () => {
-            global.fetch.mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({ models: [{ name: 'llama3:latest' }] })
+        it('should list models successfully using SDK', async () => {
+            // Mock Ollama instance
+            const mockList = jest.fn().mockResolvedValue({
+                models: [{ name: 'llama3:latest' }]
             });
+
+            Ollama.mockImplementation(() => ({
+                list: mockList
+            }));
 
             const models = await providerService.listModels(ollamaProvider);
             expect(models).toEqual(['llama3:latest']);
-            expect(global.fetch).toHaveBeenCalledWith('http://localhost:11434/api/tags');
+            expect(Ollama).toHaveBeenCalledWith({ host: 'http://localhost:11434' });
+            expect(mockList).toHaveBeenCalled();
         });
     });
 
@@ -48,7 +51,6 @@ describe('ProviderService', () => {
         };
 
         it('should list models using SDK', async () => {
-            // Mock OpenAI instance and list() method
             const mockList = jest.fn().mockResolvedValue({
                 data: [{ id: 'gpt-4' }]
             });
@@ -72,13 +74,7 @@ describe('ProviderService', () => {
             apiKey: 'secret-ref'
         };
 
-        it('should return static model list (as per spec) but still be valid', async () => {
-            // Mock Anthropic instance
-            const mockCreate = jest.fn().mockResolvedValue({});
-            Anthropic.mockImplementation(() => ({
-                messages: { create: mockCreate }
-            }));
-
+        it('should return static model list', async () => {
             const models = await providerService.listModels(anthropicProvider);
             expect(models).toContain('claude-3-opus-20240229');
         });

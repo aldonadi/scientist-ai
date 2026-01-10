@@ -49,8 +49,8 @@ Status can be:
 | 019_logger_service                                 | 3      | DONE        |
 | 020_container_pool_manager                         | 8      | DONE        |
 | 021_container_execution_wrapper                    | 5      | DONE        |
-| 022_llm_provider_interface                         | 3      | REVIEW      |
-| 023_ollama_integration                             | 3      | READY       |
+| 022_llm_provider_interface                         | 3      | DONE        |
+| 023_ollama_integration                             | 3      | DONE        |
 | 024_orchestrator_initialization                    | 5      | NOT READY   |
 | 025_orchestrator_step_loop                         | 8      | NOT READY   |
 | 026_role_prompt_construction                       | 5      | NOT READY   |
