@@ -6,13 +6,13 @@
     - [x] Read `planning/agile/backlog.md` <!-- id: 3 -->
     - [x] Create `implementation_plan.md` <!-- id: 4 -->
 - [ ] Execution <!-- id: 5 -->
-    - [ ] Update backlog status to IN-PROGRESS <!-- id: 6 -->
-    - [ ] Implement `LLMProvider` abstract base class <!-- id: 7 -->
-    - [ ] Implement `OpenAIProvider` concrete class <!-- id: 8 -->
-    - [ ] Implement `AnthropicProvider` concrete class <!-- id: 9 -->
-    - [ ] Implement `ProviderFactory` <!-- id: 10 -->
-    - [ ] Add unit tests <!-- id: 11 -->
+    - [x] Update backlog status to IN-PROGRESS <!-- id: 6 -->
+    - [x] Implement `LLMProvider` abstract base class <!-- id: 7 -->
+    - [x] Implement `OpenAIProvider` concrete class (Refactoring to SDK) <!-- id: 8 -->
+    - [x] Implement `AnthropicProvider` concrete class (Refactoring to SDK) <!-- id: 9 -->
+    - [x] Implement `ProviderFactory` <!-- id: 10 -->
+    - [x] Add unit tests <!-- id: 11 -->
 - [ ] Verification <!-- id: 12 -->
-    - [ ] Run tests <!-- id: 13 -->
-    - [ ] Update story checkboxes <!-- id: 14 -->
-    - [ ] Update backlog status to REVIEW <!-- id: 15 -->
+    - [x] Run tests <!-- id: 13 -->
+    - [x] Update story checkboxes <!-- id: 14 -->
+    - [x] Update backlog status to REVIEW <!-- id: 15 -->

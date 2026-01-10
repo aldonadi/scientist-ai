@@ -72,13 +72,13 @@ const apiKey = await secretStore.retrieve(provider.apiKeyRef);
 **So that** I'm not locked into one vendor.
 
 ## Acceptance Criteria
-- [ ] `isValid()` method implemented for all provider types.
-- [ ] `isModelReady()` method verifies model availability.
-- [ ] `listModels()` returns array of available model names.
-- [ ] `chat()` initiates streaming chat completion.
-- [ ] Provider type strategies implemented (OLLAMA, OPENAI, ANTHROPIC, GENERIC_OPENAI).
-- [ ] API keys retrieved via `ISecretStore` interface.
-- [ ] Proper error handling with meaningful error messages.
+- [x] `isValid()` method implemented for all provider types.
+- [x] `isModelReady()` method verifies model availability.
+- [x] `listModels()` returns array of available model names.
+- [x] `chat()` initiates streaming chat completion.
+- [x] Provider type strategies implemented (OLLAMA, OPENAI, ANTHROPIC, GENERIC_OPENAI).
+- [x] API keys retrieved via `ISecretStore` interface.
+- [x] Proper error handling with meaningful error messages.
 
 ## Dependencies
 - Story 038: Provider Schema (must be complete).
