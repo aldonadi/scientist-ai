@@ -1,57 +1,48 @@
-# Quick Links Fix Walkthrough
+# Walkthrough - Container Execution Wrapper (Story 021)
 
-I have fixed the issue where default quick links were not loading in the Quick Links dialog.
+I have successfully implemented the `Container` class, which serves as a robust wrapper for executing scripts inside Docker containers.
 
 ## Changes
 
-### app/links_dialog.py
+### 1. Backend Implementation
+- **File**: `backend/src/execution/container.js`
+- **Feature**: Implemented `Container` class using `dockerode`.
+- **Key Logic**:
+    - **`execute(script, env, args)`**: Creates an `exec` instance, attaches to streams, and pipes the python script to `stdin`.
+    - **Stream Handling**: Implemented a fix to manually close output streams when the main docker stream ends, ensuring no hangs occur during execution.
+    - **Demultiplexing**: Splits `stdout` and `stderr` for clean output capture.
 
-I modified `links_dialog.py` to correctly reference the instance variable `self.links` instead of the empty static class variable `LinksDialog.links`.
-
-```python
-# Before
-if len(LinksDialog.links) == 0:
-    ...
-for link in LinksDialog.links:
-    ...
-
-# After
-if len(self.links) == 0:
-    ...
-for link in self.links:
-    ...
-```
-
-### app/quick_links/repository.py
-
-I corrected the path for loading managed quick links.
-
-```python
-# Before
-path = os.path.join(base_dir, 'managed', 'managed_quick_links.json')
-
-# After
-path = os.path.join(base_dir, 'assets', 'managed', 'managed_quick_links.json')
-```
+### 2. Testing
+- **Unit Tests**: `backend/src/execution/container.test.js`
+    - Verified all lifecycle methods using a mocked `dockerode`.
+- **Integration Tests**: `backend/src/execution/container.integration.test.js`
+    - Verified real execution against a `python:3.9-slim` container.
+    - Validated argument passing, environment variable injection, and error capturing.
 
 ## Verification Results
 
 ### Automated Tests
-I ran the existing quick links tests to ensure no regressions were introduced.
+Run via `npm test` in `backend` directory.
 
 ```bash
-$ python -m pytest test/test_quick_links.py
-=========== test session starts ===========
-platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
-rootdir: /home/andrew/Projects/Code/python/nyiso-rt-v-dam-monitor
-configfile: pyproject.toml
-plugins: qt-4.4.0, cov-6.2.1
-collected 10 items
+PASS  src/execution/container.test.js
+PASS  src/execution/container.integration.test.js
 
-test/test_quick_links.py .......... [100%]
-
-=========== 10 passed in 0.15s ============
+Test Suites: 2 passed, 2 total
+Tests:       10 passed, 10 total
 ```
 
-### Manual Verification
-You should now be able to see the managed quick links when opening the dialog. The code now correctly points to `assets/managed/managed_quick_links.json`.
+### Usage Example
+
+```javascript
+const docker = new Docker();
+const container = new Container(docker, 'container-id');
+
+// Execute a script
+const result = await container.execute(
+    'print("Hello " + name)', 
+    { name: 'World' }
+);
+
+console.log(result.stdout); // "Hello World"
+```

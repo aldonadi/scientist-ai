@@ -39,19 +39,19 @@ Implement the `Container` class that wraps a Docker container. This class acts a
 **So that** user-defined code cannot compromise the host system and side-effects are contained.
 
 ## Acceptance Criteria
-- [ ] `Container` class is implemented with `id`, `status`, and `expiry`.
-- [ ] Uses `dockerode` to interact with the Docker daemon.
-- [ ] `execute(script, env, args)` method implemented:
-    - [ ] Correctly injects environment variables.
-    - [ ] Correctly passes arguments to the script.
-    - [ ] Captures and returns `{ stdout, stderr, exitCode, duration }`.
-    - [ ] Handles script timeouts or crashes gracefully (returns exit code not throws exception).
-- [ ] `destroy()` method implemented:
-    - [ ] Successfully removes the container from Docker.
-    - [ ] Updates status to `TERMINATED`.
-- [ ] `status` transitions are managed correctly (`READY` -> `BUSY` -> `TERMINATED` or back to `READY` if we were reusing, but SPEC says "One-Shot" mostly, actually SPEC says "execute-and-destroy", so `execute` might trigger `destroy` at the end or caller does). **Clarification**: SPEC Section 12.4 says "Destruction: Once execution completes... the container is Terminated." So `execute` should probably not auto-destroy, but the Orchestrator will call `destroy`. However, this story is just the Wrapper.
-- [ ] Unit tests using a mock `dockerode` to verify logic without needing actual Docker daemon (for unit tests).
-- [ ] Integration tests using actual Docker to verify real execution.
+- [x] `Container` class is implemented with `id`, `status`, and `expiry`.
+- [x] Uses `dockerode` to interact with the Docker daemon.
+- [x] `execute(script, env, args)` method implemented:
+    - [x] Correctly injects environment variables.
+    - [x] Correctly passes arguments to the script.
+    - [x] Captures and returns `{ stdout, stderr, exitCode, duration }`.
+    - [x] Handles script timeouts or crashes gracefully (returns exit code not throws exception).
+- [x] `destroy()` method implemented:
+    - [x] Successfully removes the container from Docker.
+    - [x] Updates status to `TERMINATED`.
+- [x] `status` transitions are managed correctly (`READY` -> `BUSY` -> `TERMINATED` or back to `READY` if we were reusing, but SPEC says "One-Shot" mostly, actually SPEC says "execute-and-destroy", so `execute` might trigger `destroy` at the end or caller does). **Clarification**: SPEC Section 12.4 says "Destruction: Once execution completes... the container is Terminated." So `execute` should probably not auto-destroy, but the Orchestrator will call `destroy`. However, this story is just the Wrapper.
+- [x] Unit tests using a mock `dockerode` to verify logic without needing actual Docker daemon (for unit tests).
+- [x] Integration tests using actual Docker to verify real execution.
 
 ## Testing Strategy
 

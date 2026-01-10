@@ -1,13 +1,12 @@
-- [x] Investigate why default quick links are not loading <!-- id: 0 -->
-    - [x] Review `app/links_dialog.py` to understand how it requests links <!-- id: 1 -->
-    - [x] Review `app/quick_links/repository.py` to understand how it loads links <!-- id: 2 -->
-    - [x] Review `app/assets/quick_links/default_quick_links.json` validity <!-- id: 3 -->
-    - [x] trace the data flow from json file to dialog <!-- id: 4 -->
-- [x] Fix the issue <!-- id: 5 -->
-    - [x] Apply fix to code <!-- id: 6 -->
-    - [x] Verify fix (by code inspection or unit test if applicable) <!-- id: 7 -->
+# Task: Implement Container Execution Wrapper (Story 021)
 
-- [x] Fix Managed Quick Links Loading <!-- id: 8 -->
-    - [x] Locate `managed_quick_links.json` <!-- id: 9 -->
-    - [x] Update `app/quick_links/repository.py` with correct path <!-- id: 10 -->
-    - [x] Verify fix <!-- id: 11 -->
+- [x] Update `planning/agile/backlog.md` status to IN-PROGRESS <!-- id: 0 -->
+- [x] Research and document Docker installation procedure for Ubuntu 24.04 <!-- id: 10 -->
+- [x] Check environment (Docker availability, package.json dependencies) <!-- id: 1 -->
+- [x] Create `implementation_plan.md` <!-- id: 2 -->
+- [x] Implement `backend/src/execution/container.js` <!-- id: 3 -->
+- [x] Implement `backend/src/execution/container.test.js` <!-- id: 4 -->
+- [x] Implement `backend/src/execution/container.integration.test.js` <!-- id: 5 -->
+- [x] Run verification (unit and integration tests) <!-- id: 6 -->
+- [x] Update story checkboxes in `planning/agile/stories/021_container_execution_wrapper.md` <!-- id: 7 -->
+- [x] Update `planning/agile/backlog.md` status to REVIEW <!-- id: 8 -->
