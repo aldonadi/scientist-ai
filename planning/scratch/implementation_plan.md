@@ -1,20 +1,37 @@
-# Fix Managed Quick Links Path
+# Implementation Plan - LLM Provider Interface
 
-The application currently attempts to load managed quick links from `app/managed/managed_quick_links.json`, but the file is actually located at `app/assets/managed/managed_quick_links.json`.
+Implement the service layer methods for `Provider` that enable communication with LLM backends (Ollama, OpenAI, Anthropic).
 
 ## User Review Required
-None.
+
+> [!NOTE]
+> This implementation will introduce new dependencies for external API communication if they are not already present (e.g., `axios`, `openai`, `anthropic`). I will assume standard HTTP calls or official SDKs where appropriate. For this plan I will use `axios` for Ollama and standard SDKs for OpenAI/Anthropic if permitted, or just `axios` for all to keep it lightweight as per the story description "Use appropriate SDK or HTTP calls".
 
 ## Proposed Changes
 
-### App
-#### [MODIFY] [repository.py](file:///home/andrew/Projects/Code/python/nyiso-rt-v-dam-monitor/app/quick_links/repository.py)
-- Update `_load_managed` method to point to `assets/managed/managed_quick_links.json` instead of `managed/managed_quick_links.json`.
+### Backend
+
+#### [NEW] [provider.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/provider/provider.service.js)
+- Implement `ProviderService` class with methods:
+    - `isValid(provider)`
+    - `isModelReady(provider, modelName)`
+    - `listModels(provider)`
+    - `chat(provider, modelName, history, tools, config)`
+- Implement Strategy definitions:
+    - `OllamaStrategy`
+    - `OpenAIStrategy`
+    - `AnthropicStrategy`
+    - `GenericOpenAIStrategy`
+- Use `SecretStoreFactory` to retrieve API keys.
+
+#### [NEW] [provider.service.test.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/tests/services/provider/provider.service.test.js)
+- Unit tests for `ProviderService`.
+- Mock strategies and network calls.
 
 ## Verification Plan
 
-### Manual Verification
-1.  Run the application.
-2.  Open the Quick Links dialog.
-3.  Verify that managed quick links (if any are defined in that file) are displayed.
-4.  Check logs to ensure "Loading managed quick links..." is followed by successful parsing of items.
+### Automated Tests
+- Run the new unit tests using Jest:
+  ```bash
+  npm test backend/tests/services/provider/provider.service.test.js
+  ```
