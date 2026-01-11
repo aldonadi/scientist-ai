@@ -17,6 +17,7 @@ class ExperimentOrchestrator {
         this.experiment = null;
         this.plan = null;
         this.isInitialized = false;
+        this.registeredHooks = []; // Track registered hook handlers for cleanup
     }
 
     /**
@@ -51,6 +52,17 @@ class ExperimentOrchestrator {
                 // We will set it, but we need to save to persist.
                 this.experiment.currentEnvironment = this.plan.initialEnvironment;
                 await this.experiment.save();
+            }
+        }
+
+        // 4. Script Registration - Register hooks from the plan
+        if (this.plan.scripts && this.plan.scripts.length > 0) {
+            for (const script of this.plan.scripts) {
+                const handler = async (eventPayload) => {
+                    await this._handleHookEvent(script, eventPayload);
+                };
+                this.eventBus.on(script.hookType, handler);
+                this.registeredHooks.push({ hookType: script.hookType, handler });
             }
         }
 
@@ -355,6 +367,13 @@ class ExperimentOrchestrator {
                     });
 
                     for (const call of toolCalls) {
+                        // Emit BEFORE_TOOL_CALL for hooks
+                        this.eventBus.emit(EventTypes.BEFORE_TOOL_CALL, {
+                            experimentId: this.experiment._id,
+                            toolName: call.toolName,
+                            args: call.args
+                        });
+
                         this.eventBus.emit(EventTypes.TOOL_CALL, {
                             experimentId: this.experiment._id,
                             toolName: call.toolName,
@@ -415,6 +434,13 @@ class ExperimentOrchestrator {
                             role: 'tool',
                             name: call.toolName,
                             content: error ? `Error: ${error}` : (typeof result === 'string' ? result : JSON.stringify(result))
+                        });
+
+                        // Emit AFTER_TOOL_CALL for hooks
+                        this.eventBus.emit(EventTypes.AFTER_TOOL_CALL, {
+                            experimentId: this.experiment._id,
+                            toolName: call.toolName,
+                            result: error ? { error } : result
                         });
                     }
 
@@ -525,6 +551,139 @@ except Exception as e:
             }
         }
         return null;
+    }
+
+    /**
+     * Handles a hook event by executing the associated script.
+     * @param {Object} script - The script object from the plan
+     * @param {Object} eventPayload - The event payload that triggered the hook
+     */
+    async _handleHookEvent(script, eventPayload) {
+        if (script.executionMode === 'ASYNC') {
+            // Fire and forget for async
+            this.executeHook(script, eventPayload).catch(err => {
+                this.eventBus.emit(EventTypes.LOG, {
+                    experimentId: this.experiment?._id,
+                    stepNumber: this.experiment?.currentStep,
+                    source: 'HOOK',
+                    message: `Async hook failed: ${err.message}`,
+                    data: { hookType: script.hookType, error: err.message }
+                });
+            });
+        } else {
+            // SYNC - await completion
+            await this.executeHook(script, eventPayload);
+        }
+    }
+
+    /**
+     * Executes a hook script in a container.
+     * @param {Object} script - The script object containing code, failPolicy, etc.
+     * @param {Object} eventPayload - The event payload
+     * @returns {Promise<void>}
+     */
+    async executeHook(script, eventPayload) {
+        let container = null;
+        try {
+            container = await ContainerPoolManager.getInstance().acquire();
+
+            // Construct Context
+            const context = {
+                experiment: {
+                    id: this.experiment._id.toString(),
+                    planId: this.experiment.planId.toString(),
+                    status: this.experiment.status,
+                    currentStep: this.experiment.currentStep
+                },
+                environment: deepCopy(this.experiment.currentEnvironment),
+                event: eventPayload
+            };
+
+            const contextJson = JSON.stringify(context);
+
+            // Python wrapper that loads context, executes user code, and outputs modified environment
+            const pythonScript = `
+import os
+import json
+import sys
+
+try:
+    context_str = os.environ.get('HOOK_CONTEXT', '{}')
+    context = json.loads(context_str)
+    
+    experiment = context.get('experiment', {})
+    env = context.get('environment', {}).get('variables', {})
+    event = context.get('event', {})
+    
+    # User code has access to: experiment, env, event
+    # User code can modify 'env' dict
+    user_code = os.environ.get('HOOK_CODE', '')
+    exec(user_code)
+    
+    # Output modified environment
+    print(json.dumps({'success': True, 'environment': env}))
+except Exception as e:
+    print(json.dumps({'success': False, 'error': str(e)}))
+`;
+
+            const execResult = await container.execute(
+                ['python3', '-c', pythonScript],
+                {
+                    Env: [
+                        `HOOK_CONTEXT=${contextJson}`,
+                        `HOOK_CODE=${script.code}`
+                    ]
+                }
+            );
+
+            // Log script output
+            this.eventBus.emit(EventTypes.LOG, {
+                experimentId: this.experiment._id,
+                stepNumber: this.experiment.currentStep,
+                source: 'HOOK',
+                message: `Hook ${script.hookType} executed`,
+                data: { stdout: execResult.stdout, stderr: execResult.stderr }
+            });
+
+            if (execResult.exitCode !== 0) {
+                throw new Error(execResult.stderr || `Hook process failed with exit code ${execResult.exitCode}`);
+            }
+
+            // Parse output
+            let output;
+            try {
+                output = JSON.parse(execResult.stdout);
+            } catch (parseErr) {
+                throw new Error(`Failed to parse hook output: ${execResult.stdout}`);
+            }
+
+            if (!output.success) {
+                throw new Error(output.error || 'Unknown hook error');
+            }
+
+            // Merge environment changes back
+            if (output.environment) {
+                Object.assign(this.experiment.currentEnvironment.variables, output.environment);
+            }
+
+        } catch (e) {
+            this.eventBus.emit(EventTypes.LOG, {
+                experimentId: this.experiment._id,
+                stepNumber: this.experiment.currentStep,
+                source: 'HOOK',
+                message: `Hook ${script.hookType} failed: ${e.message}`,
+                data: { error: e.message, failPolicy: script.failPolicy }
+            });
+
+            if (script.failPolicy === 'ABORT_EXPERIMENT') {
+                throw e; // Re-throw to abort the experiment
+            }
+            // CONTINUE_WITH_ERROR - just log and continue (already logged above)
+        } finally {
+            if (container) {
+                await container.destroy();
+            }
+        }
     }
 
     /**

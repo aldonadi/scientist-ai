@@ -21,12 +21,24 @@ const ScriptSchema = new Schema({
             'TOOL_RESULT',
             'STEP_END',
             'EXPERIMENT_END',
-            'LOG'
+            'LOG',
+            'BEFORE_TOOL_CALL',
+            'AFTER_TOOL_CALL'
         ]
     },
     code: {
         type: String,
         required: true
+    },
+    failPolicy: {
+        type: String,
+        enum: ['ABORT_EXPERIMENT', 'CONTINUE_WITH_ERROR'],
+        default: 'ABORT_EXPERIMENT'
+    },
+    executionMode: {
+        type: String,
+        enum: ['SYNC', 'ASYNC'],
+        default: 'SYNC'
     }
 }, {
     _id: false, // subdocument
@@ -34,3 +46,4 @@ const ScriptSchema = new Schema({
 });
 
 module.exports = { ScriptSchema };
+

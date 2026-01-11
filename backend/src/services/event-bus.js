@@ -15,6 +15,8 @@ const EventTypes = {
     STEP_END: 'STEP_END', // { stepNumber, environmentSnapshot }
     EXPERIMENT_END: 'EXPERIMENT_END', // { result, duration }
     LOG: 'LOG', // { source, level, message, data }
+    BEFORE_TOOL_CALL: 'BEFORE_TOOL_CALL', // { toolName, args }
+    AFTER_TOOL_CALL: 'AFTER_TOOL_CALL', // { toolName, result }
 };
 
 /**

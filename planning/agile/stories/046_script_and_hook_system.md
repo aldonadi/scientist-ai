@@ -27,12 +27,12 @@ Implement the mechanism to register and execute Scripts defined in an `Experimen
 -   **Architecture**: Ensure proper decoupling. The orchestration service shouldn't know the content of the script, just that it needs to run it.
 
 ## Acceptance Criteria
-- [ ] `ExperimentOrchestrator` registers all scripts from the Plan upon initialization.
-- [ ] Listeners correctly receive the event payload.
-- [ ] `processHook()` (or similar method) is implemented to bridge Node.js events to Python execution.
-- [ ] Python execution receives the correct `Context` data (serialized as JSON).
-- [ ] Script output/errors are captured and logged via the Logger service.
-- [ ] Experiment properly handles script errors for both `ABORT_EXPERIMENT` and `CONTINUE_WITH_ERROR` policies.
+- [x] `ExperimentOrchestrator` registers all scripts from the Plan upon initialization.
+- [x] Listeners correctly receive the event payload.
+- [x] `processHook()` (or similar method) is implemented to bridge Node.js events to Python execution.
+- [x] Python execution receives the correct `Context` data (serialized as JSON).
+- [x] Script output/errors are captured and logged via the Logger service.
+- [x] Experiment properly handles script errors for both `ABORT_EXPERIMENT` and `CONTINUE_WITH_ERROR` policies.
 - [ ] Integration test verifies that a script attached to `EXPERIMENT_START` runs when the experiment starts.
 - [ ] Integration test verifies that a script attached to `STEP_START` runs at the beginning of a step.
 - [ ] Integration test verifies that a script attached to `STEP_END` runs at the end of a step.
