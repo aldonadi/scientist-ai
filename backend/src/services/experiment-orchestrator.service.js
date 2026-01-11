@@ -1,6 +1,8 @@
 const { EventBus, EventTypes } = require('./event-bus');
 const { Experiment } = require('../models/experiment.model');
 const { ExperimentPlan } = require('../models/experimentPlan.model');
+const Tool = require('../models/tool.model');
+const { deepCopy } = require('../models/schemas/environment.schema');
 const Logger = require('./logger.service');
 
 class ExperimentOrchestrator {
@@ -203,15 +205,90 @@ class ExperimentOrchestrator {
 
     /**
      * Processing for a single role.
-     * TODO: Implement full prompt construction definitions in Story 026.
+     * Constructs the prompt, resolves tools, and emits the MODEL_PROMPT event.
      */
     async processRole(role) {
-        // Placeholder for Story 026
-        // emit MODEL_PROMPT, call provider, emit TOOL_CALL/RESULT, etc.
         this.eventBus.emit(EventTypes.ROLE_START, {
             experimentId: this.experiment._id,
             roleName: role.name
         });
+
+        // 1. Environment Isolation
+        // Create a deep copy to prevent mutation by the LLM (mental sandbox)
+        // and filter based on whitelist.
+        const fullEnv = deepCopy(this.experiment.currentEnvironment);
+        const filteredEnv = { variables: {} };
+
+        // If whitelist is empty, we might decide to show nothing or everything.
+        // Spec implies we filter. If whitelist is not defined, we assume access to nothing?
+        // Or maybe everything? Let's assume explicit whitelist means "only these".
+        // If whitelist is empty array, they get nothing.
+        // If whitelist is undefined/null, let's give them everything (safe default for dev, but restrictive is better for prod).
+        // Spec: "variableWhitelist: List<String> (Defines which Environment variables this Role can see)"
+        // Implementation: If whitelist is present, filter. If not present (or empty array depending on schema default), 
+        // strictly speaking they see nothing if it's an allowlist.
+        // Looking at schema default: RoleSchema.variableWhitelist type [String].
+
+        const whitelist = role.variableWhitelist;
+        if (whitelist && whitelist.length > 0) {
+            whitelist.forEach(key => {
+                if (fullEnv.variables.hasOwnProperty(key)) {
+                    filteredEnv.variables[key] = fullEnv.variables[key];
+                }
+            });
+        } else {
+            // If no whitelist is provided, we default to showing EVERYTHING or NOTHING?
+            // "Defines which variables this Role can see" -> Implies restriction.
+            // Let's copy everything if whitelist is missing to be friendly, 
+            // BUT if it's an empty array, it means "none".
+            // Mongoose defaults arrays to [] if not specified in some cases, or undefined.
+            // Let's assume if it is explicitly empty, show keys.
+            if (!whitelist || whitelist.length === 0) {
+                // Warning: This policy might need review. For now, if empty, we provide all.
+                // This is easier for "Generic" roles.
+                filteredEnv.variables = fullEnv.variables;
+            }
+        }
+
+        // 2. Tool Resolution
+        // We need to fetch the full Tool definitions for the provider.
+        // role.tools is an array of ObjectIds.
+        let toolsForProvider = [];
+        if (role.tools && role.tools.length > 0) {
+            const toolDocs = await Tool.find({ _id: { $in: role.tools } });
+
+            // Map to the format expected by the Provider/LLM
+            toolsForProvider = toolDocs.map(t => ({
+                name: t.name,
+                description: t.description,
+                parameters: t.parameters
+            }));
+        }
+
+        // 3. Prompt Construction
+        const step = this.experiment.currentStep;
+        const messages = [
+            {
+                role: 'system',
+                content: role.systemPrompt
+            },
+            {
+                role: 'user',
+                content: `Step ${step}. Current Environment: ${JSON.stringify(filteredEnv.variables)}`
+            }
+        ];
+
+        // 4. Emit MODEL_PROMPT
+        // Hooks can listen to this and modify 'messages' if needed.
+        this.eventBus.emit(EventTypes.MODEL_PROMPT, {
+            experimentId: this.experiment._id,
+            roleName: role.name,
+            messages: messages,
+            tools: toolsForProvider
+        });
+
+        // 5. Inference (Placeholder for next story)
+        // const response = await Provider.chat(...)
     }
 
     /**

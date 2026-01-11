@@ -1,6 +1,6 @@
 # Implement Role Prompt Construction
 
-- **Status:** READY
+- **Status:** DONE
 - **Points:** 5
 - **Story ID:** 026
 - **Type:** Feature
@@ -24,14 +24,15 @@ Implement logic to build the context window for a Role in `ExperimentOrchestrato
 -   **Tools**: Retrieve `Tool` definitions referenced by the Role and format them for the LLM Provider.
 
 ## Acceptance Criteria
-- [ ] Creates deep copy of environment to prevent leakage.
-- [ ] Filters environment variables correctly based on whitelist.
-- [ ] Constructs System and User messages.
-- [ ] Emits `MODEL_PROMPT` event with mutable payload.
-- [ ] Resolves linked Tools for the Provider.
+- [x] Creates deep copy of environment to prevent leakage.
+- [x] Filters environment variables correctly based on whitelist.
+- [x] Constructs System and User messages.
+- [x] Emits `MODEL_PROMPT` event with mutable payload.
+- [x] Resolves linked Tools for the Provider.
 
 ## Testing
 1.  Unit test with dummy environment and key whitelist (verify keys are filtered).
 2.  Verify `MODEL_PROMPT` event contains the constructed messages.
 
 ## Review Log
+**1/11/26** - Accepted by Product Owner
