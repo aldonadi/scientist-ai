@@ -4,6 +4,7 @@ const { ExperimentPlan } = require('../models/experimentPlan.model');
 const Tool = require('../models/tool.model');
 const { deepCopy } = require('../models/schemas/environment.schema');
 const Logger = require('./logger.service');
+const ContainerPoolManager = require('./container-pool.service');
 
 class ExperimentOrchestrator {
     constructor(experimentId) {
@@ -289,7 +290,7 @@ class ExperimentOrchestrator {
 
         // 5. Inference & Tool Execution Loop
         const ProviderService = require('./provider/provider.service');
-        const ContainerPoolManager = require('./container-pool.service');
+        // ContainerPoolManager imported at top-level
 
         let shouldContinue = true;
         let accumulatedResponse = '';
@@ -449,26 +450,78 @@ class ExperimentOrchestrator {
         if (!this.plan.goals || this.plan.goals.length === 0) return null;
 
         for (const goal of this.plan.goals) {
+            let container = null;
             try {
-                // TODO: Implement actual python evaluation (Story 028)
-                // For now, checks a simple boolean against variables if possible, 
-                // or just returns null until implemented.
+                // Acquire container
+                container = await ContainerPoolManager.getInstance().acquire();
+
+                const envJson = JSON.stringify(this.experiment.currentEnvironment.variables);
                 const condition = goal.conditionScript;
 
-                // Very basic mock evaluation for "Task 025" testing purposes solely:
-                // If condition is "TRUE" string (debug), return true.
-                if (condition.trim() === 'TRUE') {
+                // Python script to evaluate the condition safely using env vars
+                const pythonScript = `
+import os
+import json
+import sys
+
+try:
+    env_str = os.environ.get('EXPERIMENT_ENV', '{}')
+    env = json.loads(env_str)
+    condition = os.environ.get('GOAL_CONDITION', 'False')
+    
+    # Evaluate locally using env as the variable scope
+    result = eval(condition, {}, env)
+    
+    print(json.dumps({'result': result}))
+except Exception as e:
+    print(json.dumps({'error': str(e)}))
+`;
+
+                // Execute in container
+                const execResult = await container.execute(
+                    ['python3', '-c', pythonScript],
+                    {
+                        Env: [
+                            `EXPERIMENT_ENV=${envJson}`,
+                            `GOAL_CONDITION=${condition}`
+                        ]
+                    }
+                );
+
+                if (execResult.exitCode !== 0) {
+                    // If python crashed without printing JSON
+                    throw new Error(execResult.stderr || `Goal evaluation process failed with exit code ${execResult.exitCode}`);
+                }
+
+                // Parse output
+                let output;
+                try {
+                    output = JSON.parse(execResult.stdout);
+                } catch (parseErr) {
+                    throw new Error(`Failed to parse goal evaluation output: ${execResult.stdout}`);
+                }
+
+                if (output.error) {
+                    throw new Error(output.error);
+                }
+
+                if (output.result === true) {
                     return goal.description;
                 }
+
             } catch (e) {
                 this.eventBus.emit(EventTypes.LOG, {
                     experimentId: this.experiment._id,
                     stepNumber: this.experiment.currentStep,
                     source: 'SYSTEM',
-                    message: `Goal evaluation failed for goal ${goal.description}`,
+                    message: `Goal evaluation failed for goal ${goal.description}: ${e.message}`,
                     data: { error: e.message }
                 });
-                throw e; // Re-throw to be caught by runLoop and fail the experiment
+                throw e; // Fail the experiment if goal eval is broken
+            } finally {
+                if (container) {
+                    await container.destroy();
+                }
             }
         }
         return null;

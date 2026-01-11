@@ -55,7 +55,7 @@ Status can be:
 | 025_orchestrator_step_loop                         | 8      | DONE        |
 | 026_role_prompt_construction                       | 5      | DONE        |
 | 027_tool_execution_logic                           | 5      | DONE        |
-| 028_goal_evaluation_logic                          | 3      | READY       |
+| 028_goal_evaluation_logic                          | 3      | DONE        |
 | 046_script_and_hook_system                         | 5      | READY       |
 | 047_experiment_control_api                         | 5      | NOT READY   |
 | 029_setup_frontend_layout                          | 3      | NOT READY   |
