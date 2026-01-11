@@ -1,15 +1,11 @@
-# Orchestrator Initialization
-
-- [x] Read and understand requirements (SPEC.md, story 024) <!-- id: 0 -->
-- [x] Update backlog to IN-PROGRESS <!-- id: 1 -->
-- [x] Create implementation plan <!-- id: 2 -->
-- [x] Implement `Orchestrator` class initialization <!-- id: 3 -->
-    - [x] Constructor with `experimentId` <!-- id: 4 -->
-    - [x] `initialize()` method <!-- id: 5 -->
-    - [x] Load Experiment and Plan <!-- id: 6 -->
-    - [x] Initialize global context <!-- id: 7 -->
-    - [x] Initialize Agents with specialized prompts <!-- id: 8 -->
-- [x] Implement Unit Tests <!-- id: 9 -->
-- [x] Verify Implementation <!-- id: 10 -->
-- [x] Update story checklist <!-- id: 11 -->
-- [x] Update backlog to REVIEW <!-- id: 12 -->
+- [ ] Read `planning/SPEC.md` and `planning/agile/stories/025_orchestrator_step_loop.md` <!-- id: unique-10 -->
+- [ ] Read existing `ExperimentOrchestrator` code <!-- id: unique-11 -->
+- [ ] Create `implementation_plan.md` <!-- id: unique-12 -->
+- [ ] Update `backlog.md` to IN-PROGRESS <!-- id: unique-13 -->
+- [ ] Implement `processStep()` logic <!-- id: unique-14 -->
+- [ ] Implement Goal Evaluation logic <!-- id: unique-15 -->
+- [ ] Implement `STEP_START` and `STEP_END` events <!-- id: unique-16 -->
+- [ ] Implement loop termination (Goals, MaxSteps) <!-- id: unique-17 -->
+- [ ] Add Unit Tests for Step Loop <!-- id: unique-18 -->
+- [ ] Verify Implementation <!-- id: unique-19 -->
+- [ ] Mark story as DONE in backlog and story file <!-- id: unique-20 -->
