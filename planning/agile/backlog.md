@@ -56,6 +56,8 @@ Status can be:
 | 026_role_prompt_construction                       | 5      | READY       |
 | 027_tool_execution_logic                           | 5      | READY       |
 | 028_goal_evaluation_logic                          | 3      | NOT READY   |
+| 046_script_and_hook_system                         | 5      | NOT READY   |
+| 047_experiment_control_api                         | 5      | NOT READY   |
 | 029_setup_frontend_layout                          | 3      | NOT READY   |
 | 030_ui_tool_list                                   | 2      | NOT READY   |
 | 031_ui_tool_editor                                 | 5      | NOT READY   |
@@ -64,4 +66,5 @@ Status can be:
 | 034_ui_plan_editor_roles                           | 5      | NOT READY   |
 | 035_ui_experiment_monitor                          | 8      | NOT READY   |
 | 036_ui_realtime_logs                               | 5      | NOT READY   |
+
 

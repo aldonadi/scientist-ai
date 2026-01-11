@@ -1,11 +1,6 @@
-- [x] Read `planning/SPEC.md` and `planning/agile/stories/025_orchestrator_step_loop.md` <!-- id: unique-10 -->
-- [x] Read existing `ExperimentOrchestrator` code <!-- id: unique-11 -->
-- [x] Create `implementation_plan.md` <!-- id: unique-12 -->
-- [x] Update `backlog.md` to IN-PROGRESS <!-- id: unique-13 -->
-- [x] Implement `processStep()` logic <!-- id: unique-14 -->
-- [x] Implement Goal Evaluation logic <!-- id: unique-15 -->
-- [x] Implement `STEP_START` and `STEP_END` events <!-- id: unique-16 -->
-- [x] Implement loop termination (Goals, MaxSteps) <!-- id: unique-17 -->
-- [x] Add Unit Tests for Step Loop <!-- id: unique-18 -->
-- [x] Verify Implementation <!-- id: unique-19 -->
-- [x] Mark story as DONE in backlog and story file <!-- id: unique-20 -->
+# Task: Create Remediation User Stories
+
+- [x] Create User Story 046: Script & Hook System <!-- id: 5 -->
+- [x] Create User Story 047: Experiment Control API <!-- id: 6 -->
+- [x] Register new stories in `planning/agile/backlog.md` <!-- id: 7 -->
+- [ ] Notify user <!-- id: 8 -->
