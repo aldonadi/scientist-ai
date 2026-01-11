@@ -52,9 +52,9 @@ Status can be:
 | 022_llm_provider_interface                         | 3      | DONE        |
 | 023_ollama_integration                             | 3      | DONE        |
 | 024_orchestrator_initialization                    | 5      | DONE        |
-| 025_orchestrator_step_loop                         | 8      | NOT READY   |
-| 026_role_prompt_construction                       | 5      | NOT READY   |
-| 027_tool_execution_logic                           | 5      | NOT READY   |
+| 025_orchestrator_step_loop                         | 8      | READY       |
+| 026_role_prompt_construction                       | 5      | READY       |
+| 027_tool_execution_logic                           | 5      | READY       |
 | 028_goal_evaluation_logic                          | 3      | NOT READY   |
 | 029_setup_frontend_layout                          | 3      | NOT READY   |
 | 030_ui_tool_list                                   | 2      | NOT READY   |
