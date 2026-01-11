@@ -1,6 +1,6 @@
 # Implement Experiment Control API (Pause/Resume/Stop)
 
-- **Status:** NOT READY
+- **Status:** READY
 - **Points:** 5
 - **Story ID:** 047
 - **Type:** Feature
@@ -28,6 +28,7 @@ Implement the API endpoints and orchestrator logic to allow external control of 
 - [ ] `PAUSE` command transitions status to `PAUSED` (if currently `RUNNING`).
 - [ ] `RESUME` command transitions status to `RUNNING` (if currently `PAUSED`) and triggers resumption of the Orchestrator loop.
 - [ ] `STOP` command transitions status to `STOPPED` and terminates execution.
+- [ ] Disallowed transitions are handled gracefully (e.g., cannot `RESUME` a `COMPLETED` experiment).
 - [ ] Integration Test: Launch experiment, Pause it, Verify it stops processing steps. Resume it, verify it continues. Stop it, verify it ends.
 
 ## Dependencies
@@ -36,7 +37,7 @@ Implement the API endpoints and orchestrator logic to allow external control of 
 
 ## Testing
 1.  **API Test**: Send valid and invalid commands to the endpoint.
-2.  **State Transition Test**: Verify allowed transitions (e.g., cannot `RESUME` a `COMPLETED` experiment).
+2.  **State Transition Test**: Verify allowed transitions (e.g., cannot `RESUME` a `COMPLETED` experiment). Verify proper handling of every disallowed transition.
 3.  **Orchestrator Integration**:
     -   Start a long-running experiment (high `maxSteps`).
     -   Send `PAUSE`. Wait. Check that step count stops increasing.
