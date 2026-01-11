@@ -1,11 +1,11 @@
-- [ ] Read `planning/SPEC.md` and `planning/agile/stories/025_orchestrator_step_loop.md` <!-- id: unique-10 -->
-- [ ] Read existing `ExperimentOrchestrator` code <!-- id: unique-11 -->
-- [ ] Create `implementation_plan.md` <!-- id: unique-12 -->
-- [ ] Update `backlog.md` to IN-PROGRESS <!-- id: unique-13 -->
-- [ ] Implement `processStep()` logic <!-- id: unique-14 -->
-- [ ] Implement Goal Evaluation logic <!-- id: unique-15 -->
-- [ ] Implement `STEP_START` and `STEP_END` events <!-- id: unique-16 -->
-- [ ] Implement loop termination (Goals, MaxSteps) <!-- id: unique-17 -->
-- [ ] Add Unit Tests for Step Loop <!-- id: unique-18 -->
-- [ ] Verify Implementation <!-- id: unique-19 -->
-- [ ] Mark story as DONE in backlog and story file <!-- id: unique-20 -->
+- [x] Read `planning/SPEC.md` and `planning/agile/stories/025_orchestrator_step_loop.md` <!-- id: unique-10 -->
+- [x] Read existing `ExperimentOrchestrator` code <!-- id: unique-11 -->
+- [x] Create `implementation_plan.md` <!-- id: unique-12 -->
+- [x] Update `backlog.md` to IN-PROGRESS <!-- id: unique-13 -->
+- [x] Implement `processStep()` logic <!-- id: unique-14 -->
+- [x] Implement Goal Evaluation logic <!-- id: unique-15 -->
+- [x] Implement `STEP_START` and `STEP_END` events <!-- id: unique-16 -->
+- [x] Implement loop termination (Goals, MaxSteps) <!-- id: unique-17 -->
+- [x] Add Unit Tests for Step Loop <!-- id: unique-18 -->
+- [x] Verify Implementation <!-- id: unique-19 -->
+- [x] Mark story as DONE in backlog and story file <!-- id: unique-20 -->

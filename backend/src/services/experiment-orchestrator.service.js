@@ -72,7 +72,123 @@ class ExperimentOrchestrator {
             planName: this.plan.name
         });
 
-        // TODO: Trigger the first step loop (Story 025)
+        // Start the loop
+        await this.runLoop();
+    }
+
+    /**
+     * Main execution loop.
+     * Iterates until completion or failure.
+     */
+    async runLoop() {
+        while (
+            this.experiment.status === 'RUNNING' &&
+            this.experiment.currentStep < this.plan.maxSteps
+        ) {
+            try {
+                await this.processStep();
+
+                // Goal Evaluation
+                const goalMet = await this.evaluateGoals();
+                if (goalMet) {
+                    this.experiment.status = 'COMPLETED';
+                    this.experiment.result = goalMet;
+                    this.experiment.endTime = new Date();
+                    await this.experiment.save();
+                    this.eventBus.emit(EventTypes.EXPERIMENT_END, {
+                        experimentId: this.experiment._id,
+                        result: goalMet
+                    });
+                    return;
+                }
+
+                // Check Max Steps
+                this.experiment.currentStep += 1;
+                if (this.experiment.currentStep >= this.plan.maxSteps) {
+                    this.experiment.status = 'FAILED';
+                    this.experiment.result = 'Max Steps Exceeded';
+                    this.experiment.endTime = new Date();
+                    await this.experiment.save();
+                    this.eventBus.emit(EventTypes.EXPERIMENT_END, {
+                        experimentId: this.experiment._id,
+                        result: 'Max Steps Exceeded'
+                    });
+                    return;
+                }
+
+                await this.experiment.save();
+
+            } catch (error) {
+                console.error('Error in execution loop:', error);
+                this.experiment.status = 'FAILED';
+                this.experiment.result = `Error: ${error.message}`;
+                this.experiment.endTime = new Date();
+                await this.experiment.save();
+                // TODO: Emit ERROR event?
+                return;
+            }
+        }
+    }
+
+    /**
+     * Executes a single step.
+     */
+    async processStep() {
+        const step = this.experiment.currentStep;
+
+        this.eventBus.emit(EventTypes.STEP_START, {
+            experimentId: this.experiment._id,
+            stepNumber: step
+        });
+
+        // Role Iteration
+        for (const role of this.plan.roles) {
+            await this.processRole(role);
+        }
+
+        this.eventBus.emit(EventTypes.STEP_END, {
+            experimentId: this.experiment._id,
+            stepNumber: step
+        });
+    }
+
+    /**
+     * Processing for a single role.
+     * TODO: Implement full prompt construction definitions in Story 026.
+     */
+    async processRole(role) {
+        // Placeholder for Story 026
+        // emit MODEL_PROMPT, call provider, emit TOOL_CALL/RESULT, etc.
+        this.eventBus.emit(EventTypes.ROLE_START, {
+            experimentId: this.experiment._id,
+            roleName: role.name
+        });
+    }
+
+    /**
+     * Evaluates goals to see if experiment should terminate.
+     * @returns {Promise<string|null>} Description of met goal, or null.
+     */
+    async evaluateGoals() {
+        if (!this.plan.goals || this.plan.goals.length === 0) return null;
+
+        for (const goal of this.plan.goals) {
+            try {
+                // TODO: Implement actual python evaluation (Story 028)
+                // For now, checks a simple boolean against variables if possible, 
+                // or just returns null until implemented.
+                const condition = goal.conditionScript;
+
+                // Very basic mock evaluation for "Task 025" testing purposes solely:
+                // If condition is "TRUE" string (debug), return true.
+                if (condition.trim() === 'TRUE') {
+                    return goal.description;
+                }
+            } catch (e) {
+                console.error(`Goal evaluation failed for goal ${goal.description}`, e);
+            }
+        }
+        return null;
     }
 
     /**

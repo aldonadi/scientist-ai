@@ -52,7 +52,7 @@ Status can be:
 | 022_llm_provider_interface                         | 3      | DONE        |
 | 023_ollama_integration                             | 3      | DONE        |
 | 024_orchestrator_initialization                    | 5      | DONE        |
-| 025_orchestrator_step_loop                         | 8      | READY       |
+| 025_orchestrator_step_loop                         | 8      | REVIEW      |
 | 026_role_prompt_construction                       | 5      | READY       |
 | 027_tool_execution_logic                           | 5      | READY       |
 | 028_goal_evaluation_logic                          | 3      | NOT READY   |

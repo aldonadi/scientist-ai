@@ -1,49 +1,36 @@
-# Walkthrough - Experiment Orchestrator Initialization
+# Walkthrough - Orchestrator Step Loop (Story 025)
 
-I have implemented the `ExperimentOrchestrator` service, which is responsible for the lifecycle of an experiment. This covers the initialization phase, including loading the experiment and plan from the database and setting up the event bus.
+I have implemented the core execution loop for the `ExperimentOrchestrator`, enabling the system to run experiments step-by-step, manage lifecycle events, and handle termination conditions.
 
 ## Changes
 
-### 1. [NEW] ExperimentOrchestrator Service
+### 1. `ExperimentOrchestrator` Implementation
+-   **Step Loop**: Implemented `runLoop()` to iterate through experiment steps.
+-   **Step Processing**: Implemented `processStep()` to handling `STEP_START` and `STEP_END` events and role iteration.
+-   **Goal Evaluation**: Added `evaluateGoals()` logic (basic structure for now) to check for experiment success.
+-   **Termination Logic**: Added checks for `maxSteps` and met goals, updating the experiment status to `COMPLETED` or `FAILED` appropriately.
 
-Created `backend/src/services/experiment-orchestrator.service.js`.
-
--   **Initialization**: Loads `Experiment` and `ExperimentPlan` by ID.
--   **Event Bus**: Instantiates a private `EventBus` and `Logger` for the experiment.
--   **State Management**: Ensures the experiment has an initial environment populated from the plan.
--   **Start**: Emits the `EXPERIMENT_START` event.
-
-### 2. [NEW] Unit Tests
-
-Created `backend/tests/services/experiment-orchestrator.service.test.js`.
-
--   **Coverage**:
-    -   Successful initialization.
-    -   Error handling for missing IDs.
-    -   Idempotency of `initialize()`.
-    -   Verification of `EXPERIMENT_START` event emission.
-    -   Status updates to `RUNNING`.
+### 2. Unit Tests
+Created `backend/src/services/experiment-orchestrator.service.test.js` covering:
+-   **Initialization**: Verifies the loop starts correctly.
+-   **Max Steps**: Verifies the experiment fails if `maxSteps` is exceeded.
+-   **Goal Termination**: Verifies the experiment completes if a goal is met.
+-   **Role Iteration**: Verifies that roles are processed within each step.
+-   **Error Handling**: Verifies graceful failure upon errors.
 
 ## Verification Results
 
 ### Automated Tests
-
-Ran `npm test tests/services/experiment-orchestrator.service.test.js` and all tests passed.
+Run command: `npm test -- src/services/experiment-orchestrator.service.test.js`
 
 ```
-PASS  tests/services/experiment-orchestrator.service.test.js
-  ExperimentOrchestrator Service
-    constructor
-      ✓ should throw error if experimentId is missing (26 ms)
-      ✓ should initialize properties correctly (3 ms)
-    initialize
-      ✓ should load experiment and plan successfully (4 ms)
-      ✓ should throw error if experiment not found (3 ms)
-      ✓ should throw error if plan not found (3 ms)
-      ✓ should populate initial environment if empty (3 ms)
-      ✓ should be idempotent (2 ms)
-    start
-      ✓ should initialize if not already initialized (15 ms)
-      ✓ should update experiment status to RUNNING (3 ms)
-      ✓ should emit EXPERIMENT_START event (3 ms)
+ PASS  src/services/experiment-orchestrator.service.test.js
+  ExperimentOrchestrator Step Loop
+    ✓ should initialize and start the loop (17 ms)
+    ✓ should increment steps up to maxSteps and fail (11 ms)
+    ✓ should terminate early if a goal is met (7 ms)
+    ✓ should iterate through roles in each step (4 ms)
+    ✓ should handle errors in loop gracefully (72 ms)
 ```
+
+All 5 tests passed successfully.

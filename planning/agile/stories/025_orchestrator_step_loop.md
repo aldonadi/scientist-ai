@@ -23,14 +23,14 @@ Implement the main loop of the orchestrator to manage the lifecycle of an experi
 -   **Status Updates**: Manage `Experiment.status` transitions.
 
 ## Acceptance Criteria
-- [ ] `processStep()` logic is implemented.
-- [ ] Emits `STEP_START` at beginning of step.
-- [ ] Iterates through all Roles defined in the plan (delegating to prompt/inference logic).
-- [ ] Emits `STEP_END` at end of step.
-- [ ] Evaluates all Goals after step completion.
-- [ ] Increments `currentStep`.
-- [ ] Respects `maxSteps` and handles termination.
-- [ ] Updates `Experiment.status` correctly.
+- [x] `processStep()` logic is implemented.
+- [x] Emits `STEP_START` at beginning of step.
+- [x] Iterates through all Roles defined in the plan (delegating to prompt/inference logic).
+- [x] Emits `STEP_END` at end of step.
+- [x] Evaluates all Goals after step completion.
+- [x] Increments `currentStep`.
+- [x] Respects `maxSteps` and handles termination.
+- [x] Updates `Experiment.status` correctly.
 
 ## Testing
 1.  Run a dummy loop with 0 roles.
