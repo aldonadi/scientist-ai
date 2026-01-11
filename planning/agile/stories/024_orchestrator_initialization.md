@@ -14,12 +14,13 @@ Implement the startup phase of `ExperimentOrchestrator`: loading the plan, setti
 **So that** all components are ready before the first step.
 
 ## Acceptance Criteria
-- [ ] Loads Experiment and Plan from DB.
-- [ ] Instantiates EventBus.
-- [ ] Emits `EXPERIMENT_START`.
+- [x] Loads Experiment and Plan from DB.
+- [x] Instantiates EventBus.
+- [x] Emits `EXPERIMENT_START`.
 
 ## Testing
 1. Call `start()`.
 2. Verify events emitted.
 
 ## Review Log
+**1/10/26** - Accepted by Product Owner
