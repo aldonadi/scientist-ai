@@ -1,6 +1,6 @@
 # Implement Experiment Control API (Pause/Resume/Stop)
 
-- **Status:** READY
+- **Status:** DONE
 - **Points:** 5
 - **Story ID:** 047
 - **Type:** Feature
@@ -43,3 +43,6 @@ Implement the API endpoints and orchestrator logic to allow external control of 
     -   Send `PAUSE`. Wait. Check that step count stops increasing.
     -   Send `RESUME`. Check that step count resumes increasing.
     -   Send `STOP`. Check that status becomes `STOPPED`.
+
+## Review
+**1/11/26**: Accepted by Product Owner
