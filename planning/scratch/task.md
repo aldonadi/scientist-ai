@@ -15,11 +15,11 @@
     - [x] Test environment mutation and merge
     - [x] Test `ABORT_EXPERIMENT` policy
     - [x] Test `CONTINUE_WITH_ERROR` policy
-- [ ] Integration Tests
-    - [ ] `EXPERIMENT_START` hook
-    - [ ] `STEP_START` hook
-    - [ ] `STEP_END` hook
-    - [ ] `EXPERIMENT_END` hook
-    - [ ] `BEFORE_TOOL_CALL` hook
-    - [ ] `AFTER_TOOL_CALL` hook
+- [x] Integration Tests
+    - [x] `EXPERIMENT_START` hook
+    - [x] `STEP_START` hook
+    - [x] `STEP_END` hook
+    - [x] `EXPERIMENT_END` hook
+    - [x] `BEFORE_TOOL_CALL` hook
+    - [x] `AFTER_TOOL_CALL` hook
 - [x] Update backlog and story file

@@ -1,6 +1,6 @@
 # Implement Script & Hook System
 
-- **Status:** NOT READY
+- **Status:** DONE
 - **Points:** 5
 - **Story ID:** 046
 - **Type:** Feature
@@ -33,16 +33,16 @@ Implement the mechanism to register and execute Scripts defined in an `Experimen
 - [x] Python execution receives the correct `Context` data (serialized as JSON).
 - [x] Script output/errors are captured and logged via the Logger service.
 - [x] Experiment properly handles script errors for both `ABORT_EXPERIMENT` and `CONTINUE_WITH_ERROR` policies.
-- [ ] Integration test verifies that a script attached to `EXPERIMENT_START` runs when the experiment starts.
-- [ ] Integration test verifies that a script attached to `STEP_START` runs at the beginning of a step.
-- [ ] Integration test verifies that a script attached to `STEP_END` runs at the end of a step.
-- [ ] Integration test verifies that a script attached to `EXPERIMENT_END` runs when the experiment ends.
-- [ ] Integration test verifies that a script attached to `BEFORE_TOOL_CALL` runs before a tool is called.
-- [ ] Integration test verifies that a script attached to `AFTER_TOOL_CALL` runs after a tool is called.
+- [x] Integration test verifies that a script attached to `EXPERIMENT_START` runs when the experiment starts.
+- [x] Integration test verifies that a script attached to `STEP_START` runs at the beginning of a step.
+- [x] Integration test verifies that a script attached to `STEP_END` runs at the end of a step.
+- [x] Integration test verifies that a script attached to `EXPERIMENT_END` runs when the experiment ends.
+- [x] Integration test verifies that a script attached to `BEFORE_TOOL_CALL` runs before a tool is called.
+- [x] Integration test verifies that a script attached to `AFTER_TOOL_CALL` runs after a tool is called.
 
 ## Dependencies
 - Story 042 (Script Schema) - DONE
-- Story 025 (Orchestrator Loop) - REVIEW (Must be integrated with loop events)
+- Story 025 (Orchestrator Loop) - DONE
 - Story 018 (Event Bus) - DONE
 - Story 021 (Container Execution) - DONE
 
@@ -68,3 +68,6 @@ Implement the mechanism to register and execute Scripts defined in an `Experimen
     -   Create a Plan with a Script on `AFTER_TOOL_CALL` that prints "Hello World AFTER_TOOL_CALL".
     -   Launch Experiment.
     -   Check Logs for "Hello World AFTER_TOOL_CALL".
+
+## Review
+**1/11/26**: Accepted by Product Owner
