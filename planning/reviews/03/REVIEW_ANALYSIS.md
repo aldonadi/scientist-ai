@@ -32,14 +32,17 @@ The three reviews present **dramatically conflicting assessments**. Reviews 1 an
 | Review 2 | ❌ **MISSING** - Confirmed |
 | Review 3 | ✅ **IMPLEMENTED** |
 
-**Our Evaluation**: **NEEDS IMMEDIATE VERIFICATION**
+**Our Evaluation**: ❌ **CONFIRMED MISSING**
 
-> [!IMPORTANT]
-> This is a fundamental discrepancy. Either the endpoint exists or it doesn't. We must inspect `experiment.routes.js` to verify.
->
-> **Justification**: Reviews 1 and 2 explicitly cite the routes file showing only two endpoints (`POST /` and `POST /:id/control`). Review 3 claims full implementation without providing file evidence. The weight of evidence suggests the endpoint is likely missing.
+> [!CAUTION]
+> **VERIFIED**: `experiment.routes.js` contains only 10 lines with exactly 2 endpoints:
+> ```javascript
+> router.post('/', experimentController.launchExperiment);
+> router.post('/:id/control', experimentController.controlExperiment);
+> ```
+> Reviews 1 and 2 are correct. Review 3 is incorrect.
 
-**Action Required**: Verify if `GET /api/experiments` exists in the codebase.
+**Action Required**: Created **Story 048** to implement missing endpoints.
 
 ---
 
@@ -131,10 +134,10 @@ The three reviews present **dramatically conflicting assessments**. Reviews 1 an
 | Review 2 | ❌ **BLOCKER** - Confirmed with code snippet |
 | Review 3 | Not mentioned |
 
-**Our Evaluation**: **CRITICAL - MUST FIX**
+**Our Evaluation**: ❌ **CONFIRMED - CRITICAL BUG**
 
 > [!CAUTION]
-> Both Reviews 1 and 2 provide the exact same code evidence:
+> **VERIFIED**: `ollama-strategy.js` lines 37-42 show:
 > ```javascript
 > const stream = await client.chat({
 >     model: modelName,
@@ -144,11 +147,9 @@ The three reviews present **dramatically conflicting assessments**. Reviews 1 an
 >     // tools: tools  <-- MISSING!
 > });
 > ```
-> Without the `tools` parameter, the LLM cannot perform function calling, which breaks the core agent loop.
+> The `tools` parameter is received but NOT passed to the Ollama client. Reviews 1 and 2 are correct.
 
-**Justification**: This is a factual code observation verified by two independent reviewers. Review 3's silence on this issue is concerning and suggests incomplete inspection.
-
-**Action Required**: Add `tools: tools` to the Ollama chat payload in `ollama-strategy.js`.
+**Action Required**: Created **Story 050** to fix this blocker bug.
 
 ---
 
@@ -160,19 +161,20 @@ The three reviews present **dramatically conflicting assessments**. Reviews 1 an
 | Review 2 | ❌ **BLOCKER** - Signature mismatch will crash |
 | Review 3 | Not mentioned |
 
-**Our Evaluation**: **HIGH PRIORITY - NEEDS VERIFICATION**
+**Our Evaluation**: ❌ **CONFIRMED - BLOCKER BUG**
 
-> [!WARNING]
-> Review 2 claims:
-> - `ContainerPoolManager` returns `src/domain/container.js` instances
-> - `domain/container.js` expects `execute(cmdArray, opts)`
-> - Orchestrator calls `execute(toolCodeString, envObject, argsArray)`
+> [!CAUTION]
+> **VERIFIED**: The interface mismatch is CONFIRMED and even worse than reported:
 >
-> This would cause a crash on any tool execution.
+> 1. `domain/container.js` line 22: `execute(cmd, opts = {})` - expects cmd array
+> 2. `execution/container.js` line 34: `execute(script, env = {}, args = [])` - convenience method
+> 3. **Orchestrator uses BOTH signatures inconsistently**:
+>    - Tool calls (line 399-403): `execute(toolDoc.code, filteredEnv.variables, call.args)` 
+>    - Goal/Hook calls (line 509-517): `execute(['python3', '-c', pythonScript], {Env: [...]})`
+>
+> The pool returns `domain/container.js` instances, so tool execution WILL CRASH.
 
-**Justification**: Review 1 independently noted the presence of two Container implementations (`domain/container.js` and `execution/container.js`). Review 2 elaborates on the interface mismatch. This suggests a real issue.
-
-**Action Required**: Verify the actual `Container.execute()` signature and how it is called in the orchestrator.
+**Action Required**: Created **Story 051** to unify container interfaces.
 
 ---
 
@@ -218,18 +220,16 @@ The three reviews present **dramatically conflicting assessments**. Reviews 1 an
 | Review 2 | ❌ **HIGH RISK** - Confirmed with code snippet |
 | Review 3 | Not mentioned |
 
-**Our Evaluation**: **CRITICAL - MUST FIX**
+**Our Evaluation**: ❌ **CONFIRMED - SECURITY VULNERABILITY**
 
 > [!CAUTION]
-> Review 2 provides direct evidence:
+> **VERIFIED**: `container-pool.service.js` line 90 shows:
 > ```javascript
 > // PidsLimit: 10, // Prevent fork bombs
 > ```
-> A fork bomb (`while True: os.fork()`) could crash the host system.
+> Additionally, there is NO `CpuQuota` setting. Reviews 1 and 2 are correct.
 
-**Justification**: Two reviewers identify the same commented-out line. This is trivial to fix and high-impact security.
-
-**Action Required**: Uncomment `PidsLimit: 10` in container configuration.
+**Action Required**: Created **Story 052** to enable resource limits.
 
 ---
 
@@ -319,38 +319,42 @@ The three reviews present **dramatically conflicting assessments**. Reviews 1 an
 
 ## Section 6: Summary of Required Actions
 
-### Critical (Must Fix Before Alpha)
+> [!IMPORTANT]
+> All findings have been **VERIFIED** by direct code inspection. User stories have been created for each issue.
 
-| ID | Issue | Fix |
-|----|-------|-----|
-| C1 | Verify and implement missing Experiment CRUD endpoints | `GET /api/experiments`, `GET /:id`, `DELETE /:id` |
-| C2 | Pass `tools` to Ollama chat API | Add `tools: tools` in `ollama-strategy.js` |
-| C3 | Resolve Container interface mismatch | Verify and unify `execute()` signature |
-| C4 | Uncomment `PidsLimit` | Enable fork bomb protection |
+### Critical (Must Fix Before Alpha) ✅ Stories Created
 
-### High Priority
+| ID | Issue | Story |
+|----|-------|-------|
+| C1 | `GET /api/experiments` not implemented | **[048](file:///home/andrew/Projects/Code/web/scientist-ai/planning/agile/stories/048_experiment_crud_api.md)** |
+| C2 | `GET /api/experiments/:id` not implemented | **[048](file:///home/andrew/Projects/Code/web/scientist-ai/planning/agile/stories/048_experiment_crud_api.md)** |
+| C3 | `DELETE /api/experiments/:id` not implemented | **[048](file:///home/andrew/Projects/Code/web/scientist-ai/planning/agile/stories/048_experiment_crud_api.md)** |
+| C4 | Tools not passed to Ollama chat API | **[050](file:///home/andrew/Projects/Code/web/scientist-ai/planning/agile/stories/050_fix_ollama_tool_passing.md)** |
+| C5 | Container interface mismatch | **[051](file:///home/andrew/Projects/Code/web/scientist-ai/planning/agile/stories/051_unify_container_interface.md)** |
+| C6 | `PidsLimit` commented out | **[052](file:///home/andrew/Projects/Code/web/scientist-ai/planning/agile/stories/052_container_security_hardening.md)** |
 
-| ID | Issue | Fix |
-|----|-------|-----|
-| H1 | Add `CpuQuota` to containers | Limit CPU usage per container |
-| H2 | Implement `GET /api/experiments/:id/logs` | Enable log retrieval |
-| H3 | Add integration tests for tool execution path | Verify real container calls |
+### High Priority ✅ Stories Created
 
-### Medium Priority
+| ID | Issue | Story |
+|----|-------|-------|
+| H1 | `GET /api/experiments/:id/logs` missing | **[049](file:///home/andrew/Projects/Code/web/scientist-ai/planning/agile/stories/049_logs_api.md)** |
+| H2 | No CPU limit on containers | **[052](file:///home/andrew/Projects/Code/web/scientist-ai/planning/agile/stories/052_container_security_hardening.md)** |
+| H3 | SSE stream endpoint missing | **[055](file:///home/andrew/Projects/Code/web/scientist-ai/planning/agile/stories/055_sse_streaming_endpoint.md)** |
 
-| ID | Issue | Fix |
-|----|-------|-----|
-| M1 | Implement LLM retry with exponential backoff | Per SPEC §8.2 |
-| M2 | Implement SSE streaming endpoint | Real-time UI updates |
-| M3 | Implement `POST /api/plans/:id/duplicate` | Clone experiment plans |
+### Medium Priority ✅ Stories Created
 
-### Low Priority
+| ID | Issue | Story |
+|----|-------|-------|
+| M1 | No LLM retry logic | **[054](file:///home/andrew/Projects/Code/web/scientist-ai/planning/agile/stories/054_llm_retry_logic.md)** |
+| M2 | Plan duplicate endpoint missing | **[053](file:///home/andrew/Projects/Code/web/scientist-ai/planning/agile/stories/053_plan_duplicate_endpoint.md)** |
 
-| ID | Issue | Fix |
-|----|-------|-----|
-| L1 | Return 400 for invalid ObjectId | Handle CastError |
-| L2 | Remove duplicate `experiment.save()` | Code cleanup |
-| L3 | Consolidate Container implementations | Remove `execution/container.js` if unused |
+### Low Priority (Deferred)
+
+| ID | Issue | Notes |
+|----|-------|-------|
+| L1 | Return 400 for invalid ObjectId | Can be addressed in Story 048 |
+| L2 | Remove duplicate `experiment.save()` | Code cleanup, no story needed |
+| L3 | Consolidate Container implementations | Addressed in Story 051 |
 
 ---
 

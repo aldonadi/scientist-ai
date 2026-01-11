@@ -58,6 +58,14 @@ Status can be:
 | 028_goal_evaluation_logic                          | 3      | DONE        |
 | 046_script_and_hook_system                         | 5      | DONE        |
 | 047_experiment_control_api                         | 5      | DONE        |
+| 048_experiment_crud_api                            | 5      | READY       |
+| 049_logs_api                                       | 3      | READY       |
+| 050_fix_ollama_tool_passing                        | 2      | READY       |
+| 051_unify_container_interface                      | 5      | READY       |
+| 052_container_security_hardening                   | 2      | READY       |
+| 053_plan_duplicate_endpoint                        | 2      | READY       |
+| 054_llm_retry_logic                                | 3      | READY       |
+| 055_sse_streaming_endpoint                         | 5      | READY       |
 | 029_setup_frontend_layout                          | 3      | NOT READY   |
 | 030_ui_tool_list                                   | 2      | NOT READY   |
 | 031_ui_tool_editor                                 | 5      | NOT READY   |
