@@ -20,7 +20,10 @@ Implement the mechanism to register and execute Scripts defined in an `Experimen
     -   `environment`: A deep copy of the current environment (or mutable reference if allowed).
     -   `event`: The payload of the event that triggered the hook.
 -   **Execution**: Use `containerPool.service` (or `executionEnv` interface) to run the `script.code` in a container.
--   **Error Handling**: If a script fails (non-zero exit code), it should be logged but should NOT crash the experiment unless critical (implementation detail: define policy, likely `CONTINUE_WITH_ERROR`).
+-   **Error Handling**: Each script can be assigned a `failPolicy` that determines how the experiment should react to a failure (e.g., abort, continue with error).
+    - `ABORT_EXPERIMENT`: (default) Abort the experiment and raise an error.
+    - `CONTINUE_WITH_ERROR`: Continue the experiment but raise an error.
+
 -   **Architecture**: Ensure proper decoupling. The orchestration service shouldn't know the content of the script, just that it needs to run it.
 
 ## Acceptance Criteria
@@ -29,8 +32,13 @@ Implement the mechanism to register and execute Scripts defined in an `Experimen
 - [ ] `processHook()` (or similar method) is implemented to bridge Node.js events to Python execution.
 - [ ] Python execution receives the correct `Context` data (serialized as JSON).
 - [ ] Script output/errors are captured and logged via the Logger service.
+- [ ] Experiment properly handles script errors for both `ABORT_EXPERIMENT` and `CONTINUE_WITH_ERROR` policies.
 - [ ] Integration test verifies that a script attached to `EXPERIMENT_START` runs when the experiment starts.
 - [ ] Integration test verifies that a script attached to `STEP_START` runs at the beginning of a step.
+- [ ] Integration test verifies that a script attached to `STEP_END` runs at the end of a step.
+- [ ] Integration test verifies that a script attached to `EXPERIMENT_END` runs when the experiment ends.
+- [ ] Integration test verifies that a script attached to `BEFORE_TOOL_CALL` runs before a tool is called.
+- [ ] Integration test verifies that a script attached to `AFTER_TOOL_CALL` runs after a tool is called.
 
 ## Dependencies
 - Story 042 (Script Schema) - DONE
@@ -39,8 +47,24 @@ Implement the mechanism to register and execute Scripts defined in an `Experimen
 - Story 021 (Container Execution) - DONE
 
 ## Testing
-1.  **Unit Test**: Mock `EventBus` and `ContainerPool`. Verify `initialize()` subscribes to events. Verify event emission triggers `execute()` on the container service.
+1.  **Unit Test**: Mock `EventBus` and `ContainerPool`. Verify `initialize()` subscribes to events. Verify event emission triggers `execute()` on the container service. Test experiment properly handling script errors for both `ABORT_EXPERIMENT` and `CONTINUE_WITH_ERROR` policies.
+
 2.  **Integration Test**:
-    -   Create a Plan with a Script on `EXPERIMENT_START` that prints "Hello World".
+    -   Create a Plan with a Script on `EXPERIMENT_START` that prints "Hello World EXPERIMENT_START".
     -   Launch Experiment.
-    -   Check Logs for "Hello World".
+    -   Check Logs for "Hello World EXPERIMENT_START".
+    -   Create a Plan with a Script on `STEP_START` that prints "Hello World STEP_START".
+    -   Launch Experiment.
+    -   Check Logs for "Hello World STEP_START".
+    -   Create a Plan with a Script on `STEP_END` that prints "Hello World STEP_END".
+    -   Launch Experiment.
+    -   Check Logs for "Hello World STEP_END".
+    -   Create a Plan with a Script on `EXPERIMENT_END` that prints "Hello World EXPERIMENT_END".
+    -   Launch Experiment.
+    -   Check Logs for "Hello World EXPERIMENT_END".
+    -   Create a Plan with a Script on `BEFORE_TOOL_CALL` that prints "Hello World BEFORE_TOOL_CALL".
+    -   Launch Experiment.
+    -   Check Logs for "Hello World BEFORE_TOOL_CALL".
+    -   Create a Plan with a Script on `AFTER_TOOL_CALL` that prints "Hello World AFTER_TOOL_CALL".
+    -   Launch Experiment.
+    -   Check Logs for "Hello World AFTER_TOOL_CALL".
