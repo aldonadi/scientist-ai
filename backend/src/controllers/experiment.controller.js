@@ -34,8 +34,6 @@ const launchExperiment = async (req, res, next) => {
 
         await experiment.save();
 
-        await experiment.save();
-
         // Start Orchestrator Asynchronously
         const orchestrator = new ExperimentOrchestrator(experiment._id);
         orchestrator.start().catch(err => {

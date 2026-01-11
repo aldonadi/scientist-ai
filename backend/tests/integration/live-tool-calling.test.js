@@ -91,5 +91,5 @@ describe('Live Tool Calling Verification (Ollama)', () => {
 
         console.log(`\nFinal Score: ${successCount}/${NUM_RUNS}`);
         expect(successCount).toBeGreaterThanOrEqual(SUCCESS_THRESHOLD);
-    });
+    }, 300000);
 });
