@@ -1,45 +1,47 @@
-# Implementation Plan - Role Prompt Construction (Story 026)
+# Implementation Plan - Tool Execution Logic (Story 027)
 
 ## Goal Description
-Implement the logic within `ExperimentOrchestrator.processRole` to construct the context window definition for an agent role. This involves isolating the environment (deep copy + whitelist), resolving tool definitions, constructing standard System/User messages, and emitting the `MODEL_PROMPT` event.
+Implement the logic to handle `TOOL_CALL` events within the `ExperimentOrchestrator`. This enables the "Action" part of the agent loop, allowing the model to interact with the environment through safe, sandboxed Docker containers.
 
 ## User Review Required
 > [!IMPORTANT]
-> The current story (026) scope effectively ends at emitting `MODEL_PROMPT`. The actual LLM inference and response handling is likely covered in subsequent stories or implicit. I will implement the preparation logic.
+> **Ollama Strategy Update**: The current `OllamaStrategy` only yields text content. I will need to update it to support/yield `tool_calls` if the underlying `ollama-js` library provides them, or implement a parsing mechanism if we are strictly using text-based tool invocation. **Assumption**: I will modify `OllamaStrategy` to yield full message objects or specific events when tool calls are detected, which might be a breaking change for anything expecting only strings (though currently `processRole` just emits `MODEL_PROMPT` and stops, so likely safe).
 
 ## Proposed Changes
 
 ### Backend
 
 #### [MODIFY] [experiment-orchestrator.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/experiment-orchestrator.service.js)
-- Import `Tool` model.
-- Import `deepCopy` and `set` from `environment.schema.js`.
-- Implement `processRole` method:
-    - **Environment Isolation**:
-        - Call `deepCopy(this.experiment.currentEnvironment)`.
-        - Filter variables against `role.variableWhitelist`.
-    - **Tool Resolution**:
-        - Query `Tool` model for IDs in `role.tools`.
-        - Map to format expected by Provider (or just raw definitions for now).
-    - **Prompt Construction**:
-        - `systemMessage`: `role.systemPrompt`.
-        - `userMessage`: `Step ${stepNumber}. Current Environment: ${JSON.stringify(filteredEnv)}`.
-    - **Event Emission**:
-        - Emit `EventTypes.MODEL_PROMPT` with `{ experimentId, roleName, messages, tools }`.
+- Implement the "Inference" section in `processRole` (or `processStep` loop).
+- **Logic**:
+    1. Instantiate `ProviderService`.
+    2. Call `ProviderService.chat(...)`.
+    3. Iterate over the stream.
+    4. Detect `TOOL_CALL` (either via structured object from provider or parsing).
+    5. **If Tool Call Detected**:
+        - Emit `TOOL_CALL` event.
+        - **Acquire Container**: Call `ContainerPoolManager.getInstance().acquire()`.
+        - **Execute**: Call `container.execute(tool.code, env, args)`.
+        - **Handle Result**: Parse JSON output, update `currentEnvironment`.
+        - **Cleanup**: Call `container.destroy()`.
+        - Emit `TOOL_RESULT`.
+        - Append tool result to history and continue chat (recursion or loop).
+
+#### [MODIFY] [ollama-strategy.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/provider/strategies/ollama-strategy.js)
+- Update `chat` generator to yield objects `{ type: 'text', content: '...' }` or `{ type: 'tool_call', call: ... }` instead of just strings, OR just pass through the raw chunk structure so the Orchestrator can decide.
+
+#### [NEW] [experiment-orchestrator.tool-execution.test.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/tests/services/experiment-orchestrator.tool-execution.test.js)
+- Create a new test file specifically for testing tool execution flow.
+- Mock `ContainerPoolManager`, `ProviderService`, and `Tool` model.
 
 ## Verification Plan
 
 ### Automated Tests
-- Create a new unit test or extend existing `experiment-orchestrator.test.js`.
-- **Test Case 1: Environment Isolation**
-    - Setup: Experiment with env `{ a: 1, b: 2 }`, Role whitelist `['a']`.
-    - Action: Run `processRole`.
-    - Assert: `MODEL_PROMPT` event payload contains environment with only `a`.
-- **Test Case 2: Tool Resolution**
-    - Setup: Role with 1 Tool.
-    - Assert: `MODEL_PROMPT` event payload contains the tool definition.
-- **Test Case 3: Prompt Structure**
-    - Assert: Messages array contains correct System and User messages.
-
-### Manual Verification
-- N/A (Backend logic, unit tests are sufficient and preferred).
+- **Unit Tests**: Run the newly created test file.
+    ```bash
+    npm test backend/tests/services/experiment-orchestrator.tool-execution.test.js
+    ```
+    - Verify detection of tool call.
+    - Verify container acquisition and execution.
+    - Verify environment update from tool output.
+    - Verify event emission (`TOOL_CALL`, `TOOL_RESULT`).

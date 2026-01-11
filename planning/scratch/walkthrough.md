@@ -1,31 +1,43 @@
-# Walkthrough - Role Prompt Construction (Story 026)
+# Walkthrough - Tool Execution Logic (Story 027)
 
-I have implemented the logic for constructing role prompts within the `ExperimentOrchestrator`. This ensures that each agent role receives a properly isolated environment context and access to its assigned tools.
+I have implemented the logic to handle `TOOL_CALL` events within the `ExperimentOrchestrator`, enabling the agent to interact with the environment via safe Docker containers.
 
 ## Changes
 
-### Backend
+### 1. `ExperimentOrchestrator` Update
+- Implemented the inference loop in `processRole`.
+- Added detection of `tool_call` events from the provider.
+- Integrated `ContainerPoolManager` to acquire `READY` containers.
+- Executed tool code using the acquired container.
+- Handled tool results (parsing JSON output, updating `currentEnvironment`).
+- Emitted `TOOL_CALL` and `TOOL_RESULT` events.
+- Appended tool calls and results to the conversation history to support multi-turn tool usage (up to 5 loops).
 
-#### [custom] [experiment-orchestrator.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/experiment-orchestrator.service.js)
-- Implemented `processRole(role)` method.
-- **Environment Isolation**: Uses `deepCopy` and filters the environment based on `role.variableWhitelist`.
-- **Tool Resolution**: Fetches full `Tool` definitions from the database for the provider.
-- **Event Emission**: Emits `MODEL_PROMPT` with the constructed messages and resolved tools.
+### 2. `OllamaStrategy` Update
+- Updated the `chat` generator to yield structured objects `{ type: 'text' | 'tool_call', ... }` instead of just raw strings.
+- This ensures the orchestrator can reliably distinguish between content and tool invocation.
+
+### 3. New Unit Test
+- Created `backend/tests/services/experiment-orchestrator.tool-execution.test.js`.
+- Verifies the full flow:
+    - Provider simulates text -> tool call.
+    - Orchestrator detects call.
+    - Container acquired and executed.
+    - Result parsed and environment updated.
+    - Events emitted correctly.
+    - Container destroyed.
 
 ## Verification Results
 
 ### Automated Tests
-I created a new test suite [role-prompt.test.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/tests/role-prompt.test.js) and verified that:
-- Environment variables are correctly filtered based on the whitelist.
-- A deep copy is used to prevent state leakage.
-- Tools are correctly resolved and included in the payload.
-- System and User messages are constructed with the correct content.
-
+Ran the new test suite:
 ```bash
-PASS  tests/role-prompt.test.js
-  ExperimentOrchestrator - Role Prompt Construction
-    ✓ should construct prompt with filtered environment based on whitelist (9 ms)
-    ✓ should provide full environment if whitelist is empty/undefined (1 ms)
-    ✓ should resolve tools and include in payload (2 ms)
-    ✓ should construct correct system and user messages (2 ms)
+npm test backend/tests/services/experiment-orchestrator.tool-execution.test.js
+```
+**Result**: PASS
+
+```
+PASS  tests/services/experiment-orchestrator.tool-execution.test.js
+  ExperimentOrchestrator Tool Execution
+    ✓ should detect and execute a tool call (14 ms)
 ```

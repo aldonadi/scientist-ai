@@ -287,8 +287,158 @@ class ExperimentOrchestrator {
             tools: toolsForProvider
         });
 
-        // 5. Inference (Placeholder for next story)
-        // const response = await Provider.chat(...)
+        // 5. Inference & Tool Execution Loop
+        const ProviderService = require('./provider/provider.service');
+        const ContainerPoolManager = require('./container-pool.service');
+
+        let shouldContinue = true;
+        let accumulatedResponse = '';
+        let currentMessages = [...messages];
+        let toolCalls = [];
+
+        // Safety limit for tool loops to prevent infinite recursions
+        let loopCount = 0;
+        const MAX_TOOL_LOOPS = 5;
+
+        while (shouldContinue && loopCount < MAX_TOOL_LOOPS) {
+            shouldContinue = false; // Default to stop unless tool call forces continuance
+            accumulatedResponse = '';
+            toolCalls = [];
+
+            // We need to pass the config. For now using defaults or role.modelConfig if available
+            // Assuming role.modelConfig has the provider and modelName
+
+            // Temporarily constructed provider object for the service
+            // This should ideally come from a populated modelConfig
+            const providerConfig = {
+                type: role.modelConfig ? role.modelConfig.provider : 'OLLAMA', // Default
+                baseUrl: process.env.OLLAMA_HOST || 'http://localhost:11434' // TODO: Get from DB/Config
+            };
+            const modelName = role.modelConfig ? role.modelConfig.modelName : 'llama3';
+
+            try {
+                const stream = await ProviderService.chat(
+                    providerConfig,
+                    modelName,
+                    currentMessages,
+                    toolsForProvider,
+                    { temperature: role.modelConfig?.temperature || 0.7 }
+                );
+
+                for await (const event of stream) {
+                    if (event.type === 'text') {
+                        accumulatedResponse += event.content;
+                        this.eventBus.emit(EventTypes.MODEL_RESPONSE_CHUNK, {
+                            experimentId: this.experiment._id,
+                            roleName: role.name,
+                            chunk: event.content
+                        });
+                    } else if (event.type === 'tool_call') {
+                        toolCalls.push(event);
+                    }
+                }
+
+                // If we got tool calls, we must execute them and continue the loop
+                if (toolCalls.length > 0) {
+                    // Append the assistant's thought process (if any text before tool call) to history
+                    currentMessages.push({
+                        role: 'assistant',
+                        content: accumulatedResponse,
+                        tool_calls: toolCalls.map(tc => ({
+                            type: 'function',
+                            function: {
+                                name: tc.toolName,
+                                arguments: tc.args
+                            }
+                        }))
+                    });
+
+                    for (const call of toolCalls) {
+                        this.eventBus.emit(EventTypes.TOOL_CALL, {
+                            experimentId: this.experiment._id,
+                            toolName: call.toolName,
+                            args: call.args
+                        });
+
+                        // 1. Acquire Container
+                        const container = await ContainerPoolManager.getInstance().acquire();
+
+                        // 2. Resolve Tool Code
+                        const toolDoc = await Tool.findOne({ name: call.toolName });
+                        if (!toolDoc) {
+                            throw new Error(`Tool detected but not found in DB: ${call.toolName}`);
+                        }
+
+                        let result = '';
+                        let error = null;
+
+                        try {
+                            // 3. Execute
+                            const execResult = await container.execute(
+                                toolDoc.code,
+                                filteredEnv.variables, // Pass the environment
+                                call.args
+                            );
+
+                            // 4. Handle Result
+                            try {
+                                const jsonOutput = JSON.parse(execResult.stdout);
+                                // Merge into environment
+                                Object.assign(this.experiment.currentEnvironment.variables, jsonOutput);
+                                // Also update our local filtered copy for the next loop iteration visibility?
+                                Object.assign(filteredEnv.variables, jsonOutput);
+                                result = jsonOutput;
+                            } catch (parseErr) {
+                                result = execResult.stdout;
+                            }
+
+                            if (execResult.exitCode !== 0) {
+                                error = execResult.stderr || 'Unknown error';
+                            }
+                        } catch (err) {
+                            error = err.message;
+                        } finally {
+                            // 5. Cleanup
+                            await container.destroy(); // One-shot
+                        }
+
+                        this.eventBus.emit(EventTypes.TOOL_RESULT, {
+                            experimentId: this.experiment._id,
+                            toolName: call.toolName,
+                            result: error ? { error } : result,
+                            envChanges: result // Simplified
+                        });
+
+                        // Append Tool Result to History
+                        currentMessages.push({
+                            role: 'tool',
+                            name: call.toolName,
+                            content: error ? `Error: ${error}` : (typeof result === 'string' ? result : JSON.stringify(result))
+                        });
+                    }
+
+                    shouldContinue = true; // Continue the conversation loop
+                    loopCount++;
+                } else {
+                    // No tool calls, just normal completion
+                    this.eventBus.emit(EventTypes.MODEL_RESPONSE_COMPLETE, {
+                        experimentId: this.experiment._id,
+                        roleName: role.name,
+                        fullResponse: accumulatedResponse
+                    });
+                }
+
+            } catch (err) {
+                this.eventBus.emit(EventTypes.LOG, {
+                    experimentId: this.experiment._id,
+                    stepNumber: this.experiment.currentStep,
+                    source: 'SYSTEM',
+                    message: `Inference failed: ${err.message}`,
+                    data: { error: err }
+                });
+                shouldContinue = false;
+            }
+        }
     }
 
     /**

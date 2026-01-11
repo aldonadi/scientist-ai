@@ -27,12 +27,12 @@ Implement the logic to handle a `TOOL_CALL` event by executing the tool safely u
 -   **Events**: Emit `TOOL_CALL` (before) and `TOOL_RESULT` (after).
 
 ## Acceptance Criteria
-- [ ] Logic correctly detects tool call requests.
-- [ ] Acquires container from `ContainerPoolManager`.
-- [ ] Executes tool code with correct env/args.
-- [ ] Destroy container after single use.
-- [ ] Updates `Variables` map with result.
-- [ ] Emits `TOOL_CALL` and `TOOL_RESULT` events.
+- [x] Logic correctly detects tool call requests.
+- [x] Acquires container from `ContainerPoolManager`.
+- [x] Executes tool code with correct env/args.
+- [x] Destroy container after single use.
+- [x] Updates `Variables` map with result.
+- [x] Emits `TOOL_CALL` and `TOOL_RESULT` events.
 
 ## Testing
 1.  Simulate a tool call event.
