@@ -57,7 +57,7 @@ Status can be:
 | 027_tool_execution_logic                           | 5      | DONE        |
 | 028_goal_evaluation_logic                          | 3      | DONE        |
 | 046_script_and_hook_system                         | 5      | DONE        |
-| 047_experiment_control_api                         | 5      | READY       |
+| 047_experiment_control_api                         | 5      | REVIEW      |
 | 029_setup_frontend_layout                          | 3      | NOT READY   |
 | 030_ui_tool_list                                   | 2      | NOT READY   |
 | 031_ui_tool_editor                                 | 5      | NOT READY   |

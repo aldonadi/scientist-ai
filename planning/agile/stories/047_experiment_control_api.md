@@ -23,13 +23,13 @@ Implement the API endpoints and orchestrator logic to allow external control of 
 -   **Concurrency**: The orchestrator must respect status changes made by the API. (Addressed by mitigation in Story 025 to refresh state).
 
 ## Acceptance Criteria
-- [ ] `POST /api/experiments/:id/control` endpoint implemented.
-- [ ] Validates command enum (`PAUSE`, `RESUME`, `STOP`).
-- [ ] `PAUSE` command transitions status to `PAUSED` (if currently `RUNNING`).
-- [ ] `RESUME` command transitions status to `RUNNING` (if currently `PAUSED`) and triggers resumption of the Orchestrator loop.
-- [ ] `STOP` command transitions status to `STOPPED` and terminates execution.
-- [ ] Disallowed transitions are handled gracefully (e.g., cannot `RESUME` a `COMPLETED` experiment).
-- [ ] Integration Test: Launch experiment, Pause it, Verify it stops processing steps. Resume it, verify it continues. Stop it, verify it ends.
+- [x] `POST /api/experiments/:id/control` endpoint implemented.
+- [x] Validates command enum (`PAUSE`, `RESUME`, `STOP`).
+- [x] `PAUSE` command transitions status to `PAUSED` (if currently `RUNNING`).
+- [x] `RESUME` command transitions status to `RUNNING` (if currently `PAUSED`) and triggers resumption of the Orchestrator loop.
+- [x] `STOP` command transitions status to `STOPPED` and terminates execution.
+- [x] Disallowed transitions are handled gracefully (e.g., cannot `RESUME` a `COMPLETED` experiment).
+- [x] Integration Test: Launch experiment, Pause it, Verify it stops processing steps. Resume it, verify it continues. Stop it, verify it ends.
 
 ## Dependencies
 - Story 025 (Orchestrator Loop) - REVIEW

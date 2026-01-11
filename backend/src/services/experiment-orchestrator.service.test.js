@@ -157,3 +157,63 @@ describe('ExperimentOrchestrator Goal Evaluation', () => {
         expect(mockContainer.destroy).toHaveBeenCalled();
     });
 });
+
+describe('ExperimentOrchestrator Control & State Transitions', () => {
+    let orchestrator;
+    let mockExperiment;
+
+    beforeEach(() => {
+        const { ExperimentOrchestrator } = require('./experiment-orchestrator.service');
+        const { Experiment } = require('../models/experiment.model');
+
+        orchestrator = new ExperimentOrchestrator('test-id');
+        mockExperiment = {
+            _id: 'test-id',
+            status: 'INITIALIZING',
+            startTime: null,
+            save: jest.fn().mockResolvedValue(true)
+        };
+        orchestrator.experiment = mockExperiment;
+        // Mock plan
+        orchestrator.plan = { name: 'Test Plan', maxSteps: 10 };
+        // Mock initialized
+        orchestrator.isInitialized = true;
+        // Mock initialize to do nothing
+        orchestrator.initialize = jest.fn().mockResolvedValue();
+        // Mock runLoop to resolve immediately to avoid hanging tests
+        orchestrator.runLoop = jest.fn().mockResolvedValue();
+
+        // Mock EventBus
+        orchestrator.eventBus = { emit: jest.fn() };
+
+        // Mock Experiment.findById for the start() method if it uses it? 
+        // Actually start() uses this.experiment. 
+        // But runLoop uses Experiment.findById.
+        Experiment.findById.mockResolvedValue(mockExperiment);
+    });
+
+    it('start() should set status to RUNNING and set startTime if not present', async () => {
+        await orchestrator.start();
+        expect(mockExperiment.status).toBe('RUNNING');
+        expect(mockExperiment.startTime).toBeInstanceOf(Date);
+        expect(mockExperiment.save).toHaveBeenCalled();
+        expect(orchestrator.runLoop).toHaveBeenCalled();
+    });
+
+    it('start() should NOT overwrite startTime if already present (Resume)', async () => {
+        const originalTime = new Date('2023-01-01');
+        mockExperiment.startTime = originalTime;
+        mockExperiment.status = 'PAUSED';
+
+        await orchestrator.start();
+
+        expect(mockExperiment.status).toBe('RUNNING');
+        expect(mockExperiment.startTime).toBe(originalTime); // Should not change
+        expect(mockExperiment.save).toHaveBeenCalled();
+        expect(orchestrator.runLoop).toHaveBeenCalled();
+    });
+
+    // We can't easily test the WHILE loop in unit tests without extensive mocking or refactoring to expose the loop condition.
+    // However, we can test that start() calls runLoop().
+    // The integration test will be better suited for verified the actual loop pause/resume behavior.
+});

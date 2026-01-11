@@ -15,7 +15,7 @@ const ExperimentSchema = new Schema({
     },
     status: {
         type: String,
-        enum: ['INITIALIZING', 'RUNNING', 'PAUSED', 'COMPLETED', 'FAILED'],
+        enum: ['INITIALIZING', 'RUNNING', 'PAUSED', 'COMPLETED', 'FAILED', 'STOPPED'],
         default: 'INITIALIZING',
         index: true,
         required: true

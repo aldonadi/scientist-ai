@@ -79,7 +79,9 @@ class ExperimentOrchestrator {
         }
 
         this.experiment.status = 'RUNNING';
-        this.experiment.startTime = new Date();
+        if (!this.experiment.startTime) {
+            this.experiment.startTime = new Date();
+        }
         await this.experiment.save();
 
         this.eventBus.emit(EventTypes.EXPERIMENT_START, {
