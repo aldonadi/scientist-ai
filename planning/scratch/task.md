@@ -1,0 +1,25 @@
+# Task Checklist - Story 046 Script and Hook System
+
+- [ ] Schema Updates
+    - [ ] Add `failPolicy` and `executionMode` to `ScriptSchema`
+    - [ ] Add `BEFORE_TOOL_CALL` and `AFTER_TOOL_CALL` to `hookType` enum
+    - [ ] Add new event types to `event-bus.js`
+- [ ] Orchestrator Integration
+    - [ ] Implement script registration in `initialize()`
+    - [ ] Implement `executeHook()` method
+    - [ ] Emit `BEFORE_TOOL_CALL` and `AFTER_TOOL_CALL` in `processRole()`
+    - [ ] Handle `executionMode` (SYNC/ASYNC)
+- [ ] Unit Tests
+    - [ ] Test script registration
+    - [ ] Test `executeHook()` with context passing
+    - [ ] Test environment mutation and merge
+    - [ ] Test `ABORT_EXPERIMENT` policy
+    - [ ] Test `CONTINUE_WITH_ERROR` policy
+- [ ] Integration Tests
+    - [ ] `EXPERIMENT_START` hook
+    - [ ] `STEP_START` hook
+    - [ ] `STEP_END` hook
+    - [ ] `EXPERIMENT_END` hook
+    - [ ] `BEFORE_TOOL_CALL` hook
+    - [ ] `AFTER_TOOL_CALL` hook
+- [ ] Update backlog and story file
