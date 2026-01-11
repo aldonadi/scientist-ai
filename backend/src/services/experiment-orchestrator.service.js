@@ -80,12 +80,40 @@ class ExperimentOrchestrator {
      * Main execution loop.
      * Iterates until completion or failure.
      */
+    /**
+     * Main execution loop.
+     * Iterates until completion or failure.
+     */
     async runLoop() {
+        // Initial refresh of status before starting loop
+        this.experiment = await Experiment.findById(this.experimentId);
+
         while (
             this.experiment.status === 'RUNNING' &&
             this.experiment.currentStep < this.plan.maxSteps
         ) {
             try {
+                // Refresh experiment state from DB to catch external status changes (PAUSE/STOP)
+                // We re-fetch strictly to check status, but we must be careful not to overwrite
+                // local changes to currentEnvironment if we haven't saved them yet.
+                // However, since we save at the end of every loop iteration, it should be safe.
+                const freshExperiment = await Experiment.findById(this.experimentId);
+                if (!freshExperiment) {
+                    throw new Error('Experiment deleted during execution');
+                }
+
+                // If external actor changed status, respect it
+                if (freshExperiment.status !== 'RUNNING') {
+                    this.experiment.status = freshExperiment.status;
+                    this.eventBus.emit(EventTypes.LOG, {
+                        experimentId: this.experiment._id,
+                        stepNumber: this.experiment.currentStep,
+                        source: 'SYSTEM',
+                        message: `Execution stopped external status change: ${freshExperiment.status}`
+                    });
+                    return;
+                }
+
                 await this.processStep();
 
                 // Goal Evaluation
@@ -94,10 +122,13 @@ class ExperimentOrchestrator {
                     this.experiment.status = 'COMPLETED';
                     this.experiment.result = goalMet;
                     this.experiment.endTime = new Date();
+                    const duration = this.experiment.endTime - this.experiment.startTime;
+
                     await this.experiment.save();
                     this.eventBus.emit(EventTypes.EXPERIMENT_END, {
                         experimentId: this.experiment._id,
-                        result: goalMet
+                        result: goalMet,
+                        duration: duration
                     });
                     return;
                 }
@@ -108,10 +139,13 @@ class ExperimentOrchestrator {
                     this.experiment.status = 'FAILED';
                     this.experiment.result = 'Max Steps Exceeded';
                     this.experiment.endTime = new Date();
+                    const duration = this.experiment.endTime - this.experiment.startTime;
+
                     await this.experiment.save();
                     this.eventBus.emit(EventTypes.EXPERIMENT_END, {
                         experimentId: this.experiment._id,
-                        result: 'Max Steps Exceeded'
+                        result: 'Max Steps Exceeded',
+                        duration: duration
                     });
                     return;
                 }
@@ -119,12 +153,26 @@ class ExperimentOrchestrator {
                 await this.experiment.save();
 
             } catch (error) {
-                console.error('Error in execution loop:', error);
+                this.eventBus.emit(EventTypes.LOG, {
+                    experimentId: this.experiment._id,
+                    stepNumber: this.experiment.currentStep,
+                    source: 'SYSTEM',
+                    message: 'Error in execution loop',
+                    data: { error: error.message }
+                });
                 this.experiment.status = 'FAILED';
                 this.experiment.result = `Error: ${error.message}`;
                 this.experiment.endTime = new Date();
+                const duration = this.experiment.endTime - this.experiment.startTime;
+
                 await this.experiment.save();
-                // TODO: Emit ERROR event?
+
+                this.eventBus.emit(EventTypes.EXPERIMENT_END, {
+                    experimentId: this.experiment._id,
+                    result: 'Failed',
+                    duration: duration,
+                    error: error.message
+                });
                 return;
             }
         }
@@ -148,7 +196,8 @@ class ExperimentOrchestrator {
 
         this.eventBus.emit(EventTypes.STEP_END, {
             experimentId: this.experiment._id,
-            stepNumber: step
+            stepNumber: step,
+            environmentSnapshot: this.experiment.currentEnvironment
         });
     }
 
@@ -185,7 +234,14 @@ class ExperimentOrchestrator {
                     return goal.description;
                 }
             } catch (e) {
-                console.error(`Goal evaluation failed for goal ${goal.description}`, e);
+                this.eventBus.emit(EventTypes.LOG, {
+                    experimentId: this.experiment._id,
+                    stepNumber: this.experiment.currentStep,
+                    source: 'SYSTEM',
+                    message: `Goal evaluation failed for goal ${goal.description}`,
+                    data: { error: e.message }
+                });
+                throw e; // Re-throw to be caught by runLoop and fail the experiment
             }
         }
         return null;

@@ -1,6 +1,6 @@
 # Task: Create Remediation User Stories
 
-- [x] Create User Story 046: Script & Hook System <!-- id: 5 -->
-- [x] Create User Story 047: Experiment Control API <!-- id: 6 -->
-- [x] Register new stories in `planning/agile/backlog.md` <!-- id: 7 -->
-- [ ] Notify user <!-- id: 8 -->
+- [x] Refactor `experiment-orchestrator.service.js` (Event Payloads, Concurrency, Error Handling, Logging) <!-- id: 9 -->
+- [x] Add unit tests for new scenarios in `experiment-orchestrator.service.test.js` <!-- id: 10 -->
+- [x] Run tests to verify fixes <!-- id: 11 -->
+- [ ] Notify user <!-- id: 12 -->
