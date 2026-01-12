@@ -1,6 +1,6 @@
 # Implement Experiment CRUD API
 
-- **Status:** REVIEW
+- **Status:** DONE
 - **Points:** 5
 - **Story ID:** 048
 - **Type:** Bug/Feature
@@ -60,3 +60,4 @@ Implement the missing Experiment API endpoints for reading and deleting experime
 - Handle CastError for invalid ObjectId to return 400 not 500
 
 ## Review
+**1/11/26** - Accepted by Product Owner
