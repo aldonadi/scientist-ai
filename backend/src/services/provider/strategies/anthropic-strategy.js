@@ -57,18 +57,65 @@ class AnthropicStrategy extends ProviderStrategy {
         const systemMessage = history.find(m => m.role === 'system');
         const messages = history.filter(m => m.role !== 'system');
 
+        // Transform tools to Anthropic format if provided
+        // Anthropic expects: { name, description, input_schema } (not 'parameters')
+        const anthropicTools = tools && tools.length > 0 ? tools.map(t => ({
+            name: t.name,
+            description: t.description,
+            input_schema: t.parameters
+        })) : undefined;
+
         const stream = await client.messages.create({
             model: modelName,
             messages: messages,
             system: systemMessage ? systemMessage.content : undefined,
             stream: true,
             max_tokens: config.max_tokens || 4096, // Anthropic requires max_tokens
+            tools: anthropicTools,
             ...config
         });
 
+        // Track current tool use block for accumulation
+        let currentToolUse = null;
+        let toolInputJson = '';
+
         for await (const chunk of stream) {
-            if (chunk.type === 'content_block_delta' && chunk.delta.text) {
-                yield chunk.delta.text;
+            // Handle text content
+            if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
+                yield { type: 'text', content: chunk.delta.text };
+            }
+
+            // Handle tool use start
+            if (chunk.type === 'content_block_start' && chunk.content_block?.type === 'tool_use') {
+                currentToolUse = {
+                    id: chunk.content_block.id,
+                    name: chunk.content_block.name
+                };
+                toolInputJson = '';
+            }
+
+            // Handle tool use input delta
+            if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'input_json_delta') {
+                toolInputJson += chunk.delta.partial_json;
+            }
+
+            // Handle tool use end
+            if (chunk.type === 'content_block_stop' && currentToolUse) {
+                try {
+                    yield {
+                        type: 'tool_call',
+                        toolName: currentToolUse.name,
+                        args: toolInputJson ? JSON.parse(toolInputJson) : {}
+                    };
+                } catch (e) {
+                    yield {
+                        type: 'tool_call',
+                        toolName: currentToolUse.name,
+                        args: toolInputJson
+                    };
+                }
+                currentToolUse = null;
+                toolInputJson = '';
             }
         }
     }

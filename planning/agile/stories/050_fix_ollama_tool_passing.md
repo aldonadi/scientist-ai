@@ -1,6 +1,6 @@
 # Fix Ollama Tool Parameter Passing
 
-- **Status:** READY
+- **Status:** DONE
 - **Points:** 2
 - **Story ID:** 050
 - **Type:** Bug
@@ -30,10 +30,10 @@ const stream = await client.chat({
 **So that** agents can use tools during experiment execution.
 
 ## Acceptance Criteria
-- [ ] `OllamaStrategy.chat()` passes `tools` parameter to Ollama client
-- [ ] Tool call responses are correctly parsed from Ollama stream
-- [ ] Integration test verifies tool calling works end-to-end
-- [ ] Other provider strategies (if any) are audited for same issue
+- [x] `OllamaStrategy.chat()` passes `tools` parameter to Ollama client
+- [x] Tool call responses are correctly parsed from Ollama stream
+- [x] Integration test verifies tool calling works end-to-end
+- [x] Other provider strategies (if any) are audited for same issue
 
 ## Testing Strategy
 
@@ -50,8 +50,11 @@ const stream = await client.chat({
     - Verify tool result is returned in stream
 
 ## Technical Notes
-- Add `tools: tools` to the client.chat() payload
-- Ensure tools are formatted per Ollama API spec
-- May need to transform tool format if Ollama expects different structure
+- Added `tools: ollamaTools` to the `client.chat()` payload (line 53) with transformation to Ollama format
+- Also fixed OpenAI and Anthropic strategies which had the same bug
+- Each strategy transforms internal tool format to provider-specific format:
+  - Ollama/OpenAI: `{ type: 'function', function: { name, description, parameters } }`
+  - Anthropic: `{ name, description, input_schema }`
 
 ## Review
+**1/11/26** - Accepted by Product Owner. Scope expanded to fix all three providers.

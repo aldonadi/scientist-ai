@@ -34,11 +34,23 @@ class OllamaStrategy extends ProviderStrategy {
     async *chat(provider, modelName, history, tools, config) {
         const client = this._getClient(provider);
 
+        // Transform tools to Ollama format if provided
+        // Ollama expects: { type: 'function', function: { name, description, parameters } }
+        const ollamaTools = tools && tools.length > 0 ? tools.map(t => ({
+            type: 'function',
+            function: {
+                name: t.name,
+                description: t.description,
+                parameters: t.parameters
+            }
+        })) : undefined;
+
         const stream = await client.chat({
             model: modelName,
             messages: history,
             stream: true,
             options: config,
+            tools: ollamaTools,
         });
 
         for await (const chunk of stream) {

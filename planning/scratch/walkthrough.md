@@ -1,39 +1,66 @@
-# Logs API Implementation - Walkthrough
+# Story 050: Fix Tool Parameter Passing - Walkthrough
 
 ## Summary
-Implemented `GET /api/experiments/:id/logs` endpoint per Story 049.
+Fixed a critical bug where all three provider strategies (Ollama, OpenAI, Anthropic) received but ignored the `tools` parameter, breaking agent tool-calling functionality.
 
 ## Changes Made
 
-### Controller ([experiment.controller.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/controllers/experiment.controller.js))
-- Added `getExperimentLogs` function with:
-  - ObjectId validation (400) and experiment existence check (404)
-  - Step filter (`?step=N`)
-  - Source filter (`?source=X`) - accepts any string
-  - Pagination (`?limit=N&offset=M`, default 50, max 500)
-  - Chronological ordering (oldest first)
+### Provider Strategies Fixed
 
-### Routes ([experiment.routes.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/routes/experiment.routes.js))
-- Added `GET /:id/logs` → `getExperimentLogs`
+| File | Change |
+|------|--------|
+| [ollama-strategy.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/provider/strategies/ollama-strategy.js) | Added `tools` parameter transformation and passing |
+| [openai-strategy.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/provider/strategies/openai-strategy.js) | Added `tools` parameter + fixed response parsing for `tool_call` events |
+| [anthropic-strategy.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/provider/strategies/anthropic-strategy.js) | Added `tools` parameter with Anthropic's `input_schema` format + fixed response parsing |
 
-## Response Format
-```json
-{
-  "logs": [...],
-  "pagination": { "total": 100, "limit": 50, "offset": 0, "hasMore": true }
-}
+### Tool Format Transformation
+
+Each provider requires a slightly different format:
+
+```javascript
+// Ollama & OpenAI
+{ type: 'function', function: { name, description, parameters } }
+
+// Anthropic
+{ name, description, input_schema }  // Uses input_schema instead of parameters
 ```
 
-## Test Results
+### Unit Tests Added
+
+5 new tests in [provider.service.test.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/tests/services/provider/provider.service.test.js):
+
+| Test | Strategy |
+|------|----------|
+| `should pass tools to client.chat() when provided` | Ollama |
+| `should omit tools when empty array provided` | Ollama |
+| `should yield tool_call events from stream` | Ollama |
+| `should pass tools to client.chat.completions.create()` | OpenAI |
+| `should pass tools to client.messages.create() with input_schema format` | Anthropic |
+
+## Verification
+
 ```
-Tests:       39 passed, 39 total (18 new for logs)
-Time:        4.486s
+npm test -- provider.service.test --verbose
+
+PASS  tests/services/provider/provider.service.test.js
+  ProviderService
+    Ollama Strategy
+      ✓ should list models successfully using SDK
+      ✓ should pass tools to client.chat() when provided
+      ✓ should omit tools when empty array provided
+      ✓ should yield tool_call events from stream
+    OpenAI Strategy
+      ✓ should list models using SDK
+      ✓ should pass tools to client.chat.completions.create() when provided
+    Anthropic Strategy
+      ✓ should return static model list
+      ✓ should validate connection using dummy chat
+      ✓ should pass tools to client.messages.create() with input_schema format
+
+Tests: 9 passed, 9 total
 ```
 
-### New Test Coverage
-- Basic retrieval, empty results
-- Step/source filters, combined filters
-- Chronological ordering
-- Pagination (limit, offset, hasMore, caps)
-- Data field handling
-- Experiment isolation
+## Story Status
+
+- **Story 050**: ✅ **DONE**
+- **Backlog updated**: Story moved to DONE status

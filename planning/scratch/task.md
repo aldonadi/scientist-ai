@@ -1,25 +1,23 @@
-# Task: Implement Logs API (Story 049)
+# Task: Story 050 - Fix Ollama Tool Parameter Passing
+
+## Objective
+Fix the bug where provider strategies receive but ignore the `tools` parameter.
 
 ## Checklist
 
-- [x] Update backlog status to IN-PROGRESS
-- [ ] Implement `getExperimentLogs` controller method
-  - [ ] Validate experiment exists (404 if not)
-  - [ ] Query logs by experimentId
-  - [ ] Support `?step=N` filter
-  - [ ] Support `?source=<string>` filter
-  - [ ] Support pagination (`?limit=N&offset=M`)
-  - [ ] Return logs in chronological order (oldest first)
-  - [ ] Include `data` field only when present
-- [ ] Add route `GET /api/experiments/:id/logs`
-- [ ] Write unit tests
-  - [ ] Returns logs array for valid experiment
-  - [ ] Returns 404 for non-existent experiment
-  - [ ] Step filter works correctly
-  - [ ] Source filter works correctly
-  - [ ] Pagination works correctly
-  - [ ] Logs returned in chronological order
-  - [ ] Returns empty array for experiment with no logs
-  - [ ] Invalid ObjectId format returns 400
-- [ ] Mark story checkboxes as complete
-- [ ] Update backlog status to REVIEW
+### Planning ✅
+- [x] Research Ollama API tool format
+- [x] Audit all provider strategies (Ollama, OpenAI, Anthropic)
+- [x] Create implementation plan
+- [x] Get user approval on plan
+
+### Implementation ✅
+- [x] Fix `ollama-strategy.js` - add tools param
+- [x] Fix `openai-strategy.js` - add tools param and fix parsing
+- [x] Fix `anthropic-strategy.js` - add tools param and fix parsing
+- [x] Add unit tests for tools parameter passing
+
+### Verification ✅
+- [x] Run unit tests (9/9 pass)
+- [x] Update story file with completion
+- [x] Update backlog status

@@ -1,52 +1,164 @@
-# Implement Logs API Endpoint
+# Fix Ollama Tool Parameter Passing
 
-Implement `GET /api/experiments/:id/logs` to retrieve experiment logs with filtering and pagination.
+## Problem Statement
+The `OllamaStrategy.chat()` method receives a `tools` parameter but does NOT pass it to the Ollama API client. This breaks tool calling functionality - the LLM cannot make tool calls because it is unaware of available tools.
+
+## User Review Required
+
+> [!IMPORTANT]
+> **All three provider strategies have this bug** - not just Ollama.
+> - **Ollama**: `tools` param received but not passed to `client.chat()`
+> - **OpenAI**: `tools` param received but not passed to `client.chat.completions.create()`  
+> - **Anthropic**: `tools` param received but not passed to `client.messages.create()`
+>
+> **Recommendation**: Fix all three in this story since they share the same bug pattern.
+
+---
 
 ## Proposed Changes
 
-### Experiment Controller
+### Provider Strategies
 
-#### [MODIFY] [experiment.controller.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/controllers/experiment.controller.js)
+#### [MODIFY] [ollama-strategy.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/provider/strategies/ollama-strategy.js)
 
-Add `getExperimentLogs` function:
-- Validate ObjectId format (400 if invalid)
-- Check experiment exists (404 if not)
-- Build query with optional filters:
-  - `?step=N` - filter by stepNumber
-  - `?source=<string>` - filter by source (any string accepted)
-- Pagination with defaults:
-  - `?limit=50` (default 50, max 500)
-  - `?offset=0` (default 0)
-- Sort by `timestamp: 1` (chronological, oldest first)
-- Return array of log entries with `data` field when present
+**Current** (lines 37-42):
+```javascript
+const stream = await client.chat({
+    model: modelName,
+    messages: history,
+    stream: true,
+    options: config,
+});
+```
+
+**Proposed** - Add `tools` parameter and transform to Ollama format:
+```javascript
+// Transform tools to Ollama format if provided
+const ollamaTools = tools && tools.length > 0 ? tools.map(t => ({
+    type: 'function',
+    function: {
+        name: t.name,
+        description: t.description,
+        parameters: t.parameters
+    }
+})) : undefined;
+
+const stream = await client.chat({
+    model: modelName,
+    messages: history,
+    stream: true,
+    options: config,
+    tools: ollamaTools,  // ADD THIS
+});
+```
 
 ---
 
-### Experiment Routes
+#### [MODIFY] [openai-strategy.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/provider/strategies/openai-strategy.js)
 
-#### [MODIFY] [experiment.routes.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/routes/experiment.routes.js)
+**Current** (lines 33-38):
+```javascript
+const stream = await client.chat.completions.create({
+    model: modelName,
+    messages: history,
+    stream: true,
+    ...config
+});
+```
 
-Add route: `GET /:id/logs` → `experimentController.getExperimentLogs`
+**Proposed** - Add `tools` parameter and fix response parsing:
+```javascript
+// Transform tools to OpenAI format if provided
+const openaiTools = tools && tools.length > 0 ? tools.map(t => ({
+    type: 'function',
+    function: {
+        name: t.name,
+        description: t.description,
+        parameters: t.parameters
+    }
+})) : undefined;
+
+const stream = await client.chat.completions.create({
+    model: modelName,
+    messages: history,
+    stream: true,
+    tools: openaiTools,  // ADD THIS
+    ...config
+});
+```
+
+Also fix response parsing to yield tool_call events (currently only yields text).
 
 ---
 
-### Tests
+#### [MODIFY] [anthropic-strategy.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/provider/strategies/anthropic-strategy.js)
 
-#### [MODIFY] [experiment.routes.test.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/tests/api/experiment.routes.test.js)
+**Current** (lines 60-67):
+```javascript
+const stream = await client.messages.create({
+    model: modelName,
+    messages: messages,
+    system: systemMessage ? systemMessage.content : undefined,
+    stream: true,
+    max_tokens: config.max_tokens || 4096,
+    ...config
+});
+```
 
-Add `describe('GET /api/experiments/:id/logs')` block with tests for:
-- Returns logs array for valid experiment
-- Returns 404 for non-existent experiment
-- Step filter (`?step=N`) works
-- Source filter (`?source=X`) works
-- Pagination (`?limit=N&offset=M`) works
-- Logs in chronological order
-- Empty array for experiment with no logs
-- 400 for invalid ObjectId
+**Proposed** - Add `tools` parameter (Anthropic format):
+```javascript
+// Transform tools to Anthropic format if provided
+const anthropicTools = tools && tools.length > 0 ? tools.map(t => ({
+    name: t.name,
+    description: t.description,
+    input_schema: t.parameters  // Anthropic uses input_schema, not parameters
+})) : undefined;
+
+const stream = await client.messages.create({
+    model: modelName,
+    messages: messages,
+    system: systemMessage ? systemMessage.content : undefined,
+    stream: true,
+    max_tokens: config.max_tokens || 4096,
+    tools: anthropicTools,  // ADD THIS
+    ...config
+});
+```
+
+Also fix response parsing to yield tool_call events.
+
+---
+
+### Unit Tests
+
+#### [MODIFY] [provider.service.test.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/tests/services/provider/provider.service.test.js)
+
+Add new test cases for each strategy:
+- Verify `client.chat()` is called with `tools` parameter when tools provided
+- Verify `tools` is omitted when empty array passed
+- Verify tool_call events are yielded from stream parsing
+
+---
 
 ## Verification Plan
 
 ### Automated Tests
-```bash
-npm test -- --testPathPattern=experiment.routes.test.js
-```
+
+**Command**: `npm test -- --testPathPattern=provider.service.test`
+
+**New test cases to add**:
+1. `OllamaStrategy.chat() passes tools to client when provided`
+2. `OllamaStrategy.chat() omits tools when empty array`
+3. `OpenAIStrategy.chat() passes tools to client when provided`
+4. `AnthropicStrategy.chat() passes tools to client when provided`
+
+### Manual Verification
+
+Since this affects live LLM calls, full integration testing requires a running Ollama instance:
+
+1. Start Ollama locally: `ollama serve`
+2. Ensure a model with tool support is available: `ollama pull llama3.2`
+3. Run integration test (if exists) or verify via experiment execution
+
+> [!NOTE]
+> Full end-to-end verification may need to wait for Story 051 (Container Interface) since tool execution is currently broken due to container interface mismatch.
