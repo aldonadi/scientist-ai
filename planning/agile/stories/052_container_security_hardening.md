@@ -1,6 +1,6 @@
 # Container Security Hardening
 
-- **Status:** READY
+- **Status:** DONE
 - **Points:** 2
 - **Story ID:** 052
 - **Type:** Bug/Security
@@ -61,3 +61,4 @@ HostConfig: {
 ```
 
 ## Review
+**1/11/26** - Accepted by Product Owner.
