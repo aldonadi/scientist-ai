@@ -87,7 +87,9 @@ class ContainerPoolManager {
             HostConfig: {
                 NetworkMode: 'none', // No network access by default for security
                 Memory: 128 * 1024 * 1024, // 128MB limit
-                // PidsLimit: 10, // Prevent fork bombs
+                PidsLimit: process.env.CONTAINER_PIDS_LIMIT ? parseInt(process.env.CONTAINER_PIDS_LIMIT) : 50, // Prevent fork bombs
+                CpuQuota: process.env.CONTAINER_CPU_QUOTA ? parseInt(process.env.CONTAINER_CPU_QUOTA) : 50000,
+                CpuPeriod: 100000,
             }
         });
 

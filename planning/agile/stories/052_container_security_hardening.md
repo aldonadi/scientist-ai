@@ -27,12 +27,12 @@ The container configuration is missing critical resource limits, creating securi
 **So that** malicious scripts cannot crash the host system.
 
 ## Acceptance Criteria
-- [ ] `PidsLimit` is enabled (uncommented and set to reasonable value like 10-50)
-- [ ] `CpuQuota` is configured (e.g., 50000 for 50% of one CPU core)
-- [ ] `CpuPeriod` is set appropriately (default 100000)
-- [ ] Memory limit remains at 128MB or is made configurable
-- [ ] Limits are configurable via environment variables
-- [ ] Unit test verifies container creation includes all limits
+- [x] `PidsLimit` is enabled (uncommented and set to reasonable value like 10-50)
+- [x] `CpuQuota` is configured (e.g., 50000 for 50% of one CPU core)
+- [x] `CpuPeriod` is set appropriately (default 100000)
+- [x] Memory limit remains at 128MB or is made configurable
+- [x] Limits are configurable via environment variables
+- [x] Unit test verifies container creation includes all limits
 
 ## Testing Strategy
 

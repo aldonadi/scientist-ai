@@ -1,22 +1,10 @@
-# Task: Unify Container Interface (Story 051)
+# Task Checklist - Container Security Hardening (Story 052)
 
-- [x] Read and understand requirements
-    - [x] `planning/SPEC.md`
-    - [x] `planning/reviews/03/REVIEW_ANALYSIS.md`
-    - [x] `planning/agile/stories/051_unify_container_interface.md`
-- [x] Create Implementation Plan
-    - [x] Analyze `Container` class
-    - [x] Analyze `ContainerPoolManager` class
-    - [x] Identify discrepancies
-    - [x] Design unified interface
-- [x] Implement Changes
-    - [x] Refactor `Container` class if necessary
-    - [x] Refactor `ContainerPoolManager`
-    - [x] Update `ExperimentOrchestrator` to use unified interface
-    - [x] Delete `src/execution/container.js`
-- [x] Verification
-    - [x] Unit Tests
-    - [x] Integration Tests
-- [x] Documentation
-    - [x] Update Story File
-    - [x] Update Backlog
+- [x] Create implementation plan <!-- id: 0 -->
+- [x] Create `backend/tests/container-pool.service.test.js` <!-- id: 1 -->
+- [x] Run tests to confirm failure (Red phase) <!-- id: 2 -->
+- [x] Modify `backend/src/services/container-pool.service.js` to add resource limits <!-- id: 3 -->
+- [x] Run tests to confirm success (Green phase) <!-- id: 4 -->
+- [x] Manual verification (optional/if needed) <!-- id: 5 -->
+- [x] Audit `backend/src/services/container-pool.service.js` code <!-- id: 6 -->
+- [x] Update `planning/agile/backlog.md` <!-- id: 7 -->
