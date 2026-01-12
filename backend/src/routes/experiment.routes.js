@@ -17,6 +17,9 @@ router.post('/:id/control', experimentController.controlExperiment);
 // GET /api/experiments/:id/logs - Get logs for an experiment
 router.get('/:id/logs', experimentController.getExperimentLogs);
 
+// GET /api/experiments/:id/stream - Stream events
+router.get('/:id/stream', experimentController.streamExperimentEvents);
+
 // DELETE /api/experiments/:id - Delete an ended experiment
 router.delete('/:id', experimentController.deleteExperiment);
 

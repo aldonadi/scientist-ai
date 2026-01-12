@@ -21,14 +21,14 @@ Implement Server-Sent Events (SSE) endpoint for real-time experiment updates. Th
 **So that** I can monitor progress without refreshing.
 
 ## Acceptance Criteria
-- [ ] `GET /api/experiments/:id/stream` endpoint implemented
-- [ ] Returns SSE stream (`Content-Type: text/event-stream`)
-- [ ] Streams STEP_START, STEP_END, MODEL_RESPONSE_CHUNK events
-- [ ] Streams TOOL_CALL, TOOL_RESULT events
-- [ ] Streams EXPERIMENT_END event and closes connection
-- [ ] Returns 404 if experiment doesn't exist
-- [ ] Handles client disconnect gracefully
-- [ ] Connection timeout for ended experiments
+- [x] `GET /api/experiments/:id/stream` endpoint implemented
+- [x] Returns SSE stream (`Content-Type: text/event-stream`)
+- [x] Streams STEP_START, STEP_END, MODEL_RESPONSE_CHUNK events
+- [x] Streams TOOL_CALL, TOOL_RESULT events
+- [x] Streams EXPERIMENT_END event and closes connection
+- [x] Returns 404 if experiment doesn't exist
+- [x] Handles client disconnect gracefully
+- [x] Connection timeout for ended experiments
 
 ## Testing Strategy
 

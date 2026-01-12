@@ -1,6 +1,8 @@
 const { Experiment } = require('../models/experiment.model');
 const { ExperimentPlan } = require('../models/experimentPlan.model');
 const { ExperimentOrchestrator } = require('../services/experiment-orchestrator.service');
+const OrchestratorRegistry = require('../services/orchestrator-registry.service');
+const { EventTypes } = require('../services/event-bus');
 const Log = require('../models/log.model');
 
 // Valid experiment status values
@@ -42,9 +44,23 @@ const launchExperiment = async (req, res, next) => {
 
         // Start Orchestrator Asynchronously
         const orchestrator = new ExperimentOrchestrator(experiment._id);
-        orchestrator.start().catch(err => {
-            console.error(`Orchestrator start failed for ${experiment._id}:`, err);
-        });
+
+        // Register in registry before starting
+        OrchestratorRegistry.getInstance().register(experiment._id, orchestrator);
+
+        orchestrator.start()
+            .then(() => {
+                // Determine if we should remove from registry? 
+                // Currently start() runs until completion.
+                // So when it returns, it's done.
+            })
+            .catch(err => {
+                console.error(`Orchestrator start failed for ${experiment._id}:`, err);
+            })
+            .finally(() => {
+                // Cleanup registry when loop finishes
+                OrchestratorRegistry.getInstance().remove(experiment._id);
+            });
 
         res.status(201).json(experiment);
     } catch (error) {
@@ -90,9 +106,17 @@ const controlExperiment = async (req, res, next) => {
         } else if (command === 'RESUME') {
             if (experiment.status === 'PAUSED') {
                 const orchestrator = new ExperimentOrchestrator(experiment._id);
-                orchestrator.start().catch(err => {
-                    console.error(`Orchestartor resume failed for ${experiment._id}:`, err);
-                });
+
+                // Register for streaming visibility
+                OrchestratorRegistry.getInstance().register(experiment._id, orchestrator);
+
+                orchestrator.start()
+                    .catch(err => {
+                        console.error(`Orchestartor resume failed for ${experiment._id}:`, err);
+                    })
+                    .finally(() => {
+                        OrchestratorRegistry.getInstance().remove(experiment._id);
+                    });
 
                 experiment.status = 'RUNNING';
                 await experiment.save();
@@ -337,11 +361,101 @@ const getExperimentLogs = async (req, res, next) => {
     }
 };
 
+/**
+ * SSE Stream for experiment events
+ * GET /api/experiments/:id/stream
+ */
+const streamExperimentEvents = async (req, res) => {
+    const { id } = req.params;
+
+    // Validate ObjectId format
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+        return res.status(400).json({
+            error: true,
+            message: 'Invalid ID format'
+        });
+    }
+
+    // Set SSE Headers
+    res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*' // Adjust for prod
+    });
+
+    const sendEvent = (type, data) => {
+        // SSE format: event: name\ndata: {json}\n\n
+        res.write(`event: ${type}\n`);
+        res.write(`data: ${JSON.stringify(data)}\n\n`);
+    };
+
+    // Send initial connection message
+    sendEvent('CONNECTED', { message: 'Stream connected', experimentId: id });
+
+    // Look for active orchestrator
+    const orchestrator = OrchestratorRegistry.getInstance().get(id);
+
+    if (orchestrator) {
+        // Subscribe to relevant events
+        // We can listen to ALL defined EventTypes or specific ones.
+        // Let's iterate all EventTypes and pipe them.
+
+        const handlers = {};
+
+        Object.values(EventTypes).forEach(eventType => {
+            const handler = (payload) => {
+                sendEvent(eventType, payload);
+            };
+            handlers[eventType] = handler;
+            orchestrator.eventBus.on(eventType, handler);
+        });
+
+        // Cleanup on disconnect
+        req.on('close', () => {
+            Object.entries(handlers).forEach(([eventType, handler]) => {
+                orchestrator.eventBus.removeListener(eventType, handler);
+            });
+        });
+
+    } else {
+        // Experiment is not running. 
+        // We might want to check DB status.
+        // If COMPLETED/FAILED, send END event and close.
+        // If PAUSED/STOPPED, explain provided stream works for active execution.
+
+        try {
+            const exp = await Experiment.findById(id);
+            if (exp) {
+                if (['COMPLETED', 'FAILED', 'STOPPED'].includes(exp.status)) {
+                    sendEvent(EventTypes.EXPERIMENT_END, {
+                        result: exp.result,
+                        status: exp.status
+                    });
+                    res.end();
+                } else {
+                    // It might be Initializing or Paused but no orchestrator in memory?
+                    // Send status and keep open in case it resumes? 
+                    // Or close. Simpler to close for now or just wait.
+                    sendEvent('STATUS', { status: exp.status, message: 'Orchestrator not active in memory' });
+                }
+            } else {
+                sendEvent('ERROR', { message: 'Experiment not found' });
+                res.end();
+            }
+        } catch (err) {
+            console.error('Error fetching stream experiment:', err);
+            res.end();
+        }
+    }
+};
+
 module.exports = {
     launchExperiment,
     controlExperiment,
     listExperiments,
     getExperiment,
     deleteExperiment,
-    getExperimentLogs
+    getExperimentLogs,
+    streamExperimentEvents
 };
