@@ -371,5 +371,264 @@ describe('Experiment API Integration Tests', () => {
             expect(logsAfter).toBe(0);
         });
     });
+
+    describe('GET /api/experiments/:id/logs', () => {
+        let validExperimentId;
+
+        beforeEach(async () => {
+            const plan = await ExperimentPlan.create({
+                name: 'Test Plan',
+                description: 'For testing logs',
+                roles: [],
+                maxSteps: 10
+            });
+            validPlanId = plan._id;
+
+            const experiment = await Experiment.create({
+                planId: validPlanId,
+                status: 'RUNNING',
+                currentStep: 5
+            });
+            validExperimentId = experiment._id;
+        });
+
+        it('should return logs array for valid experiment', async () => {
+            await Log.create([
+                { experimentId: validExperimentId, stepNumber: 1, source: 'System', message: 'Step 1 started' },
+                { experimentId: validExperimentId, stepNumber: 2, source: 'System', message: 'Step 2 started' }
+            ]);
+
+            const res = await request(app).get(`/api/experiments/${validExperimentId}/logs`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.logs).toHaveLength(2);
+            expect(res.body.logs[0]).toHaveProperty('_id');
+            expect(res.body.logs[0]).toHaveProperty('experimentId');
+            expect(res.body.logs[0]).toHaveProperty('stepNumber');
+            expect(res.body.logs[0]).toHaveProperty('source');
+            expect(res.body.logs[0]).toHaveProperty('message');
+            expect(res.body.logs[0]).toHaveProperty('timestamp');
+        });
+
+        it('should return 404 for non-existent experiment', async () => {
+            const nonExistentId = new mongoose.Types.ObjectId();
+
+            const res = await request(app).get(`/api/experiments/${nonExistentId}/logs`);
+
+            expect(res.statusCode).toBe(404);
+            expect(res.body.error).toBe(true);
+            expect(res.body.message).toBe('Experiment not found');
+        });
+
+        it('should return 400 for invalid ObjectId format', async () => {
+            const res = await request(app).get('/api/experiments/invalid-id-format/logs');
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.error).toBe(true);
+            expect(res.body.message).toBe('Invalid ID format');
+        });
+
+        it('should return empty array for experiment with no logs', async () => {
+            const res = await request(app).get(`/api/experiments/${validExperimentId}/logs`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.logs).toEqual([]);
+            expect(res.body.pagination.total).toBe(0);
+        });
+
+        it('should filter logs by step number', async () => {
+            await Log.create([
+                { experimentId: validExperimentId, stepNumber: 1, source: 'System', message: 'Step 1' },
+                { experimentId: validExperimentId, stepNumber: 2, source: 'System', message: 'Step 2' },
+                { experimentId: validExperimentId, stepNumber: 1, source: 'Tool', message: 'Tool in step 1' }
+            ]);
+
+            const res = await request(app).get(`/api/experiments/${validExperimentId}/logs?step=1`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.logs).toHaveLength(2);
+            res.body.logs.forEach(log => {
+                expect(log.stepNumber).toBe(1);
+            });
+        });
+
+        it('should return 400 for invalid step parameter', async () => {
+            const res = await request(app).get(`/api/experiments/${validExperimentId}/logs?step=abc`);
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.error).toBe(true);
+            expect(res.body.message).toBe('Invalid step parameter, must be a number');
+        });
+
+        it('should filter logs by source', async () => {
+            await Log.create([
+                { experimentId: validExperimentId, stepNumber: 1, source: 'System', message: 'System log' },
+                { experimentId: validExperimentId, stepNumber: 1, source: 'Tool', message: 'Tool log' },
+                { experimentId: validExperimentId, stepNumber: 2, source: 'System', message: 'Another system log' }
+            ]);
+
+            const res = await request(app).get(`/api/experiments/${validExperimentId}/logs?source=Tool`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.logs).toHaveLength(1);
+            expect(res.body.logs[0].source).toBe('Tool');
+        });
+
+        it('should combine step and source filters', async () => {
+            await Log.create([
+                { experimentId: validExperimentId, stepNumber: 1, source: 'System', message: 'Sys 1' },
+                { experimentId: validExperimentId, stepNumber: 1, source: 'Tool', message: 'Tool 1' },
+                { experimentId: validExperimentId, stepNumber: 2, source: 'System', message: 'Sys 2' },
+                { experimentId: validExperimentId, stepNumber: 2, source: 'Tool', message: 'Tool 2' }
+            ]);
+
+            const res = await request(app).get(`/api/experiments/${validExperimentId}/logs?step=1&source=Tool`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.logs).toHaveLength(1);
+            expect(res.body.logs[0].message).toBe('Tool 1');
+        });
+
+        it('should return logs in chronological order (oldest first)', async () => {
+            const oldTime = new Date('2020-01-01T00:00:00Z');
+            const midTime = new Date('2022-06-15T12:00:00Z');
+            const newTime = new Date('2025-01-01T00:00:00Z');
+
+            await Log.create([
+                { experimentId: validExperimentId, stepNumber: 1, source: 'System', message: 'Newest', timestamp: newTime },
+                { experimentId: validExperimentId, stepNumber: 1, source: 'System', message: 'Oldest', timestamp: oldTime },
+                { experimentId: validExperimentId, stepNumber: 1, source: 'System', message: 'Middle', timestamp: midTime }
+            ]);
+
+            const res = await request(app).get(`/api/experiments/${validExperimentId}/logs`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.logs).toHaveLength(3);
+            expect(res.body.logs[0].message).toBe('Oldest');
+            expect(res.body.logs[1].message).toBe('Middle');
+            expect(res.body.logs[2].message).toBe('Newest');
+        });
+
+        it('should respect pagination limit', async () => {
+            // Create 10 logs
+            const logs = [];
+            for (let i = 0; i < 10; i++) {
+                logs.push({
+                    experimentId: validExperimentId,
+                    stepNumber: i,
+                    source: 'System',
+                    message: `Log ${i}`
+                });
+            }
+            await Log.create(logs);
+
+            const res = await request(app).get(`/api/experiments/${validExperimentId}/logs?limit=3`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.logs).toHaveLength(3);
+            expect(res.body.pagination.limit).toBe(3);
+            expect(res.body.pagination.total).toBe(10);
+            expect(res.body.pagination.hasMore).toBe(true);
+        });
+
+        it('should respect pagination offset', async () => {
+            const logs = [];
+            for (let i = 0; i < 5; i++) {
+                logs.push({
+                    experimentId: validExperimentId,
+                    stepNumber: i,
+                    source: 'System',
+                    message: `Log ${i}`,
+                    timestamp: new Date(2020, 0, i + 1)
+                });
+            }
+            await Log.create(logs);
+
+            const res = await request(app).get(`/api/experiments/${validExperimentId}/logs?limit=2&offset=2`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.logs).toHaveLength(2);
+            expect(res.body.logs[0].message).toBe('Log 2');
+            expect(res.body.logs[1].message).toBe('Log 3');
+            expect(res.body.pagination.offset).toBe(2);
+        });
+
+        it('should return hasMore=false when at end', async () => {
+            await Log.create([
+                { experimentId: validExperimentId, stepNumber: 1, source: 'System', message: 'Log 1' },
+                { experimentId: validExperimentId, stepNumber: 2, source: 'System', message: 'Log 2' }
+            ]);
+
+            const res = await request(app).get(`/api/experiments/${validExperimentId}/logs?limit=2`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.logs).toHaveLength(2);
+            expect(res.body.pagination.hasMore).toBe(false);
+        });
+
+        it('should cap limit at MAX_LIMIT (500)', async () => {
+            const res = await request(app).get(`/api/experiments/${validExperimentId}/logs?limit=1000`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.pagination.limit).toBe(500);
+        });
+
+        it('should use default limit when not specified', async () => {
+            const res = await request(app).get(`/api/experiments/${validExperimentId}/logs`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.pagination.limit).toBe(50);
+        });
+
+        it('should include data field when present on log entry', async () => {
+            await Log.create({
+                experimentId: validExperimentId,
+                stepNumber: 1,
+                source: 'Tool',
+                message: 'Tool executed',
+                data: { result: 'success', value: 42 }
+            });
+
+            const res = await request(app).get(`/api/experiments/${validExperimentId}/logs`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.logs[0].data).toBeDefined();
+            expect(res.body.logs[0].data.result).toBe('success');
+            expect(res.body.logs[0].data.value).toBe(42);
+        });
+
+        it('should not include data field when not set', async () => {
+            await Log.create({
+                experimentId: validExperimentId,
+                stepNumber: 1,
+                source: 'System',
+                message: 'Simple log'
+            });
+
+            const res = await request(app).get(`/api/experiments/${validExperimentId}/logs`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.logs[0].data).toBeUndefined();
+        });
+
+        it('should not return logs from other experiments', async () => {
+            const otherExperiment = await Experiment.create({
+                planId: validPlanId,
+                status: 'RUNNING',
+                currentStep: 3
+            });
+
+            await Log.create([
+                { experimentId: validExperimentId, stepNumber: 1, source: 'System', message: 'Our log' },
+                { experimentId: otherExperiment._id, stepNumber: 1, source: 'System', message: 'Other log' }
+            ]);
+
+            const res = await request(app).get(`/api/experiments/${validExperimentId}/logs`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.logs).toHaveLength(1);
+            expect(res.body.logs[0].message).toBe('Our log');
+        });
+    });
 });
 

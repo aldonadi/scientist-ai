@@ -14,6 +14,9 @@ router.post('/', experimentController.launchExperiment);
 // POST /api/experiments/:id/control - Control experiment (pause/resume/stop)
 router.post('/:id/control', experimentController.controlExperiment);
 
+// GET /api/experiments/:id/logs - Get logs for an experiment
+router.get('/:id/logs', experimentController.getExperimentLogs);
+
 // DELETE /api/experiments/:id - Delete an ended experiment
 router.delete('/:id', experimentController.deleteExperiment);
 

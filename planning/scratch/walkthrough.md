@@ -1,33 +1,39 @@
-# Walkthrough: Story 048 - Experiment CRUD API
+# Logs API Implementation - Walkthrough
 
 ## Summary
-Implemented the missing Experiment API endpoints per SPEC §5.
+Implemented `GET /api/experiments/:id/logs` endpoint per Story 049.
 
 ## Changes Made
 
-### [experiment.controller.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/controllers/experiment.controller.js)
-- Added `listExperiments` - Lists all experiments with optional `?status=` filter, validates against enum
-- Added `getExperiment` - Returns full document including `currentEnvironment`, validates ObjectId format
-- Added `deleteExperiment` - Deletes ended experiments (COMPLETED/FAILED/STOPPED), also removes associated logs
+### Controller ([experiment.controller.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/controllers/experiment.controller.js))
+- Added `getExperimentLogs` function with:
+  - ObjectId validation (400) and experiment existence check (404)
+  - Step filter (`?step=N`)
+  - Source filter (`?source=X`) - accepts any string
+  - Pagination (`?limit=N&offset=M`, default 50, max 500)
+  - Chronological ordering (oldest first)
 
-### [experiment.routes.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/routes/experiment.routes.js)
-- Added `GET /`, `GET /:id`, `DELETE /:id` routes
+### Routes ([experiment.routes.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/routes/experiment.routes.js))
+- Added `GET /:id/logs` → `getExperimentLogs`
 
-## Test Coverage
-
-22 tests added to [experiment.routes.test.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/tests/api/experiment.routes.test.js):
-
-| Endpoint | Tests |
-|----------|-------|
-| `GET /api/experiments` | Empty array, all experiments, status filter, invalid status (400), includes endTime/result, sorted by startTime |
-| `GET /api/experiments/:id` | Full document with environment, 404 missing, 400 invalid ID |
-| `DELETE /api/experiments/:id` | 204 for COMPLETED/FAILED/STOPPED, 400 for RUNNING/PAUSED/INITIALIZING, 404 missing, 400 invalid ID, log cleanup |
-
-## Verification
-
-```
-Test Suites: 33 passed, 33 total
-Tests:       374 passed, 374 total
+## Response Format
+```json
+{
+  "logs": [...],
+  "pagination": { "total": 100, "limit": 50, "offset": 0, "hasMore": true }
+}
 ```
 
-No regressions.
+## Test Results
+```
+Tests:       39 passed, 39 total (18 new for logs)
+Time:        4.486s
+```
+
+### New Test Coverage
+- Basic retrieval, empty results
+- Step/source filters, combined filters
+- Chronological ordering
+- Pagination (limit, offset, hasMore, caps)
+- Data field handling
+- Experiment isolation

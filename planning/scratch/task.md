@@ -1,40 +1,25 @@
-# Task: Implement Experiment CRUD API (Story 048)
-
-## Objective
-Implement missing Experiment API endpoints for listing, getting, and deleting experiments.
+# Task: Implement Logs API (Story 049)
 
 ## Checklist
 
-### Planning
-- [x] Review existing codebase and patterns
-- [x] Ask clarifying questions
-- [x] Create implementation plan
-
-### Implementation
-- [x] Update `experiment.controller.js` with new methods:
-    - [x] `listExperiments` - GET /api/experiments with optional status filter
-    - [x] `getExperiment` - GET /api/experiments/:id  
-    - [x] `deleteExperiment` - DELETE /api/experiments/:id (with log cleanup)
-- [x] Update `experiment.routes.js` with new routes
-
-### Testing
-- [x] Extend `experiment.routes.test.js` with tests for:
-    - [x] List experiments returns array
-    - [x] List with valid status filter works
-    - [x] List with invalid status filter returns 400
-    - [x] Get single experiment returns full document
-    - [x] Get returns 404 for missing
-    - [x] Get returns 400 for invalid ID
-    - [x] Delete returns 400 for RUNNING experiment
-    - [x] Delete returns 400 for PAUSED experiment
-    - [x] Delete returns 204 for COMPLETED experiment
-    - [x] Delete returns 404 for missing
-    - [x] Delete also removes associated logs
-
-### Verification
-- [x] Run all tests
-- [x] Verify no regressions
-
-### Documentation
-- [x] Update story checkboxes
-- [x] Update backlog status
+- [x] Update backlog status to IN-PROGRESS
+- [ ] Implement `getExperimentLogs` controller method
+  - [ ] Validate experiment exists (404 if not)
+  - [ ] Query logs by experimentId
+  - [ ] Support `?step=N` filter
+  - [ ] Support `?source=<string>` filter
+  - [ ] Support pagination (`?limit=N&offset=M`)
+  - [ ] Return logs in chronological order (oldest first)
+  - [ ] Include `data` field only when present
+- [ ] Add route `GET /api/experiments/:id/logs`
+- [ ] Write unit tests
+  - [ ] Returns logs array for valid experiment
+  - [ ] Returns 404 for non-existent experiment
+  - [ ] Step filter works correctly
+  - [ ] Source filter works correctly
+  - [ ] Pagination works correctly
+  - [ ] Logs returned in chronological order
+  - [ ] Returns empty array for experiment with no logs
+  - [ ] Invalid ObjectId format returns 400
+- [ ] Mark story checkboxes as complete
+- [ ] Update backlog status to REVIEW

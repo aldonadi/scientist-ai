@@ -250,10 +250,98 @@ const deleteExperiment = async (req, res, next) => {
     }
 };
 
+// Pagination defaults
+const DEFAULT_LIMIT = 50;
+const MAX_LIMIT = 500;
+
+/**
+ * Get logs for a specific experiment
+ * GET /api/experiments/:id/logs
+ * 
+ * Query params:
+ * - step: Filter by step number
+ * - source: Filter by source string
+ * - limit: Max results to return (default 50, max 500)
+ * - offset: Number of results to skip (default 0)
+ */
+const getExperimentLogs = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { step, source, limit, offset } = req.query;
+
+        // Validate ObjectId format
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({
+                error: true,
+                message: 'Invalid ID format'
+            });
+        }
+
+        // Check experiment exists
+        const experiment = await Experiment.findById(id).lean();
+        if (!experiment) {
+            return res.status(404).json({
+                error: true,
+                message: 'Experiment not found'
+            });
+        }
+
+        // Build query
+        const query = { experimentId: id };
+
+        // Step filter
+        if (step !== undefined) {
+            const stepNum = parseInt(step, 10);
+            if (isNaN(stepNum)) {
+                return res.status(400).json({
+                    error: true,
+                    message: 'Invalid step parameter, must be a number'
+                });
+            }
+            query.stepNumber = stepNum;
+        }
+
+        // Source filter (accept any string)
+        if (source) {
+            query.source = source;
+        }
+
+        // Pagination
+        let limitNum = parseInt(limit, 10) || DEFAULT_LIMIT;
+        limitNum = Math.min(Math.max(1, limitNum), MAX_LIMIT);
+
+        let offsetNum = parseInt(offset, 10) || 0;
+        offsetNum = Math.max(0, offsetNum);
+
+        // Query logs
+        const logs = await Log.find(query)
+            .sort({ timestamp: 1 }) // Chronological order (oldest first)
+            .skip(offsetNum)
+            .limit(limitNum)
+            .lean();
+
+        // Get total count for pagination metadata
+        const totalCount = await Log.countDocuments(query);
+
+        res.status(200).json({
+            logs,
+            pagination: {
+                total: totalCount,
+                limit: limitNum,
+                offset: offsetNum,
+                hasMore: offsetNum + logs.length < totalCount
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     launchExperiment,
     controlExperiment,
     listExperiments,
     getExperiment,
-    deleteExperiment
+    deleteExperiment,
+    getExperimentLogs
 };
