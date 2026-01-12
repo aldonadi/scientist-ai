@@ -1,6 +1,6 @@
 # Implement Experiment CRUD API
 
-- **Status:** READY
+- **Status:** REVIEW
 - **Points:** 5
 - **Story ID:** 048
 - **Type:** Bug/Feature
@@ -23,21 +23,21 @@ Implement the missing Experiment API endpoints for reading and deleting experime
 **So that** I can monitor experiment progress and clean up old experiments.
 
 ## Acceptance Criteria
-- [ ] `GET /api/experiments` endpoint implemented:
-    - [ ] Returns array of all experiments
-    - [ ] Supports `?status=RUNNING` query parameter filter
-    - [ ] Returns experiment summary (id, planId, status, currentStep, startTime)
-- [ ] `GET /api/experiments/:id` endpoint implemented:
-    - [ ] Returns full experiment document including `currentEnvironment`
-    - [ ] Returns 404 for non-existent experiments
-    - [ ] Returns 400 for invalid ObjectId format
-- [ ] `DELETE /api/experiments/:id` endpoint implemented:
-    - [ ] Returns 400 if experiment status is RUNNING or PAUSED
-    - [ ] Returns 404 for non-existent experiments
-    - [ ] Successfully deletes COMPLETED, FAILED, or STOPPED experiments
-    - [ ] Returns 204 No Content on success
-- [ ] Unit tests cover all endpoints and edge cases
-- [ ] API documentation updated
+- [x] `GET /api/experiments` endpoint implemented:
+    - [x] Returns array of all experiments
+    - [x] Supports `?status=RUNNING` query parameter filter
+    - [x] Returns experiment summary (id, planId, status, currentStep, startTime)
+- [x] `GET /api/experiments/:id` endpoint implemented:
+    - [x] Returns full experiment document including `currentEnvironment`
+    - [x] Returns 404 for non-existent experiments
+    - [x] Returns 400 for invalid ObjectId format
+- [x] `DELETE /api/experiments/:id` endpoint implemented:
+    - [x] Returns 400 if experiment status is RUNNING or PAUSED
+    - [x] Returns 404 for non-existent experiments
+    - [x] Successfully deletes COMPLETED, FAILED, or STOPPED experiments
+    - [x] Returns 204 No Content on success
+- [x] Unit tests cover all endpoints and edge cases
+- [x] API documentation updated
 
 ## Testing Strategy
 

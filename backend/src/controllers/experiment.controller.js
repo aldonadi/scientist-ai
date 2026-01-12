@@ -1,6 +1,12 @@
 const { Experiment } = require('../models/experiment.model');
 const { ExperimentPlan } = require('../models/experimentPlan.model');
 const { ExperimentOrchestrator } = require('../services/experiment-orchestrator.service');
+const Log = require('../models/log.model');
+
+// Valid experiment status values
+const VALID_STATUSES = ['INITIALIZING', 'RUNNING', 'PAUSED', 'COMPLETED', 'FAILED', 'STOPPED'];
+// Statuses that indicate an experiment can be deleted
+const DELETABLE_STATUSES = ['COMPLETED', 'FAILED', 'STOPPED'];
 
 /**
  * Launch a new experiment from a plan
@@ -132,7 +138,122 @@ const controlExperiment = async (req, res, next) => {
     }
 };
 
+/**
+ * List all experiments with optional status filter
+ * GET /api/experiments
+ */
+const listExperiments = async (req, res, next) => {
+    try {
+        const { status } = req.query;
+        const query = {};
+
+        // Validate and apply status filter if provided
+        if (status) {
+            if (!VALID_STATUSES.includes(status)) {
+                return res.status(400).json({
+                    error: true,
+                    message: `Invalid status filter. Must be one of: ${VALID_STATUSES.join(', ')}`
+                });
+            }
+            query.status = status;
+        }
+
+        const experiments = await Experiment.find(query)
+            .select('planId status currentStep startTime endTime result')
+            .sort({ startTime: -1 })
+            .lean();
+
+        res.status(200).json(experiments);
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Get a single experiment by ID
+ * GET /api/experiments/:id
+ */
+const getExperiment = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        // Validate ObjectId format
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({
+                error: true,
+                message: 'Invalid ID format'
+            });
+        }
+
+        const experiment = await Experiment.findById(id).lean();
+
+        if (!experiment) {
+            return res.status(404).json({
+                error: true,
+                message: 'Experiment not found'
+            });
+        }
+
+        res.status(200).json(experiment);
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Delete an experiment by ID
+ * DELETE /api/experiments/:id
+ * 
+ * Only allows deletion of ended experiments (COMPLETED, FAILED, STOPPED).
+ * Also deletes associated logs.
+ * 
+ * TODO: Future - consider soft delete/archive instead of hard delete
+ */
+const deleteExperiment = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        // Validate ObjectId format
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({
+                error: true,
+                message: 'Invalid ID format'
+            });
+        }
+
+        const experiment = await Experiment.findById(id);
+
+        if (!experiment) {
+            return res.status(404).json({
+                error: true,
+                message: 'Experiment not found'
+            });
+        }
+
+        // Check if experiment can be deleted
+        if (!DELETABLE_STATUSES.includes(experiment.status)) {
+            return res.status(400).json({
+                error: true,
+                message: `Cannot delete experiment in state ${experiment.status}. Only ${DELETABLE_STATUSES.join(', ')} experiments can be deleted.`
+            });
+        }
+
+        // Delete associated logs first
+        await Log.deleteMany({ experimentId: id });
+
+        // Delete the experiment
+        await Experiment.findByIdAndDelete(id);
+
+        res.status(204).send();
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     launchExperiment,
-    controlExperiment
+    controlExperiment,
+    listExperiments,
+    getExperiment,
+    deleteExperiment
 };

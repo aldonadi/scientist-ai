@@ -1,20 +1,40 @@
-# Task: Review Findings Verification and Story Creation
+# Task: Implement Experiment CRUD API (Story 048)
 
 ## Objective
-Verify all findings from the three third-party code reviews and create user stories for issues that need to be addressed.
+Implement missing Experiment API endpoints for listing, getting, and deleting experiments.
 
 ## Checklist
 
-### Phase 1: Verification ✅
-- [x] Verify disputed API endpoints in `experiment.routes.js` - CONFIRMED MISSING
-- [x] Verify `tools` parameter issue in `ollama-strategy.js` - CONFIRMED BUG
-- [x] Verify Container interface mismatch - CONFIRMED BLOCKER
-- [x] Verify `PidsLimit` and `CpuQuota` in container config - CONFIRMED MISSING
-- [x] Verify `POST /api/plans/:id/duplicate` endpoint - CONFIRMED MISSING
-- [x] Verify LLM retry logic existence - CONFIRMED MISSING
-- [x] Update `REVIEW_SUMMARY.md` with verification results
+### Planning
+- [x] Review existing codebase and patterns
+- [x] Ask clarifying questions
+- [x] Create implementation plan
 
-### Phase 2: Story Creation ✅
-- [x] Review example story format from `021_container_execution_wrapper.md`
-- [x] Create user stories for verified issues (048-055)
-- [x] Register stories in `backlog.md`
+### Implementation
+- [x] Update `experiment.controller.js` with new methods:
+    - [x] `listExperiments` - GET /api/experiments with optional status filter
+    - [x] `getExperiment` - GET /api/experiments/:id  
+    - [x] `deleteExperiment` - DELETE /api/experiments/:id (with log cleanup)
+- [x] Update `experiment.routes.js` with new routes
+
+### Testing
+- [x] Extend `experiment.routes.test.js` with tests for:
+    - [x] List experiments returns array
+    - [x] List with valid status filter works
+    - [x] List with invalid status filter returns 400
+    - [x] Get single experiment returns full document
+    - [x] Get returns 404 for missing
+    - [x] Get returns 400 for invalid ID
+    - [x] Delete returns 400 for RUNNING experiment
+    - [x] Delete returns 400 for PAUSED experiment
+    - [x] Delete returns 204 for COMPLETED experiment
+    - [x] Delete returns 404 for missing
+    - [x] Delete also removes associated logs
+
+### Verification
+- [x] Run all tests
+- [x] Verify no regressions
+
+### Documentation
+- [x] Update story checkboxes
+- [x] Update backlog status
