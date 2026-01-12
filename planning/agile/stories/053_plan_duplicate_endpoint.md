@@ -1,6 +1,6 @@
 # Implement Plan Duplicate Endpoint
 
-- **Status:** READY
+- **Status:** DONE
 - **Points:** 2
 - **Story ID:** 053
 - **Type:** Feature
@@ -19,15 +19,15 @@ Implement the missing `POST /api/plans/:id/duplicate` endpoint per SPEC §5 Line
 **So that** I can create variations without manually recreating the entire plan.
 
 ## Acceptance Criteria
-- [ ] `POST /api/plans/:id/duplicate` endpoint implemented:
-    - [ ] Creates a copy of the plan with a new ID
-    - [ ] Appends " (Copy)" to the plan name
-    - [ ] Ensures name uniqueness (adds number if needed)
-    - [ ] Deep copies all nested objects (roles, goals, scripts)
-    - [ ] Returns 201 with the new plan
-    - [ ] Returns 404 if source plan doesn't exist
-- [ ] Unit tests cover endpoint
-- [ ] Original plan remains unchanged
+- [x] `POST /api/plans/:id/duplicate` endpoint implemented:
+    - [x] Creates a copy of the plan with a new ID
+    - [x] Appends " (Copy)" to the plan name
+    - [x] Ensures name uniqueness (adds number if needed)
+    - [x] Deep copies all nested objects (roles, goals, scripts)
+    - [x] Returns 201 with the new plan
+    - [x] Returns 404 if source plan doesn't exist
+- [x] Unit tests cover endpoint
+- [x] Original plan remains unchanged
 
 ## Testing Strategy
 
@@ -46,3 +46,4 @@ Implement the missing `POST /api/plans/:id/duplicate` endpoint per SPEC §5 Line
 - Handle name collision by trying "Name (Copy)", "Name (Copy 2)", etc.
 
 ## Review
+**1/11/26** - Accepted by Product Owner.

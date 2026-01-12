@@ -219,3 +219,93 @@ exports.deletePlan = async (req, res, next) => {
         next(error);
     }
 };
+
+/**
+ * Duplicate a plan by ID.
+ * POST /api/plans/:id/duplicate
+ * Body: { name: "New Name" } (Optional)
+ */
+exports.duplicatePlan = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const customName = req.body ? req.body.name : undefined;
+
+        // console.log(`[DEBUG] Duplicating Plan ID: ${id}`);
+
+        // Basic ID validation
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ error: 'Invalid ID format' });
+        }
+
+        // 1. Find Source Plan
+        const sourcePlan = await ExperimentPlan.findById(id).lean();
+        if (!sourcePlan) {
+            return res.status(404).json({ error: 'Plan not found' });
+        }
+
+        // 2. Prepare New Name
+        let newName = customName;
+        if (!newName) {
+            // Logic to find a unique name: "Original (Copy)", "Original (Copy 2)", etc.
+            const baseName = `${sourcePlan.name} (Copy)`;
+            newName = baseName;
+
+            let counter = 2;
+            while (await ExperimentPlan.exists({ name: newName })) {
+                if (counter > 10) {
+                    return res.status(409).json({
+                        error: 'Conflict',
+                        message: 'Too many copies exist. Please provide a unique name manually.'
+                    });
+                }
+                newName = `${sourcePlan.name} (Copy ${counter})`;
+                counter++;
+            }
+        } else {
+            // Check if custom name exists (though save() will also check unique index)
+            const exists = await ExperimentPlan.exists({ name: newName });
+            if (exists) {
+                return res.status(400).json({
+                    error: 'Validation Error',
+                    message: 'Plan name must be unique.'
+                });
+            }
+        }
+
+        // 3. Create New Plan Object
+        // Remove _id, createdAt, updatedAt, __v
+        const { _id, createdAt, updatedAt, __v, ...planData } = sourcePlan;
+
+        const newPlanData = {
+            ...planData,
+            name: newName,
+            roles: planData.roles ? planData.roles.map(role => {
+                const { _id, ...roleData } = role; // Remove subdocument IDs to let Mongoose generate new ones
+                return roleData;
+            }) : [],
+            goals: planData.goals ? planData.goals.map(goal => {
+                const { _id, ...goalData } = goal;
+                return goalData;
+            }) : [],
+            scripts: planData.scripts ? planData.scripts.map(script => {
+                const { _id, ...scriptData } = script;
+                return scriptData;
+            }) : []
+        };
+
+        // 4. Save
+        const newPlan = new ExperimentPlan(newPlanData);
+        await newPlan.save();
+
+        res.status(201).json(newPlan);
+
+    } catch (error) {
+        if (error.code === 11000) {
+            return res.status(400).json({
+                error: 'Validation Error',
+                message: 'Plan name must be unique.'
+            });
+        }
+        next(error);
+    }
+};

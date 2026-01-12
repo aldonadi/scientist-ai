@@ -63,7 +63,7 @@ Status can be:
 | 050_fix_ollama_tool_passing                        | 2      | DONE        |
 | 051_unify_container_interface                      | 5      | DONE        |
 | 052_container_security_hardening                   | 2      | DONE        |
-| 053_plan_duplicate_endpoint                        | 2      | READY       |
+| 053_plan_duplicate_endpoint                        | 2      | DONE        |
 | 054_llm_retry_logic                                | 3      | READY       |
 | 055_sse_streaming_endpoint                         | 5      | READY       |
 | 029_setup_frontend_layout                          | 3      | NOT READY   |

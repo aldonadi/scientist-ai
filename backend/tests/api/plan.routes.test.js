@@ -371,4 +371,63 @@ describe('Plan API Integration Tests', () => {
             expect(res.body.error).toBe('Invalid ID format');
         });
     });
+
+    describe('POST /api/plans/:id/duplicate', () => {
+        let planId;
+
+        beforeEach(async () => {
+            const plan = await ExperimentPlan.create({
+                name: 'Source Plan',
+                description: 'Original Description',
+                roles: [{
+                    name: 'Role 1',
+                    systemPrompt: 'prompt',
+                    tools: [validToolId],
+                    modelConfig: { provider: validProviderId, modelName: 'test' }
+                }],
+                goals: [{ description: 'Goal A', conditionScript: 'true' }],
+                maxSteps: 5
+            });
+            planId = plan._id;
+        });
+
+        it('should duplicate a plan with a new name', async () => {
+            const res = await request(app).post(`/api/plans/${planId}/duplicate`);
+
+            expect(res.statusCode).toBe(201);
+            expect(res.body.name).toBe('Source Plan (Copy)');
+            expect(res.body.description).toBe('Original Description');
+            expect(res.body._id).not.toBe(planId.toString());
+            expect(res.body.roles.length).toBe(1);
+            expect(res.body.roles[0].name).toBe('Role 1');
+            expect(res.body.goals.length).toBe(1);
+        });
+
+        it('should handle name collisions by incrementing suffix', async () => {
+            // First Copy
+            await request(app).post(`/api/plans/${planId}/duplicate`);
+
+            // Second Copy
+            const res = await request(app).post(`/api/plans/${planId}/duplicate`);
+
+            expect(res.statusCode).toBe(201);
+            expect(res.body.name).toBe('Source Plan (Copy 2)');
+        });
+
+        it('should allow providing a custom name', async () => {
+            const res = await request(app)
+                .post(`/api/plans/${planId}/duplicate`)
+                .send({ name: 'My Custom Copy' });
+
+            expect(res.statusCode).toBe(201);
+            expect(res.body.name).toBe('My Custom Copy');
+        });
+
+        it('should return 404 if source plan not found', async () => {
+            const nonExistentId = new mongoose.Types.ObjectId();
+            const res = await request(app).post(`/api/plans/${nonExistentId}/duplicate`);
+
+            expect(res.statusCode).toBe(404);
+        });
+    });
 });

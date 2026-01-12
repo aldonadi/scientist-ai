@@ -17,4 +17,7 @@ router.put('/:id', planController.updatePlan);
 // DELETE /api/plans/:id - Delete an experiment plan
 router.delete('/:id', planController.deletePlan);
 
+// POST /api/plans/:id/duplicate - Duplicate an experiment plan
+router.post('/:id/duplicate', planController.duplicatePlan);
+
 module.exports = router;
