@@ -1,23 +1,22 @@
-# Task: Story 050 - Fix Ollama Tool Parameter Passing
+# Task: Unify Container Interface (Story 051)
 
-## Objective
-Fix the bug where provider strategies receive but ignore the `tools` parameter.
-
-## Checklist
-
-### Planning ✅
-- [x] Research Ollama API tool format
-- [x] Audit all provider strategies (Ollama, OpenAI, Anthropic)
-- [x] Create implementation plan
-- [x] Get user approval on plan
-
-### Implementation ✅
-- [x] Fix `ollama-strategy.js` - add tools param
-- [x] Fix `openai-strategy.js` - add tools param and fix parsing
-- [x] Fix `anthropic-strategy.js` - add tools param and fix parsing
-- [x] Add unit tests for tools parameter passing
-
-### Verification ✅
-- [x] Run unit tests (9/9 pass)
-- [x] Update story file with completion
-- [x] Update backlog status
+- [x] Read and understand requirements
+    - [x] `planning/SPEC.md`
+    - [x] `planning/reviews/03/REVIEW_ANALYSIS.md`
+    - [x] `planning/agile/stories/051_unify_container_interface.md`
+- [x] Create Implementation Plan
+    - [x] Analyze `Container` class
+    - [x] Analyze `ContainerPoolManager` class
+    - [x] Identify discrepancies
+    - [x] Design unified interface
+- [x] Implement Changes
+    - [x] Refactor `Container` class if necessary
+    - [x] Refactor `ContainerPoolManager`
+    - [x] Update `ExperimentOrchestrator` to use unified interface
+    - [x] Delete `src/execution/container.js`
+- [x] Verification
+    - [x] Unit Tests
+    - [x] Integration Tests
+- [x] Documentation
+    - [x] Update Story File
+    - [x] Update Backlog

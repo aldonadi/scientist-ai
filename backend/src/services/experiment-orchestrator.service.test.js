@@ -106,20 +106,21 @@ describe('ExperimentOrchestrator Goal Evaluation', () => {
         await orchestrator.evaluateGoals();
 
         const callArgs = mockContainer.execute.mock.calls[0];
-        const cmd = callArgs[0];
-        const opts = callArgs[1];
+        const script = callArgs[0];
+        const env = callArgs[1];
 
-        // Verify python command
-        expect(cmd[0]).toBe('python3');
-        expect(cmd[2]).toContain('import os');
+        // Verify python script is passed
+        expect(script).toContain('import os');
+        // Ensure the script tries to load the environment
+        expect(script).toContain("os.environ.get('EXPERIMENT_ENV'");
 
         // Verify Env injection
-        expect(opts.Env).toBeDefined();
-        const envVar = opts.Env.find(e => e.startsWith('EXPERIMENT_ENV='));
-        const condVar = opts.Env.find(e => e.startsWith('GOAL_CONDITION='));
+        expect(env).toBeDefined();
+        expect(env.EXPERIMENT_ENV).toBeDefined();
+        expect(env.GOAL_CONDITION).toBeDefined();
 
-        expect(envVar).toContain(JSON.stringify(mockExperiment.currentEnvironment.variables));
-        expect(condVar).toContain('status == "cloudy"');
+        expect(env.EXPERIMENT_ENV).toContain(JSON.stringify(mockExperiment.currentEnvironment.variables));
+        expect(env.GOAL_CONDITION).toContain('status == "cloudy"');
     });
 
     it('should handle Python execution errors gracefully (throw and log)', async () => {

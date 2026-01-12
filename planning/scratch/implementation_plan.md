@@ -1,164 +1,54 @@
-# Fix Ollama Tool Parameter Passing
+# Implementation Plan - Unify Container Interface (Story 051)
 
-## Problem Statement
-The `OllamaStrategy.chat()` method receives a `tools` parameter but does NOT pass it to the Ollama API client. This breaks tool calling functionality - the LLM cannot make tool calls because it is unaware of available tools.
+## Goal Description
+Unify the conflicting `Container` class implementations into a single canonical class in `src/domain/container.js` that supports the `execute(script, env, args)` signature required for robust Python execution. This will fix the crashing tool executions and simplify the Orchestrator.
 
 ## User Review Required
-
 > [!IMPORTANT]
-> **All three provider strategies have this bug** - not just Ollama.
-> - **Ollama**: `tools` param received but not passed to `client.chat()`
-> - **OpenAI**: `tools` param received but not passed to `client.chat.completions.create()`  
-> - **Anthropic**: `tools` param received but not passed to `client.messages.create()`
->
-> **Recommendation**: Fix all three in this story since they share the same bug pattern.
-
----
+> This refactor involves deleting `src/execution/container.js` and moving its logic to `src/domain/container.js`.
 
 ## Proposed Changes
 
-### Provider Strategies
+### Backend
 
-#### [MODIFY] [ollama-strategy.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/provider/strategies/ollama-strategy.js)
+#### [MODIFY] [container.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/domain/container.js)
+- Import `PassThrough` from `stream`.
+- Add `execute(script, env, args)` method (ported from `src/execution/container.js`) which:
+    - Accepts Python script string, environment object, and arguments array.
+    - Handles writing script to stdin (`python3 -`).
+    - managing stream demultiplexing.
+- Rename existing `execute(cmd, opts)` to `executeCommand(cmd, opts)` for raw command usage.
+- Ensure constructor remains compatible with `ContainerPoolManager` (`id`, `dockerContainer`).
 
-**Current** (lines 37-42):
-```javascript
-const stream = await client.chat({
-    model: modelName,
-    messages: history,
-    stream: true,
-    options: config,
-});
-```
+#### [DELETE] [container.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/execution/container.js)
+- Remove as it is being merged into domain.
 
-**Proposed** - Add `tools` parameter and transform to Ollama format:
-```javascript
-// Transform tools to Ollama format if provided
-const ollamaTools = tools && tools.length > 0 ? tools.map(t => ({
-    type: 'function',
-    function: {
-        name: t.name,
-        description: t.description,
-        parameters: t.parameters
-    }
-})) : undefined;
+#### [MODIFY] [container-pool.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/container-pool.service.js)
+- Ensure it continues to import from `../domain/container`.
+- (The instantiation logic matches the domain container signature, so minimal changes expected here).
 
-const stream = await client.chat({
-    model: modelName,
-    messages: history,
-    stream: true,
-    options: config,
-    tools: ollamaTools,  // ADD THIS
-});
-```
+#### [MODIFY] [experiment-orchestrator.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/experiment-orchestrator.service.js)
+- **Tool Execution**: Update to ensure it calls `container.execute(code, env, args)`.
+- **Hooks & Goals**: Update to use `container.execute(wrapperScript, envMap, [])` instead of manually constructing `python3 -c ...` commands and Env strings. This aligns all execution paths to the safe stdin-based injection.
 
----
+### Tests
 
-#### [MODIFY] [openai-strategy.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/provider/strategies/openai-strategy.js)
+#### [NEW] [container.test.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/tests/container.test.js)
+- Port unit tests from `src/execution/container.test.js`.
+- Update to test `src/domain/container.js`.
+- Adjust mocks to match `(id, dockerContainer)` constructor signature.
+- **Delete** `src/execution/container.test.js`.
 
-**Current** (lines 33-38):
-```javascript
-const stream = await client.chat.completions.create({
-    model: modelName,
-    messages: history,
-    stream: true,
-    ...config
-});
-```
-
-**Proposed** - Add `tools` parameter and fix response parsing:
-```javascript
-// Transform tools to OpenAI format if provided
-const openaiTools = tools && tools.length > 0 ? tools.map(t => ({
-    type: 'function',
-    function: {
-        name: t.name,
-        description: t.description,
-        parameters: t.parameters
-    }
-})) : undefined;
-
-const stream = await client.chat.completions.create({
-    model: modelName,
-    messages: history,
-    stream: true,
-    tools: openaiTools,  // ADD THIS
-    ...config
-});
-```
-
-Also fix response parsing to yield tool_call events (currently only yields text).
-
----
-
-#### [MODIFY] [anthropic-strategy.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/provider/strategies/anthropic-strategy.js)
-
-**Current** (lines 60-67):
-```javascript
-const stream = await client.messages.create({
-    model: modelName,
-    messages: messages,
-    system: systemMessage ? systemMessage.content : undefined,
-    stream: true,
-    max_tokens: config.max_tokens || 4096,
-    ...config
-});
-```
-
-**Proposed** - Add `tools` parameter (Anthropic format):
-```javascript
-// Transform tools to Anthropic format if provided
-const anthropicTools = tools && tools.length > 0 ? tools.map(t => ({
-    name: t.name,
-    description: t.description,
-    input_schema: t.parameters  // Anthropic uses input_schema, not parameters
-})) : undefined;
-
-const stream = await client.messages.create({
-    model: modelName,
-    messages: messages,
-    system: systemMessage ? systemMessage.content : undefined,
-    stream: true,
-    max_tokens: config.max_tokens || 4096,
-    tools: anthropicTools,  // ADD THIS
-    ...config
-});
-```
-
-Also fix response parsing to yield tool_call events.
-
----
-
-### Unit Tests
-
-#### [MODIFY] [provider.service.test.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/tests/services/provider/provider.service.test.js)
-
-Add new test cases for each strategy:
-- Verify `client.chat()` is called with `tools` parameter when tools provided
-- Verify `tools` is omitted when empty array passed
-- Verify tool_call events are yielded from stream parsing
-
----
+#### [NEW] [tool-execution.test.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/tests/integration/tool-execution.test.js)
+- Implement integration test as requested.
+- Verify full flow: `ContainerPool -> acquire -> execute -> destroy`.
 
 ## Verification Plan
 
 ### Automated Tests
-
-**Command**: `npm test -- --testPathPattern=provider.service.test`
-
-**New test cases to add**:
-1. `OllamaStrategy.chat() passes tools to client when provided`
-2. `OllamaStrategy.chat() omits tools when empty array`
-3. `OpenAIStrategy.chat() passes tools to client when provided`
-4. `AnthropicStrategy.chat() passes tools to client when provided`
+- Run unit tests: `npm test backend/tests/container.test.js`
+- Run integration tests: `npm test backend/tests/integration/tool-execution.test.js`
+- Run orchestrator tests: `npm test backend/src/services/experiment-orchestrator.service.test.js`
 
 ### Manual Verification
-
-Since this affects live LLM calls, full integration testing requires a running Ollama instance:
-
-1. Start Ollama locally: `ollama serve`
-2. Ensure a model with tool support is available: `ollama pull llama3.2`
-3. Run integration test (if exists) or verify via experiment execution
-
-> [!NOTE]
-> Full end-to-end verification may need to wait for Story 051 (Container Interface) since tool execution is currently broken due to container interface mismatch.
+- None required if integration tests pass, as this is a backend refactor.

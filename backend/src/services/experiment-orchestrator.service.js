@@ -505,15 +505,14 @@ except Exception as e:
     print(json.dumps({'error': str(e)}))
 `;
 
-                // Execute in container
+                // Execute in container using simplified interface
                 const execResult = await container.execute(
-                    ['python3', '-c', pythonScript],
+                    pythonScript, // The script to run
                     {
-                        Env: [
-                            `EXPERIMENT_ENV=${envJson}`,
-                            `GOAL_CONDITION=${condition}`
-                        ]
-                    }
+                        EXPERIMENT_ENV: envJson,
+                        GOAL_CONDITION: condition
+                    }, // Environment variables
+                    [] // Args
                 );
 
                 if (execResult.exitCode !== 0) {
@@ -629,13 +628,12 @@ except Exception as e:
 `;
 
             const execResult = await container.execute(
-                ['python3', '-c', pythonScript],
+                pythonScript,
                 {
-                    Env: [
-                        `HOOK_CONTEXT=${contextJson}`,
-                        `HOOK_CODE=${script.code}`
-                    ]
-                }
+                    HOOK_CONTEXT: contextJson,
+                    HOOK_CODE: script.code
+                },
+                []
             );
 
             // Log script output
