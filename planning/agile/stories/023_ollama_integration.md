@@ -1,6 +1,6 @@
 # Implement Ollama Provider
 
-- **Status:** READY
+- **Status:** DONE
 - **Points:** 3
 - **Story ID:** 023
 - **Type:** Feature
@@ -14,12 +14,17 @@ Implement the `OllamaProvider` class to communicate with a local Ollama instance
 **So that** I don't incur API costs.
 
 ## Acceptance Criteria
-- [ ] Connects to Ollama API URL.
-- [ ] Implements `chat` with streaming support.
-- [ ] Implements `listModels`.
+- [x] Add the ollama-js dependency
+- [x] Do not hard code the Ollama API URL (or use the default of `http://localhost:11434`)
+- [x] Connects to Ollama API URL.
+- [x] Implements `chat` with streaming support.
+- [x] Implements `listModels`.
 
 ## Testing
 1. Mock Ollama API response.
 2. Verify chat completion parsing.
+3. Test the `listModels` method against the actual Ollama API
+4. Test the `chat` method against the actual Ollama API
 
 ## Review Log
+**1/10/26** - Accepted by Product Owner

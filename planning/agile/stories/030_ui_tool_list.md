@@ -1,6 +1,6 @@
 # Implement Tool List UI
 
-- **Status:** READY
+- **Status:** NOT READY
 - **Points:** 2
 - **Story ID:** 030
 - **Type:** Feature

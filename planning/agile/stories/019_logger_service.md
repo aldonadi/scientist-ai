@@ -1,6 +1,6 @@
 # Implement Persistent Logger Service
 
-- **Status:** READY
+- **Status:** DONE
 - **Points:** 3
 - **Story ID:** 019
 - **Type:** Feature
@@ -14,12 +14,13 @@ Create a service that subscribes to the EventBus and writes logs to MongoDB.
 **So that** I don't lose history.
 
 ## Acceptance Criteria
-- [ ] Subscribes to `LOG` event.
-- [ ] Subscribes to lifecycle events (STEP_START, etc) and auto-generates logs.
-- [ ]  writes `LogEntry` to DB.
+- [x] Subscribes to `LOG` event.
+- [x] Subscribes to lifecycle events (STEP_START, etc) and auto-generates logs.
+- [x]  writes `LogEntry` to DB.
 
 ## Testing
 1. Emit event on bus.
 2. Check for new document in `logs` collection.
 
 ## Review Log
+**1/6/2026** - Accepted by Product Owner

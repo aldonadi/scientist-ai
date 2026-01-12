@@ -1,6 +1,6 @@
 # Setup Main Layout & Navigation
 
-- **Status:** READY
+- **Status:** NOT READY
 - **Points:** 3
 - **Story ID:** 029
 - **Type:** Feature

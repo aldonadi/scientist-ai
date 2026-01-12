@@ -27,31 +27,52 @@ Status can be:
 | 006_api_list_tools                                 | 2      | DONE        |
 | 007_api_get_tool                                   | 1      | DONE        |
 | 008_api_update_tool                                | 2      | DONE        |
-| 009_api_delete_tool                                | 1      | DONE      |
-| 010_plan_model_schema                              | 1      | READY       |
-| 011_api_create_plan                                | 2      | READY       |
-| 012_api_list_plans                                 | 2      | READY       |
-| 013_api_get_plan                                   | 1      | READY       |
-| 014_api_update_plan                                | 3      | READY       |
-| 015_experiment_model_schema                        | 1      | READY       |
-| 016_log_model_schema                               | 1      | READY       |
-| 017_api_launch_experiment                          | 3      | READY       |
-| 018_event_bus_system                               | 3      | READY       |
-| 019_logger_service                                 | 3      | READY       |
-| 020_container_pool_manager                         | 8      | READY       |
-| 021_container_execution_wrapper                    | 5      | READY       |
-| 022_llm_provider_interface                         | 3      | READY       |
-| 023_ollama_integration                             | 3      | READY       |
-| 024_orchestrator_initialization                    | 5      | READY       |
-| 025_orchestrator_step_loop                         | 8      | READY       |
-| 026_role_prompt_construction                       | 5      | READY       |
-| 027_tool_execution_logic                           | 5      | READY       |
-| 028_goal_evaluation_logic                          | 3      | READY       |
-| 029_setup_frontend_layout                          | 3      | READY       |
-| 030_ui_tool_list                                   | 2      | READY       |
-| 031_ui_tool_editor                                 | 5      | READY       |
-| 032_ui_plan_list                                   | 2      | READY       |
-| 033_ui_plan_editor_basic                           | 3      | READY       |
-| 034_ui_plan_editor_roles                           | 5      | READY       |
-| 035_ui_experiment_monitor                          | 8      | READY       |
-| 036_ui_realtime_logs                               | 5      | READY       |
+| 009_api_delete_tool                                | 1      | DONE        |
+| 037_environment_schema                             | 2      | DONE        |
+| 038_provider_schema                                | 2      | DONE        |
+| 039_model_config_schema                            | 2      | DONE        |
+| 040_role_schema                                    | 3      | DONE        |
+| 041_goal_schema                                    | 2      | DONE        |
+| 042_script_schema                                  | 2      | DONE        |
+| 043_experiment_plan_schema                         | 3      | DONE        |
+| 044_secret_storage_interface                       | 3      | DONE        |
+| 010_plan_model_schema                              | 9      | CANCELLED   |
+| 011_api_create_plan                                | 2      | DONE        |
+| 012_api_list_plans                                 | 2      | DONE        |
+| 013_api_get_plan                                   | 1      | DONE        |
+| 014_api_update_plan                                | 3      | DONE        |
+| 045_api_delete_plan                                | 1      | DONE        |
+| 015_experiment_model_schema                        | 1      | DONE        |
+| 016_log_model_schema                               | 1      | DONE        |
+| 017_api_launch_experiment                          | 3      | DONE        |
+| 018_event_bus_system                               | 3      | DONE        |
+| 019_logger_service                                 | 3      | DONE        |
+| 020_container_pool_manager                         | 8      | DONE        |
+| 021_container_execution_wrapper                    | 5      | DONE        |
+| 022_llm_provider_interface                         | 3      | DONE        |
+| 023_ollama_integration                             | 3      | DONE        |
+| 024_orchestrator_initialization                    | 5      | DONE        |
+| 025_orchestrator_step_loop                         | 8      | DONE        |
+| 026_role_prompt_construction                       | 5      | DONE        |
+| 027_tool_execution_logic                           | 5      | DONE        |
+| 028_goal_evaluation_logic                          | 3      | DONE        |
+| 046_script_and_hook_system                         | 5      | DONE        |
+| 047_experiment_control_api                         | 5      | DONE        |
+| 048_experiment_crud_api                            | 5      | DONE        |
+| 049_logs_api                                       | 3      | DONE        |
+| 050_fix_ollama_tool_passing                        | 2      | DONE        |
+| 051_unify_container_interface                      | 5      | DONE        |
+| 052_container_security_hardening                   | 2      | DONE        |
+| 053_plan_duplicate_endpoint                        | 2      | DONE        |
+| 054_llm_retry_logic                                | 3      | DONE        |
+| 055_sse_streaming_endpoint                         | 5      | DONE        |
+| 029_setup_frontend_layout                          | 3      | NOT READY   |
+| 030_ui_tool_list                                   | 2      | NOT READY   |
+| 031_ui_tool_editor                                 | 5      | NOT READY   |
+| 032_ui_plan_list                                   | 2      | NOT READY   |
+| 033_ui_plan_editor_basic                           | 3      | NOT READY   |
+| 034_ui_plan_editor_roles                           | 5      | NOT READY   |
+| 035_ui_experiment_monitor                          | 8      | NOT READY   |
+| 036_ui_realtime_logs                               | 5      | NOT READY   |
+
+

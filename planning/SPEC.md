@@ -143,6 +143,9 @@ robust platform for designing and running agentic AI experiments.
     - `EXPERIMENT_START`
     - `STEP_START` (etc...)
   - `code`: String (Python).
+  - `failPolicy` : Enum
+    - `ABORT_EXPERIMENT`
+    - `CONTINUE_WITH_ERROR`
 - **Methods**:
   - `register(eventBus)`: Subscribes `this.run` to the matching event on the bus.
   - `run(payload)`: Executed when event fires.

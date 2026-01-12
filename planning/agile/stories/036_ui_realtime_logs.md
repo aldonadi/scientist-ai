@@ -1,6 +1,6 @@
 # Implement Realtime Log Streaming
 
-- **Status:** READY
+- **Status:** NOT READY
 - **Points:** 5
 - **Story ID:** 036
 - **Type:** Feature

@@ -1,6 +1,6 @@
 # Implement Experiment Monitor View
 
-- **Status:** READY
+- **Status:** NOT READY
 - **Points:** 8
 - **Story ID:** 035
 - **Type:** Feature

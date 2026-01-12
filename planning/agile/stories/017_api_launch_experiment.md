@@ -1,6 +1,6 @@
 # Implement Launch Experiment API
 
-- **Status:** READY
+- **Status:** DONE
 - **Points:** 3
 - **Story ID:** 017
 - **Type:** Feature
@@ -14,14 +14,15 @@ Implement POST /api/experiments to spawn a new instance from a Plan.
 **So that** I can start an experiment.
 
 ## Acceptance Criteria
-- [ ] Accepts `planId`.
-- [ ] Creates `Experiment` document.
-- [ ] Copies `initialEnvironment` to `currentEnvironment`.
-- [ ] Sets status to `INITIALIZING`.
-- [ ] Returns experiment ID.
+- [x] Accepts `planId`.
+- [x] Creates `Experiment` document.
+- [x] Copies `initialEnvironment` to `currentEnvironment`.
+- [x] Sets status to `INITIALIZING`.
+- [x] Returns experiment ID.
 
 ## Testing
 1. Post planId.
 2. Verify new Experiment doc created.
 
 ## Review Log
+**1/5/2026** - Accepted by Product Owner
