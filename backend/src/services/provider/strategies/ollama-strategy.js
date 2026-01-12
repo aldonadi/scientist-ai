@@ -31,7 +31,7 @@ class OllamaStrategy extends ProviderStrategy {
         }
     }
 
-    async *chat(provider, modelName, history, tools, config) {
+    async chat(provider, modelName, history, tools, config) {
         const client = this._getClient(provider);
 
         // Transform tools to Ollama format if provided
@@ -53,23 +53,25 @@ class OllamaStrategy extends ProviderStrategy {
             tools: ollamaTools,
         });
 
-        for await (const chunk of stream) {
-            // Yield text content if present
-            if (chunk.message && chunk.message.content) {
-                yield { type: 'text', content: chunk.message.content };
-            }
+        return (async function* () {
+            for await (const chunk of stream) {
+                // Yield text content if present
+                if (chunk.message && chunk.message.content) {
+                    yield { type: 'text', content: chunk.message.content };
+                }
 
-            // Yield tool calls if present
-            if (chunk.message && chunk.message.tool_calls) {
-                for (const toolCall of chunk.message.tool_calls) {
-                    yield {
-                        type: 'tool_call',
-                        toolName: toolCall.function.name,
-                        args: toolCall.function.arguments
-                    };
+                // Yield tool calls if present
+                if (chunk.message && chunk.message.tool_calls) {
+                    for (const toolCall of chunk.message.tool_calls) {
+                        yield {
+                            type: 'tool_call',
+                            toolName: toolCall.function.name,
+                            args: toolCall.function.arguments
+                        };
+                    }
                 }
             }
-        }
+        })();
     }
 
     _getClient(provider) {

@@ -1,4 +1,5 @@
 const OllamaStrategy = require('./strategies/ollama-strategy');
+const { retryWithBackoff } = require('../../utils/retry');
 const OpenAIStrategy = require('./strategies/openai-strategy');
 const AnthropicStrategy = require('./strategies/anthropic-strategy');
 
@@ -63,7 +64,28 @@ class ProviderService {
      * @returns {AsyncIterator}
      */
     async chat(provider, modelName, history, tools, config) {
-        return this._getStrategy(provider.type).chat(provider, modelName, history, tools, config);
+        return retryWithBackoff(async () => {
+            return await this._getStrategy(provider.type).chat(provider, modelName, history, tools, config);
+        }, {
+            maxRetries: 3,
+            baseDelay: 1000,
+            maxDelay: 30000,
+            isRetryable: (error) => {
+                // If it doesn't have a status, it might be a network error (retry)
+                if (!error.status && !error.response?.status) return true;
+
+                const status = error.status || error.response?.status;
+
+                // Retry specific status codes
+                if ([429, 500, 502, 503, 504].includes(status)) return true;
+
+                // Do not retry 400, 401, 403, 404
+                if ([400, 401, 403, 404].includes(status)) return false;
+
+                // Default: allow retry for unknown errors (safe default for transient issues)
+                return true;
+            }
+        });
     }
 }
 

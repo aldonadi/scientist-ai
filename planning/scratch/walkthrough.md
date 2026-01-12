@@ -1,49 +1,41 @@
-# Walkthrough - Duplicate Experiment Plan Endpoint (Story 053)
-
-I have implemented the `POST /api/plans/:id/duplicate` endpoint, allowing users to clone existing Experiment Plans.
+# Walkthrough - LLM Retry Logic (Story 054)
 
 ## Changes
 
-### 1. Backend Controller (`plan.controller.js`)
-- Added `duplicatePlan` method.
-- Implemented deep copying of Plan, Roles, Goals, and Scripts.
-- Implemented name collision resolution:
-    - Appends ` (Copy)` to the first copy.
-    - Appends ` (Copy N)` for subsequent copies (e.g., `My Plan (Copy 2)`).
-- Included safety checks for maximum copies (limit 10) to prevent infinite loops.
+### 1. Robust Retry Utility
+Implemented `backend/src/utils/retry.js` providing:
+- **Exponential Backoff**: `delay = min(base * 2^attempt, max)`
+- **Full Jitter**: Prevents thundering herd.
+- **Configurable Predicates**: Retries on network errors and 5xx/429 status codes. Fails fast on 400/401/403/404.
 
-### 2. Backend Routes (`plan.routes.js`)
-- Registered `POST /:id/duplicate`.
+### 2. Provider Service Integration
+Modified `backend/src/services/provider/provider.service.js` to wrap all chat calls with `retryWithBackoff`.
+
+### 3. Strategy Refactoring
+Refactored `chat` methods in all provider strategies (`Ollama`, `OpenAI`, `Anthropic`) to:
+- Await the initial connection/request *before* returning the async generator.
+- This ensures connection failures are caught by the retry wrapper, rather than crashing during iteration.
+
+### 4. Verification
+Added comprehensive tests in `provider.service.test.js` verifying:
+- Successful retry on transient network errors.
+- Failure propagation after max retries.
+- Fast failure for client errors (400 Bad Request, 401 Unauthorized).
+- Handling of specific status codes (429, 503).
 
 ## Verification Results
 
-### Automated Tests (`backend/tests/api/plan.routes.test.js`)
-I added comprehensive integration tests covering:
-- **Success Case**: Duplicating a plan creates a new ID and expected name.
-- **Name Collision**: Verified `(Copy 2)` generation.
-- **Custom Name**: Verified providing a custom name in the body.
-- **Error Handling**: Verified 404 for missing source plan.
+### Automated Tests
+Run `cd backend && npm test tests/services/provider/provider.service.test.js`
 
-**Test Output:**
 ```
- PASS  tests/api/plan.routes.test.js
- ...
-    POST /api/plans/:id/duplicate 
-      ✓ should duplicate a plan with a new name (35 ms)
-      ✓ should handle name collisions by incrementing suffix (51 ms)
-      ✓ should allow providing a custom name (29 ms)
-      ✓ should return 404 if source plan not found (17 ms)
-```
-
-## Usage Example
-```bash
-# Duplicate a plan
-curl -X POST http://localhost:3000/api/plans/69646d03ac0946ca94b0eac5/duplicate
-
-# Response
-{
-  "_id": "69646d03ac0946ca94b0eac6",
-  "name": "My Plan (Copy)",
-  ...
-}
+PASS  tests/services/provider/provider.service.test.js
+  ProviderService
+    Retry Logic
+      ✓ should retry on network error and eventually succeed (9 ms)
+      ✓ should fail after max retries are exhausted (38 ms)
+      ✓ should NOT retry on 400 Bad Request (6 ms)
+      ✓ should NOT retry on 401 Unauthorized (4 ms)
+      ✓ should retry on 429 Too Many Requests (4 ms)
+      ✓ should retry on 503 Service Unavailable (5 ms)
 ```

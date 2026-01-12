@@ -50,7 +50,7 @@ class AnthropicStrategy extends ProviderStrategy {
         ];
     }
 
-    async *chat(provider, modelName, history, tools, config) {
+    async chat(provider, modelName, history, tools, config) {
         const client = await this._getClient(provider);
 
         // Anthropic system prompt is a top-level parameter
@@ -75,49 +75,51 @@ class AnthropicStrategy extends ProviderStrategy {
             ...config
         });
 
-        // Track current tool use block for accumulation
-        let currentToolUse = null;
-        let toolInputJson = '';
+        return (async function* () {
+            // Track current tool use block for accumulation
+            let currentToolUse = null;
+            let toolInputJson = '';
 
-        for await (const chunk of stream) {
-            // Handle text content
-            if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
-                yield { type: 'text', content: chunk.delta.text };
-            }
-
-            // Handle tool use start
-            if (chunk.type === 'content_block_start' && chunk.content_block?.type === 'tool_use') {
-                currentToolUse = {
-                    id: chunk.content_block.id,
-                    name: chunk.content_block.name
-                };
-                toolInputJson = '';
-            }
-
-            // Handle tool use input delta
-            if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'input_json_delta') {
-                toolInputJson += chunk.delta.partial_json;
-            }
-
-            // Handle tool use end
-            if (chunk.type === 'content_block_stop' && currentToolUse) {
-                try {
-                    yield {
-                        type: 'tool_call',
-                        toolName: currentToolUse.name,
-                        args: toolInputJson ? JSON.parse(toolInputJson) : {}
-                    };
-                } catch (e) {
-                    yield {
-                        type: 'tool_call',
-                        toolName: currentToolUse.name,
-                        args: toolInputJson
-                    };
+            for await (const chunk of stream) {
+                // Handle text content
+                if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
+                    yield { type: 'text', content: chunk.delta.text };
                 }
-                currentToolUse = null;
-                toolInputJson = '';
+
+                // Handle tool use start
+                if (chunk.type === 'content_block_start' && chunk.content_block?.type === 'tool_use') {
+                    currentToolUse = {
+                        id: chunk.content_block.id,
+                        name: chunk.content_block.name
+                    };
+                    toolInputJson = '';
+                }
+
+                // Handle tool use input delta
+                if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'input_json_delta') {
+                    toolInputJson += chunk.delta.partial_json;
+                }
+
+                // Handle tool use end
+                if (chunk.type === 'content_block_stop' && currentToolUse) {
+                    try {
+                        yield {
+                            type: 'tool_call',
+                            toolName: currentToolUse.name,
+                            args: toolInputJson ? JSON.parse(toolInputJson) : {}
+                        };
+                    } catch (e) {
+                        yield {
+                            type: 'tool_call',
+                            toolName: currentToolUse.name,
+                            args: toolInputJson
+                        };
+                    }
+                    currentToolUse = null;
+                    toolInputJson = '';
+                }
             }
-        }
+        })();
     }
 
     async _testConnection(provider) {

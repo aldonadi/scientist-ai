@@ -1,42 +1,41 @@
-# Implementation Plan - Duplicate Experiment Endpoint (Story 053)
+# Implementation Plan - LLM Retry Logic (Story 054)
 
-## Goal Description
-Implement the `POST /api/plans/:id/duplicate` endpoint to allow users to clone an existing Experiment Plan. This will create a deep copy of the plan, including all roles, goals, scripts, and environment settings, with a modified name to avoid uniqueness constraints.
-
-## User Review Required
-> [!NOTE]
-> Name collision strategy: The system will attempt to append " (Copy)" to the original name. If that exists, it will try " (Copy 2)", " (Copy 3)", etc., up to a limit (e.g., 10 attempts) before failing or relying on the user to provide a unique name.
+## Goal
+Implement exponential backoff retry logic for LLM calls to handle transient network issues and rate limits gracefully, preventing experiment crashes.
 
 ## Proposed Changes
 
-### Backend Component
+### [Backend Utilities]
 
-#### [MODIFY] [plan.controller.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/controllers/plan.controller.js)
-- Add `duplicatePlan` method.
-    - Logic to find the source plan.
-    - Deep copy the data (using `toObject()` and cleanup).
-    - Remove system fields (`_id`, `createdAt`, `updatedAt`, `__v`).
-    - Implement name uniqueness logic:
-        - Check if `Name (Copy)` exists.
-        - If so, try `Name (Copy N)` incrementing N.
-    - Create and save the new `ExperimentPlan`.
+#### [NEW] [retry.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/utils/retry.js)
+Create a generic retry utility function `retryWithBackoff`.
+- **Logic**:
+    - Retries async function `fn`.
+    - Exponential backoff: `delay = min(baseDelay * 2^attempt, maxDelay)`.
+    - Full Jitter: `sleep(random_between(0, delay))`.
+    - Checks `isRetryable` predicate if provided, or default checks for network/5xx errors.
+    - Logs attempts.
 
-#### [MODIFY] [plan.routes.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/routes/plan.routes.js)
-- Register `POST /:id/duplicate` route tied to `planController.duplicatePlan`.
+### [Provider Service]
+
+#### [MODIFY] [provider.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/provider/provider.service.js)
+- Import `retryWithBackoff`.
+- In `chat()` method, wrap the strategy call with `retryWithBackoff`.
+- Define `isRetryable` logic:
+    - Retry on: Network errors, 429, 500, 502, 503, 504.
+    - Do NOT retry on: 400 (Bad Request), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found).
 
 ## Verification Plan
 
 ### Automated Tests
-- **File**: `backend/tests/api/plan.routes.test.js`
-- **Command**: `npm test backend/tests/api/plan.routes.test.js`
+Run unit tests for `ProviderService`.
+`npm test backend/tests/services/provider/provider.service.test.js`
 
-**Test Cases**:
-1.  **Basic Duplication**: Call `/duplicate` on an existing plan. Verify 201 response and that the returned plan has `(Copy)` in the name and a new ID.
-2.  **Custom Name**: Call `/duplicate` with `{ name: "My Custom Copy" }`. Verify the new name is used.
-3.  **Name Collision**: Create a plan "A". Duplicate it to get "A (Copy)". Duplicate "A" again. Verify we get "A (Copy 2)".
-4.  **Deep Copy**: Verify that modifying the nested objects (e.g., `roles[0].systemPrompt`) in the copy does *not* affect the original plan.
-5.  **Not Found**: Call `/duplicate` on a non-existent ID. Verify 404.
+#### New Test Cases in `provider.service.test.js`
+- **Retry Success**: Mock strategy to fail twice then succeed. Verify 3 calls total.
+- **Retry Exhaustion**: Mock strategy to fail permanently. Verify N+1 calls and final error throw.
+- **Non-Retryable Error**: Mock strategy to throw 400. Verify 1 call and immediate error throw.
+- **Backoff Calculation**: (Optional) Verify delay roughly increases (or just verify call count).
 
 ### Manual Verification
-1.  (Optional if automated tests are comprehensive) Use `curl` or Postman to trigger the endpoint against a running server.
-    - `POST http://localhost:3000/api/plans/<id>/duplicate`
+None required if unit tests are comprehensive, as this is backend logic.

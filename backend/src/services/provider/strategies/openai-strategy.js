@@ -27,7 +27,7 @@ class OpenAIStrategy extends ProviderStrategy {
         return response.data.map(m => m.id);
     }
 
-    async *chat(provider, modelName, history, tools, config) {
+    async chat(provider, modelName, history, tools, config) {
         const client = await this._getClient(provider);
 
         // Transform tools to OpenAI format if provided
@@ -49,56 +49,58 @@ class OpenAIStrategy extends ProviderStrategy {
             ...config
         });
 
-        // Track tool calls across chunks (OpenAI streams tool calls in pieces)
-        const toolCallAccumulator = {};
+        return (async function* () {
+            // Track tool calls across chunks (OpenAI streams tool calls in pieces)
+            const toolCallAccumulator = {};
 
-        for await (const chunk of stream) {
-            const delta = chunk.choices[0]?.delta;
+            for await (const chunk of stream) {
+                const delta = chunk.choices[0]?.delta;
 
-            // Yield text content if present
-            if (delta?.content) {
-                yield { type: 'text', content: delta.content };
-            }
+                // Yield text content if present
+                if (delta?.content) {
+                    yield { type: 'text', content: delta.content };
+                }
 
-            // Accumulate and yield tool calls
-            if (delta?.tool_calls) {
-                for (const toolCall of delta.tool_calls) {
-                    const index = toolCall.index;
-                    if (!toolCallAccumulator[index]) {
-                        toolCallAccumulator[index] = {
-                            id: toolCall.id || '',
-                            name: '',
-                            arguments: ''
-                        };
+                // Accumulate and yield tool calls
+                if (delta?.tool_calls) {
+                    for (const toolCall of delta.tool_calls) {
+                        const index = toolCall.index;
+                        if (!toolCallAccumulator[index]) {
+                            toolCallAccumulator[index] = {
+                                id: toolCall.id || '',
+                                name: '',
+                                arguments: ''
+                            };
+                        }
+                        if (toolCall.function?.name) {
+                            toolCallAccumulator[index].name += toolCall.function.name;
+                        }
+                        if (toolCall.function?.arguments) {
+                            toolCallAccumulator[index].arguments += toolCall.function.arguments;
+                        }
                     }
-                    if (toolCall.function?.name) {
-                        toolCallAccumulator[index].name += toolCall.function.name;
-                    }
-                    if (toolCall.function?.arguments) {
-                        toolCallAccumulator[index].arguments += toolCall.function.arguments;
+                }
+
+                // When chunk indicates finish, emit accumulated tool calls
+                if (chunk.choices[0]?.finish_reason === 'tool_calls') {
+                    for (const tc of Object.values(toolCallAccumulator)) {
+                        try {
+                            yield {
+                                type: 'tool_call',
+                                toolName: tc.name,
+                                args: JSON.parse(tc.arguments)
+                            };
+                        } catch (e) {
+                            yield {
+                                type: 'tool_call',
+                                toolName: tc.name,
+                                args: tc.arguments // Pass as string if JSON parse fails
+                            };
+                        }
                     }
                 }
             }
-
-            // When chunk indicates finish, emit accumulated tool calls
-            if (chunk.choices[0]?.finish_reason === 'tool_calls') {
-                for (const tc of Object.values(toolCallAccumulator)) {
-                    try {
-                        yield {
-                            type: 'tool_call',
-                            toolName: tc.name,
-                            args: JSON.parse(tc.arguments)
-                        };
-                    } catch (e) {
-                        yield {
-                            type: 'tool_call',
-                            toolName: tc.name,
-                            args: tc.arguments // Pass as string if JSON parse fails
-                        };
-                    }
-                }
-            }
-        }
+        })();
     }
 
     async _getClient(provider) {

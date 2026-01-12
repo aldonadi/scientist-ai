@@ -1,22 +1,9 @@
-# Task Checklist: Duplicate Experiment Endpoint (Story 053)
+# Story 054: LLM Retry Logic
 
-- [ ] Planning
-    - [x] Read requirements and user story @[planning/agile/stories/053_plan_duplicate_endpoint.md]
-    - [x] Create implementation plan in `implementation_plan.md`
-    - [x] Review implementation plan with user
-
-- [x] Implementation
-    - [x] Add `duplicate` method to `ExperimentController`
-    - [x] Add `POST /experiments/:id/duplicate` route
-    - [x] Implement logic to copy experiment data (excluding logs, status, etc.)
-    - [x] Ensure unique name generation (e.g., "Copy of [Original Name]")
-    - [x] Verify deep copying of steps and other nested objects
-
-- [x] Verification
-    - [x] Write unit tests for `ExperimentController.duplicate`
-    - [x] Write integration tests for the endpoint
-    - [x] Verify manually (if applicable/needed)
-
-- [x] Documentation & Cleanup
-    - [x] Update story file `053_plan_duplicate_endpoint.md`
-    - [x] Update backlog `planning/agile/backlog.md`
+- [ ] Update backlog status to IN-PROGRESS
+- [x] Create implementation plan <!-- id: 0 -->
+- [x] Implement retry logic in `provider.service.js` <!-- id: 1 -->
+- [x] Add unit tests in `provider.service.test.js` <!-- id: 2 -->
+- [x] Verify tests pass <!-- id: 3 -->
+- [x] Update story status to DONE <!-- id: 4 -->
+- [x] Update backlog status to REVIEW <!-- id: 5 -->

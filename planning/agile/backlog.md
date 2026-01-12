@@ -64,7 +64,7 @@ Status can be:
 | 051_unify_container_interface                      | 5      | DONE        |
 | 052_container_security_hardening                   | 2      | DONE        |
 | 053_plan_duplicate_endpoint                        | 2      | DONE        |
-| 054_llm_retry_logic                                | 3      | READY       |
+| 054_llm_retry_logic                                | 3      | REVIEW      |
 | 055_sse_streaming_endpoint                         | 5      | READY       |
 | 029_setup_frontend_layout                          | 3      | NOT READY   |
 | 030_ui_tool_list                                   | 2      | NOT READY   |

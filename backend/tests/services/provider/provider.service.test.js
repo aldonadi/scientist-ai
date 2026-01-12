@@ -236,5 +236,110 @@ describe('ProviderService', () => {
             }));
         });
     });
+    describe('Retry Logic', () => {
+        const mockProvider = { type: 'OLLAMA' };
+
+        beforeEach(() => {
+            jest.spyOn(global, 'setTimeout').mockImplementation((fn) => {
+                fn();
+                return 1;
+            });
+        });
+
+        afterEach(() => {
+            global.setTimeout.mockRestore();
+        });
+
+        it('should retry on network error and eventually succeed', async () => {
+            const mockChat = jest.fn()
+                .mockRejectedValueOnce(new Error('Network error'))
+                .mockRejectedValueOnce(new Error('Network error'))
+                .mockResolvedValue('success');
+
+            Ollama.mockImplementation(() => ({
+                chat: mockChat
+            }));
+
+            const result = await providerService.chat(mockProvider, 'model', [], [], {});
+            expect(result).toBeDefined();
+            expect(mockChat).toHaveBeenCalledTimes(3);
+        });
+
+        it('should fail after max retries are exhausted', async () => {
+            const mockChat = jest.fn().mockRejectedValue(new Error('Persistent error'));
+
+            Ollama.mockImplementation(() => ({
+                chat: mockChat
+            }));
+
+            await expect(providerService.chat(mockProvider, 'model', [], [], {}))
+                .rejects.toThrow('Persistent error');
+
+            // Initial + 3 retries = 4 calls total
+            expect(mockChat).toHaveBeenCalledTimes(4);
+        });
+
+        it('should NOT retry on 400 Bad Request', async () => {
+            const error = new Error('Bad Request');
+            error.status = 400;
+            const mockChat = jest.fn().mockRejectedValue(error);
+
+            Ollama.mockImplementation(() => ({
+                chat: mockChat
+            }));
+
+            await expect(providerService.chat(mockProvider, 'model', [], [], {}))
+                .rejects.toThrow('Bad Request');
+
+            expect(mockChat).toHaveBeenCalledTimes(1);
+        });
+
+        it('should NOT retry on 401 Unauthorized', async () => {
+            const error = new Error('Unauthorized');
+            error.status = 401;
+            const mockChat = jest.fn().mockRejectedValue(error);
+
+            Ollama.mockImplementation(() => ({
+                chat: mockChat
+            }));
+
+            await expect(providerService.chat(mockProvider, 'model', [], [], {}))
+                .rejects.toThrow('Unauthorized');
+
+            expect(mockChat).toHaveBeenCalledTimes(1);
+        });
+
+        it('should retry on 429 Too Many Requests', async () => {
+            const error = new Error('Rate Limited');
+            error.status = 429;
+            const mockChat = jest.fn()
+                .mockRejectedValueOnce(error)
+                .mockResolvedValue('success');
+
+            Ollama.mockImplementation(() => ({
+                chat: mockChat
+            }));
+
+            const result = await providerService.chat(mockProvider, 'model', [], [], {});
+            expect(result).toBeDefined();
+            expect(mockChat).toHaveBeenCalledTimes(2);
+        });
+
+        it('should retry on 503 Service Unavailable', async () => {
+            const error = new Error('Service Unavailable');
+            error.status = 503;
+            const mockChat = jest.fn()
+                .mockRejectedValueOnce(error)
+                .mockResolvedValue('success');
+
+            Ollama.mockImplementation(() => ({
+                chat: mockChat
+            }));
+
+            const result = await providerService.chat(mockProvider, 'model', [], [], {});
+            expect(result).toBeDefined();
+            expect(mockChat).toHaveBeenCalledTimes(2);
+        });
+    });
 });
 
