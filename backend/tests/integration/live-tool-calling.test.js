@@ -7,25 +7,23 @@ const NUM_RUNS = 5;
 const SUCCESS_THRESHOLD = 3;
 
 // Tool Definition
+// Tool Definition
 const tools = [{
-    type: 'function',
-    function: {
-        name: 'set_flag',
-        description: 'Sets a specific flag to true or false',
-        parameters: {
-            type: 'object',
-            properties: {
-                flag_name: {
-                    type: 'string',
-                    description: 'The name of the flag to set'
-                },
-                value: {
-                    type: 'boolean',
-                    description: 'The value to set the flag to'
-                }
+    name: 'set_flag',
+    description: 'Sets a specific flag to true or false',
+    parameters: {
+        type: 'object',
+        properties: {
+            flag_name: {
+                type: 'string',
+                description: 'The name of the flag to set'
             },
-            required: ['flag_name', 'value']
-        }
+            value: {
+                type: 'boolean',
+                description: 'The value to set the flag to'
+            }
+        },
+        required: ['flag_name', 'value']
     }
 }];
 
