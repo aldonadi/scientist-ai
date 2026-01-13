@@ -12,5 +12,13 @@
     - [x] Consistency rename in source code (if applicable/safe) <!-- id: 9 -->
 - [x] **Request 3: Hook List Formatting** <!-- id: 10 -->
     - [x] Locate hook list display logic <!-- id: 11 -->
-    - [x] Implement conditional formatting: `HOOK_NAME ($num)` for count > 0, `($num) HOOK_NAME` otherwise (or keep as is? User said "keep the UI exactly as it is" for 0 scripts) <!-- id: 12 -->
+    - [x] Implement conditional formatting: `HOOK_NAME ($num)` for count > 0, `($num) HOOK_NAME` otherwise <!-- id: 12 -->
 - [x] Verify changes <!-- id: 13 -->
+
+# UI Tweaks: Tool Editor
+
+- [x] **Request 4: Pre-populate Tool Code** <!-- id: 14 -->
+    - [x] Locate `ToolEditorComponent` <!-- id: 15 -->
+    - [x] Define boilerplate code template <!-- id: 16 -->
+    - [x] Update initialization logic to populate `code` field with template for new tools <!-- id: 17 -->
+    - [x] Verify placeholder is replaced by actual value <!-- id: 18 -->

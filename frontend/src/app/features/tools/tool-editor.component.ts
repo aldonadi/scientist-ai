@@ -4,11 +4,33 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { ToolService, Tool, CreateToolDto } from '../../core/services/tool.service';
 
+const DEFAULT_TOOL_CODE = `def execute(env, args):
+    """
+    Description of what this tool does.
+    
+    Args:
+        arg_name (type): Description of argument
+        
+    Returns:
+        dict: Result of execution (must be JSON serializable)
+    """
+    # Access environment state variables (if needed)
+    # stock_data = env.get('stock_data', {})
+    
+    # Access arguments passed by the model
+    # param = args.get('arg_name')
+
+    # Your implementation here
+    
+    # Return a dictionary, list, or primitive that can be serialized to JSON
+    # This result will be passed back to the model
+    return {"status": "success", "data": "..."}`;
+
 @Component({
-    selector: 'app-tool-editor',
-    standalone: true,
-    imports: [CommonModule, FormsModule],
-    template: `
+  selector: 'app-tool-editor',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  template: `
     <div class="h-full flex flex-col">
       <!-- Header -->
       <div class="flex items-center justify-between mb-6">
@@ -91,19 +113,6 @@ import { ToolService, Tool, CreateToolDto } from '../../core/services/tool.servi
           <div class="flex-1 relative">
             <textarea [(ngModel)]="tool.code"
                       class="absolute inset-0 w-full h-full p-4 font-mono text-sm bg-gray-900 text-green-400 resize-none focus:outline-none"
-                      placeholder="def execute(env, args):
-    '''
-    Tool description for the LLM.
-    
-    Args:
-        ticker (str): Stock ticker symbol
-    
-    Returns:
-        dict: Quote data
-    '''
-    ticker = args.get('ticker')
-    # Your implementation here
-    return {'price': 100.0}"
                       spellcheck="false"></textarea>
           </div>
         </div>
@@ -112,119 +121,122 @@ import { ToolService, Tool, CreateToolDto } from '../../core/services/tool.servi
   `
 })
 export class ToolEditorComponent implements OnInit {
-    @Input() id?: string;
+  @Input() id?: string;
 
-    isNew = true;
-    tool: CreateToolDto = {
-        namespace: '',
-        name: '',
-        description: '',
-        parameters: {},
-        code: ''
+  isNew = true;
+  tool: CreateToolDto = {
+    namespace: '',
+    name: '',
+    description: '',
+    parameters: {},
+    code: ''
+  };
+
+  parametersJson = '{}';
+  parametersError = '';
+
+  constructor(
+    private toolService: ToolService,
+    private router: Router,
+    private route: ActivatedRoute
+  ) { }
+
+  ngOnInit(): void {
+    // Get ID from route if not provided via input
+    const routeId = this.route.snapshot.paramMap.get('id');
+    if (routeId && routeId !== 'new') {
+      this.id = routeId;
+      this.isNew = false;
+      this.loadTool();
+    } else {
+      // New tool: pre-populate code
+      this.tool.code = DEFAULT_TOOL_CODE;
+    }
+  }
+
+  loadTool(): void {
+    if (!this.id) return;
+
+    this.toolService.getTool(this.id).subscribe({
+      next: (tool) => {
+        this.tool = {
+          namespace: tool.namespace,
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.parameters,
+          code: tool.code
+        };
+        this.parametersJson = JSON.stringify(tool.parameters, null, 2);
+      },
+      error: (err) => {
+        console.error('Failed to load tool:', err);
+        this.router.navigate(['/tools']);
+      }
+    });
+  }
+
+  isValid(): boolean {
+    return !!(this.tool.namespace && this.tool.name && this.tool.description && this.tool.code);
+  }
+
+  validateParameters(): boolean {
+    try {
+      this.tool.parameters = JSON.parse(this.parametersJson);
+      this.parametersError = '';
+      return true;
+    } catch (e) {
+      this.parametersError = 'Invalid JSON';
+      return false;
+    }
+  }
+
+  generateSchema(): void {
+    // Parse Python code to extract function signature and docstring
+    const code = this.tool.code;
+    const schema: any = {
+      type: 'object',
+      properties: {},
+      required: []
     };
 
-    parametersJson = '{}';
-    parametersError = '';
+    // Simple regex to find Args in docstring
+    const argsMatch = code.match(/Args:\s*([\s\S]*?)(?:Returns:|$)/);
+    if (argsMatch) {
+      const argsSection = argsMatch[1];
+      const argLines = argsSection.split('\\n').filter(l => l.trim());
 
-    constructor(
-        private toolService: ToolService,
-        private router: Router,
-        private route: ActivatedRoute
-    ) { }
-
-    ngOnInit(): void {
-        // Get ID from route if not provided via input
-        const routeId = this.route.snapshot.paramMap.get('id');
-        if (routeId && routeId !== 'new') {
-            this.id = routeId;
-            this.isNew = false;
-            this.loadTool();
+      for (const line of argLines) {
+        // Match pattern: param_name (type): description
+        const match = line.match(/^\s*(\w+)\s*\((\w+)\):\s*(.+)/);
+        if (match) {
+          const [, name, type, description] = match;
+          schema.properties[name] = {
+            type: type === 'str' ? 'string' : type === 'int' ? 'integer' : type === 'bool' ? 'boolean' : type,
+            description: description.trim()
+          };
+          schema.required.push(name);
         }
+      }
     }
 
-    loadTool(): void {
-        if (!this.id) return;
+    this.parametersJson = JSON.stringify(schema, null, 2);
+    this.tool.parameters = schema;
+  }
 
-        this.toolService.getTool(this.id).subscribe({
-            next: (tool) => {
-                this.tool = {
-                    namespace: tool.namespace,
-                    name: tool.name,
-                    description: tool.description,
-                    parameters: tool.parameters,
-                    code: tool.code
-                };
-                this.parametersJson = JSON.stringify(tool.parameters, null, 2);
-            },
-            error: (err) => {
-                console.error('Failed to load tool:', err);
-                this.router.navigate(['/tools']);
-            }
-        });
-    }
+  save(): void {
+    if (!this.validateParameters()) return;
 
-    isValid(): boolean {
-        return !!(this.tool.namespace && this.tool.name && this.tool.description && this.tool.code);
-    }
+    const action = this.isNew
+      ? this.toolService.createTool(this.tool)
+      : this.toolService.updateTool(this.id!, this.tool);
 
-    validateParameters(): boolean {
-        try {
-            this.tool.parameters = JSON.parse(this.parametersJson);
-            this.parametersError = '';
-            return true;
-        } catch (e) {
-            this.parametersError = 'Invalid JSON';
-            return false;
-        }
-    }
+    action.subscribe({
+      next: () => this.router.navigate(['/tools']),
+      error: (err) => console.error('Failed to save tool:', err)
+    });
+  }
 
-    generateSchema(): void {
-        // Parse Python code to extract function signature and docstring
-        const code = this.tool.code;
-        const schema: any = {
-            type: 'object',
-            properties: {},
-            required: []
-        };
-
-        // Simple regex to find Args in docstring
-        const argsMatch = code.match(/Args:\s*([\s\S]*?)(?:Returns:|$)/);
-        if (argsMatch) {
-            const argsSection = argsMatch[1];
-            const argLines = argsSection.split('\n').filter(l => l.trim());
-
-            for (const line of argLines) {
-                // Match pattern: param_name (type): description
-                const match = line.match(/^\s*(\w+)\s*\((\w+)\):\s*(.+)/);
-                if (match) {
-                    const [, name, type, description] = match;
-                    schema.properties[name] = {
-                        type: type === 'str' ? 'string' : type === 'int' ? 'integer' : type === 'bool' ? 'boolean' : type,
-                        description: description.trim()
-                    };
-                    schema.required.push(name);
-                }
-            }
-        }
-
-        this.parametersJson = JSON.stringify(schema, null, 2);
-        this.tool.parameters = schema;
-    }
-
-    save(): void {
-        if (!this.validateParameters()) return;
-
-        const action = this.isNew
-            ? this.toolService.createTool(this.tool)
-            : this.toolService.updateTool(this.id!, this.tool);
-
-        action.subscribe({
-            next: () => this.router.navigate(['/tools']),
-            error: (err) => console.error('Failed to save tool:', err)
-        });
-    }
-
-    goBack(): void {
-        this.router.navigate(['/tools']);
-    }
+  goBack(): void {
+    this.router.navigate(['/tools']);
+  }
 }
