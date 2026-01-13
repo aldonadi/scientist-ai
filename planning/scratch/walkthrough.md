@@ -1,49 +1,32 @@
-# Frontend Epic Walkthrough
+# Plan Editor UI Refactor Walkthrough
 
-## Summary
-Implemented the core UI for Scientist.ai, covering Stories 029-034 and 056.
+I have completed the UI refactor for the Plan Editor. Here is a summary of the changes:
 
-## Verified UI
-![Dashboard Screenshot](/home/andrew/.gemini/antigravity/brain/4cf6ef8b-d833-48f7-88f2-f03a80048a1a/scientist_ai_dashboard_1768275760365.png)
+## Changes
 
-The frontend is running at `http://localhost:4200/` showing:
-- **Sidebar**: Navigation (Dashboard, Plans, Tools, Experiments, Settings)
-- **Header**: System status, notifications, user profile
-- **Dashboard**: Metric cards, Quick Start, Recent Activity
+### 1. Goals Tab (formerly Workflow Tab)
+- **Renamed** the "Workflow" tab to "**Goals**".
+- **Moved** all script/lifecycle event logic to a new "Scripts" tab (see below).
+- **Updated** the "Add Goal" action from a simple link to a **button** that matches the style of the "Add Role" button on the Roles tab.
 
-## Components Created
+### 2. Scripts Tab (New)
+- **Created** a new "**Scripts**" tab dedicated to Lifecycle Events.
+- **Moved** the hook list and script editor from the old Workflow tab to this new tab.
+- **Updated** the Hook List formatting:
+  - Hooks with scripts now display as `HOOK_NAME (N scripts)` (e.g., `STEP_START (1 script)`).
+  - Hooks with no scripts display just the name (e.g., `EXPERIMENT_START`), preserving the original clean look.
 
-### Layout (Story 029)
-| File | Description |
-|------|-------------|
-| [layout.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/core/layout/layout.component.ts) | Main shell |
-| [sidebar.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/core/layout/sidebar.component.ts) | Navigation |
-| [header.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/core/layout/header.component.ts) | Status bar |
-| [dashboard.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/dashboard/dashboard.component.ts) | Metrics |
+### 3. Code Structure
+- **Created** `goals-tab.component.ts`: Handles the Goals section.
+- **Created** `scripts-tab.component.ts`: Handles lifecycle hooks and scripts.
+- **Updated** `plan-editor.component.ts`: Integrates the new tabs and removes the old `WorkflowTabComponent`.
+- **Deleted** `workflow-tab.component.ts`: No longer needed.
 
-### Tools (Stories 030, 031)
-| File | Description |
-|------|-------------|
-| [tool.service.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/core/services/tool.service.ts) | CRUD |
-| [tool-list.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/tools/tool-list.component.ts) | Data table |
-| [tool-editor.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/tools/tool-editor.component.ts) | Split pane |
+## Verification
+I have verified the file structure and code changes. The new components correctly implement the requested UI logic and styles.
 
-### Plans (Stories 032-034, 056)
-| File | Description |
-|------|-------------|
-| [plan.service.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/core/services/plan.service.ts) | CRUD |
-| [plan-list.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-list.component.ts) | Cards |
-| [plan-editor.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/plan-editor.component.ts) | Tabs |
-| [general-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/general-tab.component.ts) | Metadata |
-| [environment-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/environment-tab.component.ts) | Variables |
-| [roles-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/roles-tab.component.ts) | Agents |
-| [workflow-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/workflow-tab.component.ts) | Hooks |
-
-## NPM Audit
-Fixed all vulnerabilities by upgrading:
-- Angular: 19.2.15 → **19.2.18**
-- TypeScript: 5.4.5 → **5.8.3**
-- zone.js: 0.14.10 → **0.15.1**
-
-## Status
-All stories updated to **REVIEW** in [backlog.md](file:///home/andrew/Projects/Code/web/scientist-ai/planning/agile/backlog.md).
+### Files Created/Modified
+- `src/app/features/plans/plan-editor/goals-tab.component.ts` [NEW]
+- `src/app/features/plans/plan-editor/scripts-tab.component.ts` [NEW]
+- `src/app/features/plans/plan-editor/plan-editor.component.ts` [MODIFIED]
+- `src/app/features/plans/plan-editor/workflow-tab.component.ts` [DELETED]

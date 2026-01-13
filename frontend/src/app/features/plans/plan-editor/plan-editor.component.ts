@@ -6,7 +6,8 @@ import { PlanService, ExperimentPlan, CreatePlanDto, Role, Goal, Script } from '
 import { GeneralTabComponent } from './general-tab.component';
 import { EnvironmentTabComponent } from './environment-tab.component';
 import { RolesTabComponent } from './roles-tab.component';
-import { WorkflowTabComponent } from './workflow-tab.component';
+import { GoalsTabComponent } from './goals-tab.component';
+import { ScriptsTabComponent } from './scripts-tab.component';
 
 @Component({
   selector: 'app-plan-editor',
@@ -17,7 +18,8 @@ import { WorkflowTabComponent } from './workflow-tab.component';
     GeneralTabComponent,
     EnvironmentTabComponent,
     RolesTabComponent,
-    WorkflowTabComponent
+    GoalsTabComponent,
+    ScriptsTabComponent
   ],
   template: `
     <div class="h-full flex flex-col">
@@ -79,11 +81,15 @@ import { WorkflowTabComponent } from './workflow-tab.component';
           [(roles)]="plan.roles">
         </app-roles-tab>
         
-        <app-workflow-tab 
-          *ngIf="activeTab === 'workflow'"
-          [(goals)]="plan.goals"
+        <app-goals-tab 
+          *ngIf="activeTab === 'goals'"
+          [(goals)]="plan.goals">
+        </app-goals-tab>
+        
+        <app-scripts-tab 
+          *ngIf="activeTab === 'scripts'"
           [(scripts)]="plan.scripts">
-        </app-workflow-tab>
+        </app-scripts-tab>
       </div>
     </div>
   `
@@ -98,7 +104,8 @@ export class PlanEditorComponent implements OnInit {
     { id: 'general', label: 'General' },
     { id: 'environment', label: 'Environment' },
     { id: 'roles', label: 'Roles' },
-    { id: 'workflow', label: 'Workflow' }
+    { id: 'goals', label: 'Goals' },
+    { id: 'scripts', label: 'Scripts' }
   ];
 
   plan: {

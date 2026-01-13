@@ -1,65 +1,48 @@
-# Implementation Plan - Frontend Epic
+# Plan Editor UI Refactor
 
-**Goal**: Build the core UI for Scientist.ai, enabling users to manage Tools and Experiment Plans.
-
-## User Review Required
-> [!IMPORTANT]
-> This plan covers a significant amount of UI work across multiple stories (029-034).
-> We will implement this iteratively, starting with the Layout and Dashboard.
-
-- **Dependencies**: Requires `npm install` for Angular dependencies (already present).
-- **New Libraries**: We may need to install `ngx-monaco-editor` or similar for the code editor features.
+## Goal Description
+Refactor the Plan Editor UI to improve usability and consistency. This involves splitting the "Workflow" tab into distinct "Goals" and "Scripts" tabs, matching button styles for consistency, and improving the readability of the Lifecycle Events list.
 
 ## Proposed Changes
 
-### 1. Foundation & Layout (Story 029)
-#### [NEW] [frontend/src/app/core/layout/](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/core/layout/)
-- `layout.component.ts`: Main shell with Sidebar and Header.
-- `sidebar.component.ts`: Navigation links.
-- `header.component.ts`: App title and global actions.
+### Frontend Components (`src/app/features/plans/plan-editor/`)
 
-#### [NEW] [frontend/src/app/features/dashboard/](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/dashboard/)
-- `dashboard.component.ts`: "Standard Admin" layout with metrics and recent activity table.
+#### [NEW] `goals-tab.component.ts`
+- Create a new component `GoalsTabComponent` based on the Goals section of existing `WorkflowTabComponent`.
+- **UI Change**: Replace "Add Goal" link with a button styled like "Add Role".
+- **Selector**: `app-goals-tab`
 
-### 2. Tools Management (Stories 030, 031)
-#### [NEW] [frontend/src/app/core/services/tool.service.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/core/services/tool.service.ts)
-- Methods: `getTools()`, `getTool(id)`, `createTool()`, `updateTool()`, `deleteTool()`.
+#### [NEW] `scripts-tab.component.ts`
+- Create a new component `ScriptsTabComponent` based on the Scripts/Lifecycle section of existing `WorkflowTabComponent`.
+- **UI Change**: Update hook list formatting to `HOOK_NAME ($num_scripts)` when scripts exist.
+- **Selector**: `app-scripts-tab`
 
-#### [NEW] [frontend/src/app/features/tools/](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/tools/)
-- `tool-list.component.ts`: Data table with "Source Preview" tooltip.
-- `tool-editor.component.ts`: Split-pane editor (Metadata + Code).
-    - Includes auto-generation of JSON schema from Python mock logic.
+#### [MODIFY] `plan-editor.component.ts`
+- Remove `WorkflowTabComponent`.
+- Import `GoalsTabComponent` and `ScriptsTabComponent`.
+- Update `tabs` configuration:
+    - Rename "Workflow" to "Goals".
+    - Add "Scripts".
+- Update template to render new components.
 
-### 3. Plans Management (Stories 032, 033, 034)
-#### [NEW] [frontend/src/app/core/services/plan.service.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/core/services/plan.service.ts)
-- Methods: `getPlans()`, `getPlan(id)`, `savePlan()`, `duplicatePlan()`.
-
-#### [NEW] [frontend/src/app/features/plans/](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/)
-- `plan-list.component.ts`: Detailed Blueprint Cards layout.
-- `plan-editor/`:
-    - `plan-editor.component.ts`: Tab container (state preservation).
-    - `general-tab.component.ts`: Metadata form.
-    - `environment-tab.component.ts`: Variables table with Quick Entry row.
-    - `roles-tab.component.ts`: Reorderable list with "Chip" tool selection.
-    - `workflow-tab.component.ts`: Split-pane Hooks Editor (Story 056).
-        - Left: Lifecycle Event List (with active counts).
-        - Right: Reorderable Script Editors (Code + Policies).
+#### [DELETE] `workflow-tab.component.ts`
+- Remove this file as it is being replaced by `goals-tab` and `scripts-tab`.
 
 ## Verification Plan
 
 ### Automated Tests
-- **Unit Tests**: Run `ng test` to verify component rendering and service logic.
-    - Verify `ToolService` and `PlanService` API calls.
-    - Verify Form validations in Editors.
+- Run existing tests to ensure no regressions (though UI tests might fail if they exist).
+- Run `npm test` (if available) or check for spec files. I noticed `index.ts` in the directory, but no `.spec.ts` files were listed in `plan-editor` folder. I should check parent folders for integration tests.
 
 ### Manual Verification
-1.  **Layout**: Run `ng serve`, navigate to `http://localhost:4200`. check Sidebar/Header.
-2.  **Tools**:
-    - Create a new tool.
-    - Check the "Source Preview" tooltip in the list.
-    - Verify JSON schema auto-generation in the editor.
-3.  **Plans**:
-    - Create a plan.
-    - Test Quick Entry in Environment tab.
-    - Test Drag-and-Drop ordering in Roles tab.
-    - Verify switching tabs does not lose unsaved data.
+1.  **Goals Tab**:
+    - Verify "Workflow" tab is now "Goals".
+    - Check "Add Goal" is now a blue button.
+    - Verify adding/removing goals works.
+2.  **Scripts Tab**:
+    - Verify new "Scripts" tab exists.
+    - Check Lifecycle Events list.
+    - Verify formatting: `HOOK_NAME (n)` for active hooks.
+    - Verify adding/removing scripts works.
+3.  **General**:
+    - Ensure saving the plan still works with the new structure.
