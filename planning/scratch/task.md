@@ -8,5 +8,7 @@
     - [x] Generate Layout Option 5 (Pipeline/Kanban)
     - [x] Generate Layout Option 6 (Lab Notebook)
     - [x] Generate Layout Option 7 (Node Graph)
-- [ ] Implement Landing Page (Future)
-- [ ] Implement Sidebar (Future)
+- [x] Brainstorm Tool Editor UI Mockups
+    - [x] Generate Layout Option 1 (Split Pane)
+    - [x] Generate Layout Option 2 (Wizard Step-by-Step)
+    - [x] Generate Layout Option 3 (Notebook Style)
