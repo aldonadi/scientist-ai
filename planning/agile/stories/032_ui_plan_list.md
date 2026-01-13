@@ -1,6 +1,6 @@
 # Implement Plan List UI
 
-- **Status:** READY
+- **Status:** REVIEW
 - **Points:** 2
 - **Story ID:** 032
 - **Type:** Feature

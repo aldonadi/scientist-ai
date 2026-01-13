@@ -1,6 +1,6 @@
 # Implement Plan Environment Settings UI
 
-- **Status:** READY
+- **Status:** REVIEW
 - **Points:** 3
 - **Story ID:** 033
 - **Type:** Feature

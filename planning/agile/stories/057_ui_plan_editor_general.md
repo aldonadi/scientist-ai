@@ -1,6 +1,6 @@
 # Implement Plan General Settings UI
 
-- **Status:** NOT READY
+- **Status:** REVIEW
 - **Points:** 3
 - **Story ID:** 057
 - **Type:** Feature

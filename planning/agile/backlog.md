@@ -66,14 +66,14 @@ Status can be:
 | 053_plan_duplicate_endpoint                        | 2      | DONE        |
 | 054_llm_retry_logic                                | 3      | DONE        |
 | 055_sse_streaming_endpoint                         | 5      | DONE        |
-| 029_setup_frontend_layout                          | 3      | READY       |
-| 030_ui_tool_list                                   | 2      | READY       |
-| 031_ui_tool_editor                                 | 5      | READY       |
-| 032_ui_plan_list                                   | 2      | READY       |
-| 057_ui_plan_editor_general                         | 3      | READY       |
-| 033_ui_plan_editor_environment                     | 3      | READY       |
-| 034_ui_plan_editor_roles                           | 5      | READY       |
-| 056_ui_plan_editor_workflow_scripts                | 5      | NOT READY   |
+| 029_setup_frontend_layout                          | 3      | REVIEW      |
+| 030_ui_tool_list                                   | 2      | REVIEW      |
+| 031_ui_tool_editor                                 | 5      | REVIEW      |
+| 032_ui_plan_list                                   | 2      | REVIEW      |
+| 057_ui_plan_editor_general                         | 3      | REVIEW      |
+| 033_ui_plan_editor_environment                     | 3      | REVIEW      |
+| 034_ui_plan_editor_roles                           | 5      | REVIEW      |
+| 056_ui_plan_editor_workflow_scripts                | 5      | REVIEW      |
 | 035_ui_experiment_monitor                          | 8      | NOT READY   |
 | 036_ui_realtime_logs                               | 5      | NOT READY   |
 

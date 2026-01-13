@@ -1,6 +1,6 @@
 # Implement Plan Role Editor UI
 
-- **Status:** NOT READY
+- **Status:** REVIEW
 - **Points:** 5
 - **Story ID:** 034
 - **Type:** Feature
