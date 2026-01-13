@@ -1,6 +1,6 @@
 # Setup Main Layout & Navigation
 
-- **Status:** REVIEW
+- **Status:** DONE
 - **Points:** 3
 - **Story ID:** 029
 - **Type:** Feature
@@ -39,12 +39,13 @@ Create the main Angular shell with Sidebar and Header.
 **So that** I can move between features.
 
 ## Acceptance Criteria
-- [ ] Sidebar with links (Dashboard, Plans, Tools, etc).
-- [ ] Header with app title.
-- [ ] Responsive design.
+- [x] Sidebar with links (Dashboard, Plans, Tools, etc).
+- [x] Header with app title.
+- [x] Responsive design.
 
 ## Testing
 1. Click all links.
 2. Verify routing works.
 
 ## Review Log
+**1/12/26**: Accepted by Product Owner

@@ -66,7 +66,7 @@ Status can be:
 | 053_plan_duplicate_endpoint                        | 2      | DONE        |
 | 054_llm_retry_logic                                | 3      | DONE        |
 | 055_sse_streaming_endpoint                         | 5      | DONE        |
-| 029_setup_frontend_layout                          | 3      | REVIEW      |
+| 029_setup_frontend_layout                          | 3      | DONE        |
 | 030_ui_tool_list                                   | 2      | REVIEW      |
 | 031_ui_tool_editor                                 | 5      | REVIEW      |
 | 032_ui_plan_list                                   | 2      | REVIEW      |
@@ -78,3 +78,4 @@ Status can be:
 | 036_ui_realtime_logs                               | 5      | NOT READY   |
 
 
+| 058_input_validation                               | 5      | READY       |
