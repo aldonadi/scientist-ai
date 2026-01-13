@@ -26,19 +26,18 @@ interface EnvVariable {
           </tr>
         </thead>
         <tbody>
+          <!-- Existing Variables -->
           <tr *ngFor="let variable of variables; let i = index" class="border-b border-gray-100">
             <td class="py-2 pr-4">
               <input type="text" 
                      [(ngModel)]="variable.key"
                      (ngModelChange)="onVariableChange()"
-                     (keydown.tab)="handleTab($any($event), i, 'key')"
                      placeholder="variable_name"
                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
             </td>
             <td class="py-2 pr-4">
               <select [(ngModel)]="variable.type"
                       (ngModelChange)="onVariableChange()"
-                      (keydown.tab)="handleTab($any($event), i, 'type')"
                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
                 <option value="string">String</option>
                 <option value="number">Number</option>
@@ -51,13 +50,11 @@ interface EnvVariable {
               <input type="text" 
                      [(ngModel)]="variable.value"
                      (ngModelChange)="onVariableChange()"
-                     (keydown.tab)="handleTab($any($event), i, 'value')"
                      [placeholder]="getPlaceholder(variable.type)"
                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-mono">
             </td>
             <td class="py-2">
-              <button *ngIf="variable.key" 
-                      (click)="removeVariable(i)"
+              <button (click)="removeVariable(i)"
                       class="text-red-600 hover:text-red-800 text-sm"
                       tabindex="-1">
                 Del
@@ -65,20 +62,21 @@ interface EnvVariable {
             </td>
           </tr>
           
-          <!-- Empty Row for Quick Entry -->
+          <!-- New Variable Entry Row (always at bottom) -->
           <tr class="border-b border-gray-100 bg-gray-50">
             <td class="py-2 pr-4">
               <input type="text" 
                      #newKeyInput
                      [(ngModel)]="newVariable.key"
-                     (input)="onNewKeyInput()"
-                     (keydown.tab)="handleNewTab($any($event), 'key')"
+                     (focus)="onNewRowFocus()"
+                     (blur)="onNewRowBlur()"
                      placeholder="Add new variable..."
                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white">
             </td>
             <td class="py-2 pr-4">
               <select [(ngModel)]="newVariable.type"
-                      (keydown.tab)="handleNewTab($any($event), 'type')"
+                      (focus)="onNewRowFocus()"
+                      (blur)="onNewRowBlur()"
                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white">
                 <option value="string">String</option>
                 <option value="number">Number</option>
@@ -90,7 +88,9 @@ interface EnvVariable {
             <td class="py-2 pr-4">
               <input type="text" 
                      [(ngModel)]="newVariable.value"
-                     (keydown.tab)="handleNewTab($any($event), 'value')"
+                     (focus)="onNewRowFocus()"
+                     (blur)="onNewRowBlur()"
+                     (keydown.tab)="onNewValueTab($any($event))"
                      [placeholder]="getPlaceholder(newVariable.type)"
                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-mono bg-white">
             </td>
@@ -100,7 +100,7 @@ interface EnvVariable {
       </table>
       
       <p class="mt-2 text-xs text-gray-500">
-        (Press Tab to move between fields. New rows are added automatically.)
+        Type a variable name to add a new row. Press Tab to move between fields.
       </p>
     </div>
   `
@@ -117,6 +117,9 @@ export class EnvironmentTabComponent {
 
   variables: EnvVariable[] = [];
   newVariable: EnvVariable = { key: '', type: 'string', value: '' };
+
+  private isInNewRow = false;
+  private blurTimeout: any = null;
 
   detectType(value: any): string {
     if (Array.isArray(value)) return 'array';
@@ -154,39 +157,46 @@ export class EnvironmentTabComponent {
     this.emitEnvironment();
   }
 
-  onNewKeyInput(): void {
+  // Called when any field in the new row gains focus
+  onNewRowFocus(): void {
+    // Cancel any pending blur commit
+    if (this.blurTimeout) {
+      clearTimeout(this.blurTimeout);
+      this.blurTimeout = null;
+    }
+    this.isInNewRow = true;
+  }
+
+  // Called when any field in the new row loses focus
+  onNewRowBlur(): void {
+    // Use a short timeout to check if focus moved to another field in the same row
+    // If focus moves within the new row, onNewRowFocus will cancel this
+    this.blurTimeout = setTimeout(() => {
+      this.isInNewRow = false;
+      this.commitNewVariable();
+    }, 100);
+  }
+
+  // Called when Tab is pressed on the value field of the new row
+  onNewValueTab(event: KeyboardEvent): void {
     if (this.newVariable.key) {
-      // Move new variable to the list and reset
-      this.variables.push({ ...this.newVariable });
-      this.newVariable = { key: '', type: 'string', value: '' };
-      this.emitEnvironment();
-    }
-  }
+      // Commit and reset, then let natural tab move to next element
+      this.commitNewVariable();
 
-  handleTab(event: KeyboardEvent, index: number, field: string): void {
-    if (field === 'value') {
-      // Tab from value field should go to next row's key field
-      event.preventDefault();
-      const nextRow = index + 1;
-      if (nextRow >= this.variables.length) {
-        // Focus the new variable input
-        setTimeout(() => {
-          const input = document.querySelector('[placeholder="Add new variable..."]') as HTMLInputElement;
-          input?.focus();
-        }, 0);
-      }
-    }
-  }
-
-  handleNewTab(event: KeyboardEvent, field: string): void {
-    if (field === 'value' && this.newVariable.key) {
-      // Commit the new row and focus the new empty row
-      event.preventDefault();
-      this.onNewKeyInput();
+      // Focus the new empty key input after a brief delay
       setTimeout(() => {
         const input = document.querySelector('[placeholder="Add new variable..."]') as HTMLInputElement;
         input?.focus();
       }, 0);
+    }
+  }
+
+  // Commits the new variable to the list if it has a key
+  private commitNewVariable(): void {
+    if (this.newVariable.key.trim()) {
+      this.variables.push({ ...this.newVariable });
+      this.newVariable = { key: '', type: 'string', value: '' };
+      this.emitEnvironment();
     }
   }
 
