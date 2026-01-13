@@ -74,7 +74,7 @@ Status can be:
 | 033_ui_plan_editor_environment                     | 3      | REVIEW      |
 | 034_ui_plan_editor_roles                           | 5      | REVIEW      |
 | 056_ui_plan_editor_workflow_scripts                | 5      | REVIEW      |
-| 059_fix_frontend_backend_integration               | 3      | READY       |
+| 059_fix_frontend_backend_integration               | 3      | DONE        |
 | 035_ui_experiment_monitor                          | 8      | NOT READY   |
 | 036_ui_realtime_logs                               | 5      | NOT READY   |
 | 058_input_validation                               | 5      | READY       |

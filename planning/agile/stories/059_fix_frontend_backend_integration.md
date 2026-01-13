@@ -1,6 +1,6 @@
 # Fix Frontend-Backend Integration
 
-- **Status:** READY
+- **Status:** DONE
 - **Points:** 3
 - **Story ID:** 059
 - **Type:** Bugfix
