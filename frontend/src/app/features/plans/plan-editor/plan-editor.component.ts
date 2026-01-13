@@ -9,17 +9,17 @@ import { RolesTabComponent } from './roles-tab.component';
 import { WorkflowTabComponent } from './workflow-tab.component';
 
 @Component({
-    selector: 'app-plan-editor',
-    standalone: true,
-    imports: [
-        CommonModule,
-        FormsModule,
-        GeneralTabComponent,
-        EnvironmentTabComponent,
-        RolesTabComponent,
-        WorkflowTabComponent
-    ],
-    template: `
+  selector: 'app-plan-editor',
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    GeneralTabComponent,
+    EnvironmentTabComponent,
+    RolesTabComponent,
+    WorkflowTabComponent
+  ],
+  template: `
     <div class="h-full flex flex-col">
       <!-- Header -->
       <div class="flex items-center justify-between mb-6">
@@ -89,81 +89,89 @@ import { WorkflowTabComponent } from './workflow-tab.component';
   `
 })
 export class PlanEditorComponent implements OnInit {
-    @Input() id?: string;
+  @Input() id?: string;
 
-    isNew = true;
-    activeTab = 'general';
+  isNew = true;
+  activeTab = 'general';
 
-    tabs = [
-        { id: 'general', label: 'General' },
-        { id: 'environment', label: 'Environment' },
-        { id: 'roles', label: 'Roles' },
-        { id: 'workflow', label: 'Workflow' }
-    ];
+  tabs = [
+    { id: 'general', label: 'General' },
+    { id: 'environment', label: 'Environment' },
+    { id: 'roles', label: 'Roles' },
+    { id: 'workflow', label: 'Workflow' }
+  ];
 
-    plan: CreatePlanDto = {
-        name: '',
-        description: '',
-        initialEnvironment: {},
-        roles: [],
-        goals: [],
-        scripts: [],
-        maxSteps: 20
+  plan: {
+    name: string;
+    description: string;
+    initialEnvironment: { [key: string]: any };
+    roles: Role[];
+    goals: Goal[];
+    scripts: Script[];
+    maxSteps: number;
+  } = {
+      name: '',
+      description: '',
+      initialEnvironment: {},
+      roles: [],
+      goals: [],
+      scripts: [],
+      maxSteps: 20
     };
 
-    constructor(
-        private planService: PlanService,
-        private router: Router,
-        private route: ActivatedRoute
-    ) { }
+  constructor(
+    private planService: PlanService,
+    private router: Router,
+    private route: ActivatedRoute
+  ) { }
 
-    ngOnInit(): void {
-        const routeId = this.route.snapshot.paramMap.get('id');
-        if (routeId && routeId !== 'new') {
-            this.id = routeId;
-            this.isNew = false;
-            this.loadPlan();
-        }
+  ngOnInit(): void {
+    const routeId = this.route.snapshot.paramMap.get('id');
+    if (routeId && routeId !== 'new') {
+      this.id = routeId;
+      this.isNew = false;
+      this.loadPlan();
     }
+  }
 
-    loadPlan(): void {
-        if (!this.id) return;
+  loadPlan(): void {
+    if (!this.id) return;
 
-        this.planService.getPlan(this.id).subscribe({
-            next: (plan) => {
-                this.plan = {
-                    name: plan.name,
-                    description: plan.description,
-                    initialEnvironment: plan.initialEnvironment || {},
-                    roles: plan.roles || [],
-                    goals: plan.goals || [],
-                    scripts: plan.scripts || [],
-                    maxSteps: plan.maxSteps || 20
-                };
-            },
-            error: (err) => {
-                console.error('Failed to load plan:', err);
-                this.router.navigate(['/plans']);
-            }
-        });
-    }
-
-    isValid(): boolean {
-        return !!(this.plan.name && this.plan.description);
-    }
-
-    save(): void {
-        const action = this.isNew
-            ? this.planService.createPlan(this.plan)
-            : this.planService.updatePlan(this.id!, this.plan);
-
-        action.subscribe({
-            next: () => this.router.navigate(['/plans']),
-            error: (err) => console.error('Failed to save plan:', err)
-        });
-    }
-
-    goBack(): void {
+    this.planService.getPlan(this.id).subscribe({
+      next: (plan) => {
+        this.plan = {
+          name: plan.name,
+          description: plan.description,
+          initialEnvironment: plan.initialEnvironment || {},
+          roles: plan.roles || [],
+          goals: plan.goals || [],
+          scripts: plan.scripts || [],
+          maxSteps: plan.maxSteps || 20
+        };
+      },
+      error: (err) => {
+        console.error('Failed to load plan:', err);
         this.router.navigate(['/plans']);
-    }
+      }
+    });
+  }
+
+  isValid(): boolean {
+    return !!(this.plan.name && this.plan.description);
+  }
+
+  save(): void {
+    const action = this.isNew
+      ? this.planService.createPlan(this.plan)
+      : this.planService.updatePlan(this.id!, this.plan);
+
+    action.subscribe({
+      next: () => this.router.navigate(['/plans']),
+      error: (err) => console.error('Failed to save plan:', err)
+    });
+  }
+
+  goBack(): void {
+    this.router.navigate(['/plans']);
+  }
 }

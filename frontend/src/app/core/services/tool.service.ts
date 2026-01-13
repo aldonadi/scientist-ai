@@ -30,8 +30,8 @@ export class ToolService {
     constructor(private http: HttpClient) { }
 
     getTools(namespace?: string): Observable<Tool[]> {
-        const params = namespace ? { namespace } : {};
-        return this.http.get<Tool[]>(this.apiUrl, { params });
+        const options = namespace ? { params: { namespace } } : {};
+        return this.http.get<Tool[]>(this.apiUrl, options);
     }
 
     getTool(id: string): Observable<Tool> {

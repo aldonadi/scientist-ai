@@ -3,16 +3,16 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 interface EnvVariable {
-    key: string;
-    type: string;
-    value: string;
+  key: string;
+  type: string;
+  value: string;
 }
 
 @Component({
-    selector: 'app-environment-tab',
-    standalone: true,
-    imports: [CommonModule, FormsModule],
-    template: `
+  selector: 'app-environment-tab',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  template: `
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
       <h2 class="text-lg font-semibold text-gray-900 mb-6">Initial Variables</h2>
       
@@ -31,14 +31,14 @@ interface EnvVariable {
               <input type="text" 
                      [(ngModel)]="variable.key"
                      (ngModelChange)="onVariableChange()"
-                     (keydown.tab)="handleTab($event, i, 'key')"
+                     (keydown.tab)="handleTab($any($event), i, 'key')"
                      placeholder="variable_name"
                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
             </td>
             <td class="py-2 pr-4">
               <select [(ngModel)]="variable.type"
                       (ngModelChange)="onVariableChange()"
-                      (keydown.tab)="handleTab($event, i, 'type')"
+                      (keydown.tab)="handleTab($any($event), i, 'type')"
                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
                 <option value="string">String</option>
                 <option value="number">Number</option>
@@ -51,7 +51,7 @@ interface EnvVariable {
               <input type="text" 
                      [(ngModel)]="variable.value"
                      (ngModelChange)="onVariableChange()"
-                     (keydown.tab)="handleTab($event, i, 'value')"
+                     (keydown.tab)="handleTab($any($event), i, 'value')"
                      [placeholder]="getPlaceholder(variable.type)"
                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-mono">
             </td>
@@ -72,13 +72,13 @@ interface EnvVariable {
                      #newKeyInput
                      [(ngModel)]="newVariable.key"
                      (input)="onNewKeyInput()"
-                     (keydown.tab)="handleNewTab($event, 'key')"
+                     (keydown.tab)="handleNewTab($any($event), 'key')"
                      placeholder="Add new variable..."
                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white">
             </td>
             <td class="py-2 pr-4">
               <select [(ngModel)]="newVariable.type"
-                      (keydown.tab)="handleNewTab($event, 'type')"
+                      (keydown.tab)="handleNewTab($any($event), 'type')"
                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white">
                 <option value="string">String</option>
                 <option value="number">Number</option>
@@ -90,7 +90,7 @@ interface EnvVariable {
             <td class="py-2 pr-4">
               <input type="text" 
                      [(ngModel)]="newVariable.value"
-                     (keydown.tab)="handleNewTab($event, 'value')"
+                     (keydown.tab)="handleNewTab($any($event), 'value')"
                      [placeholder]="getPlaceholder(newVariable.type)"
                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-mono bg-white">
             </td>
@@ -106,102 +106,102 @@ interface EnvVariable {
   `
 })
 export class EnvironmentTabComponent {
-    @Input() set environment(value: { [key: string]: any }) {
-        this.variables = Object.entries(value || {}).map(([key, val]) => ({
-            key,
-            type: this.detectType(val),
-            value: typeof val === 'object' ? JSON.stringify(val) : String(val)
-        }));
-    }
-    @Output() environmentChange = new EventEmitter<{ [key: string]: any }>();
+  @Input() set environment(value: { [key: string]: any }) {
+    this.variables = Object.entries(value || {}).map(([key, val]) => ({
+      key,
+      type: this.detectType(val),
+      value: typeof val === 'object' ? JSON.stringify(val) : String(val)
+    }));
+  }
+  @Output() environmentChange = new EventEmitter<{ [key: string]: any }>();
 
-    variables: EnvVariable[] = [];
-    newVariable: EnvVariable = { key: '', type: 'string', value: '' };
+  variables: EnvVariable[] = [];
+  newVariable: EnvVariable = { key: '', type: 'string', value: '' };
 
-    detectType(value: any): string {
-        if (Array.isArray(value)) return 'array';
-        if (typeof value === 'object') return 'object';
-        if (typeof value === 'number') return 'number';
-        if (typeof value === 'boolean') return 'boolean';
-        return 'string';
-    }
+  detectType(value: any): string {
+    if (Array.isArray(value)) return 'array';
+    if (typeof value === 'object') return 'object';
+    if (typeof value === 'number') return 'number';
+    if (typeof value === 'boolean') return 'boolean';
+    return 'string';
+  }
 
-    getPlaceholder(type: string): string {
-        switch (type) {
-            case 'number': return '0';
-            case 'boolean': return 'true/false';
-            case 'array': return '["item1", "item2"]';
-            case 'object': return '{"key": "value"}';
-            default: return '"text"';
-        }
+  getPlaceholder(type: string): string {
+    switch (type) {
+      case 'number': return '0';
+      case 'boolean': return 'true/false';
+      case 'array': return '["item1", "item2"]';
+      case 'object': return '{"key": "value"}';
+      default: return '"text"';
     }
+  }
 
-    parseValue(variable: EnvVariable): any {
-        try {
-            switch (variable.type) {
-                case 'number': return parseFloat(variable.value) || 0;
-                case 'boolean': return variable.value.toLowerCase() === 'true';
-                case 'array':
-                case 'object': return JSON.parse(variable.value);
-                default: return variable.value;
-            }
-        } catch {
-            return variable.value;
-        }
+  parseValue(variable: EnvVariable): any {
+    try {
+      switch (variable.type) {
+        case 'number': return parseFloat(variable.value) || 0;
+        case 'boolean': return variable.value.toLowerCase() === 'true';
+        case 'array':
+        case 'object': return JSON.parse(variable.value);
+        default: return variable.value;
+      }
+    } catch {
+      return variable.value;
     }
+  }
 
-    onVariableChange(): void {
-        this.emitEnvironment();
-    }
+  onVariableChange(): void {
+    this.emitEnvironment();
+  }
 
-    onNewKeyInput(): void {
-        if (this.newVariable.key) {
-            // Move new variable to the list and reset
-            this.variables.push({ ...this.newVariable });
-            this.newVariable = { key: '', type: 'string', value: '' };
-            this.emitEnvironment();
-        }
+  onNewKeyInput(): void {
+    if (this.newVariable.key) {
+      // Move new variable to the list and reset
+      this.variables.push({ ...this.newVariable });
+      this.newVariable = { key: '', type: 'string', value: '' };
+      this.emitEnvironment();
     }
+  }
 
-    handleTab(event: KeyboardEvent, index: number, field: string): void {
-        if (field === 'value') {
-            // Tab from value field should go to next row's key field
-            event.preventDefault();
-            const nextRow = index + 1;
-            if (nextRow >= this.variables.length) {
-                // Focus the new variable input
-                setTimeout(() => {
-                    const input = document.querySelector('[placeholder="Add new variable..."]') as HTMLInputElement;
-                    input?.focus();
-                }, 0);
-            }
-        }
+  handleTab(event: KeyboardEvent, index: number, field: string): void {
+    if (field === 'value') {
+      // Tab from value field should go to next row's key field
+      event.preventDefault();
+      const nextRow = index + 1;
+      if (nextRow >= this.variables.length) {
+        // Focus the new variable input
+        setTimeout(() => {
+          const input = document.querySelector('[placeholder="Add new variable..."]') as HTMLInputElement;
+          input?.focus();
+        }, 0);
+      }
     }
+  }
 
-    handleNewTab(event: KeyboardEvent, field: string): void {
-        if (field === 'value' && this.newVariable.key) {
-            // Commit the new row and focus the new empty row
-            event.preventDefault();
-            this.onNewKeyInput();
-            setTimeout(() => {
-                const input = document.querySelector('[placeholder="Add new variable..."]') as HTMLInputElement;
-                input?.focus();
-            }, 0);
-        }
+  handleNewTab(event: KeyboardEvent, field: string): void {
+    if (field === 'value' && this.newVariable.key) {
+      // Commit the new row and focus the new empty row
+      event.preventDefault();
+      this.onNewKeyInput();
+      setTimeout(() => {
+        const input = document.querySelector('[placeholder="Add new variable..."]') as HTMLInputElement;
+        input?.focus();
+      }, 0);
     }
+  }
 
-    removeVariable(index: number): void {
-        this.variables.splice(index, 1);
-        this.emitEnvironment();
-    }
+  removeVariable(index: number): void {
+    this.variables.splice(index, 1);
+    this.emitEnvironment();
+  }
 
-    private emitEnvironment(): void {
-        const env: { [key: string]: any } = {};
-        for (const variable of this.variables) {
-            if (variable.key) {
-                env[variable.key] = this.parseValue(variable);
-            }
-        }
-        this.environmentChange.emit(env);
+  private emitEnvironment(): void {
+    const env: { [key: string]: any } = {};
+    for (const variable of this.variables) {
+      if (variable.key) {
+        env[variable.key] = this.parseValue(variable);
+      }
     }
+    this.environmentChange.emit(env);
+  }
 }
