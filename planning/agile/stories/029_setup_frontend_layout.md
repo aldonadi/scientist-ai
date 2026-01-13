@@ -1,6 +1,6 @@
 # Setup Main Layout & Navigation
 
-- **Status:** NOT READY
+- **Status:** READY
 - **Points:** 3
 - **Story ID:** 029
 - **Type:** Feature
@@ -29,6 +29,8 @@ Create the main Angular shell with Sidebar and Header.
 |                     |                                                       |
 |                     |                                                       |
 +---------------------+-------------------------------------------------------+
+| Copyright (c) 2026 Andrew Wilson, Scientist.AI           |   About   Help   |
++-----------------------------------------------------------------------------+
 ```
 
 ## User Story

@@ -1,6 +1,6 @@
 # Implement Tool Editor UI
 
-- **Status:** NOT READY
+- **Status:** READY
 - **Points:** 5
 - **Story ID:** 031
 - **Type:** Feature
