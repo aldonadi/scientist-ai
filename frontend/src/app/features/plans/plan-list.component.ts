@@ -4,10 +4,10 @@ import { RouterLink } from '@angular/router';
 import { PlanService, ExperimentPlan } from '../../core/services/plan.service';
 
 @Component({
-    selector: 'app-plan-list',
-    standalone: true,
-    imports: [CommonModule, RouterLink],
-    template: `
+  selector: 'app-plan-list',
+  standalone: true,
+  imports: [CommonModule, RouterLink],
+  template: `
     <div class="space-y-6">
       <!-- Header -->
       <div class="flex items-center justify-between">
@@ -67,6 +67,10 @@ import { PlanService, ExperimentPlan } from '../../core/services/plan.service';
                       class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
                 Duplicate
               </button>
+              <button (click)="deletePlan(plan)" 
+                      class="px-4 py-2 border border-red-300 text-red-700 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors">
+                Delete
+              </button>
             </div>
           </div>
         </div>
@@ -80,47 +84,56 @@ import { PlanService, ExperimentPlan } from '../../core/services/plan.service';
   `
 })
 export class PlanListComponent implements OnInit {
-    plans: ExperimentPlan[] = [];
+  plans: ExperimentPlan[] = [];
 
-    constructor(private planService: PlanService) { }
+  constructor(private planService: PlanService) { }
 
-    ngOnInit(): void {
-        this.loadPlans();
+  ngOnInit(): void {
+    this.loadPlans();
+  }
+
+  loadPlans(): void {
+    this.planService.getPlans().subscribe({
+      next: (plans) => this.plans = plans,
+      error: (err) => console.error('Failed to load plans:', err)
+    });
+  }
+
+  getLastRun(plan: ExperimentPlan): string {
+    // This would come from experiment data in a real app
+    return 'Never';
+  }
+
+  runPlan(plan: ExperimentPlan): void {
+    // Launch experiment from plan
+    fetch('/api/experiments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ planId: plan._id })
+    })
+      .then(res => res.json())
+      .then(exp => {
+        window.location.href = `/experiments/${exp._id}`;
+      })
+      .catch(err => console.error('Failed to launch experiment:', err));
+  }
+
+  duplicatePlan(plan: ExperimentPlan): void {
+    const newName = prompt('Name for duplicated plan:', `${plan.name} (Copy)`);
+    if (newName) {
+      this.planService.duplicatePlan(plan._id, newName).subscribe({
+        next: () => this.loadPlans(),
+        error: (err) => console.error('Failed to duplicate plan:', err)
+      });
     }
+  }
 
-    loadPlans(): void {
-        this.planService.getPlans().subscribe({
-            next: (plans) => this.plans = plans,
-            error: (err) => console.error('Failed to load plans:', err)
-        });
+  deletePlan(plan: ExperimentPlan): void {
+    if (confirm(`Are you sure you want to delete "${plan.name}"? This action cannot be undone.`)) {
+      this.planService.deletePlan(plan._id).subscribe({
+        next: () => this.loadPlans(),
+        error: (err) => console.error('Failed to delete plan:', err)
+      });
     }
-
-    getLastRun(plan: ExperimentPlan): string {
-        // This would come from experiment data in a real app
-        return 'Never';
-    }
-
-    runPlan(plan: ExperimentPlan): void {
-        // Launch experiment from plan
-        fetch('/api/experiments', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ planId: plan._id })
-        })
-            .then(res => res.json())
-            .then(exp => {
-                window.location.href = `/experiments/${exp._id}`;
-            })
-            .catch(err => console.error('Failed to launch experiment:', err));
-    }
-
-    duplicatePlan(plan: ExperimentPlan): void {
-        const newName = prompt('Name for duplicated plan:', `${plan.name} (Copy)`);
-        if (newName) {
-            this.planService.duplicatePlan(plan._id, newName).subscribe({
-                next: () => this.loadPlans(),
-                error: (err) => console.error('Failed to duplicate plan:', err)
-            });
-        }
-    }
+  }
 }
