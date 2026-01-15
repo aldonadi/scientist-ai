@@ -1,5 +1,6 @@
-# Task: Create Integration User Story
+# Task: Implement Plan Delete UI
 
-- [x] Analyze existing story format <!-- id: 0 -->
-- [x] Create Story 059: Fix Frontend Integration <!-- id: 1 -->
-- [x] Register Story 059 in Backlog <!-- id: 2 -->
+- [x] Read SPEC.md for API endpoint
+- [x] Analyze existing Plan List Component (deletePlan already in service)
+- [x] Add Delete button to Plan List UI
+- [x] Test the Delete functionality

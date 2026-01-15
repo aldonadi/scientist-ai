@@ -1,46 +1,70 @@
-# Plan Editor UI Refactor Walkthrough
+# Browser Integration Test Walkthrough
 
-I have completed the UI refactor for the Plan Editor. Here is a summary of the changes:
+Full CRUD integration tests were performed via browser automation for **Tools** and **ExperimentPlans**.
 
-## Changes
+## Tool CRUD Tests ✅ All Passed
 
-### 1. Goals Tab (formerly Workflow Tab)
-- **Renamed** the "Workflow" tab to "**Goals**".
-- **Moved** all script/lifecycle event logic to a new "Scripts" tab (see below).
-- **Updated** the "Add Goal" action from a simple link to a **button** that matches the style of the "Add Role" button on the Roles tab.
+| Operation | Result | Notes |
+|-----------|--------|-------|
+| Create    | ✅ Pass | Created `crud_test_tool` with namespace, description, and code |
+| Read      | ✅ Pass | Tool appeared in list, details loaded correctly |
+| Update    | ✅ Pass | Description updated and persisted |
+| Delete    | ✅ Pass | Tool removed from list after confirmation |
 
-### 2. Scripts Tab (New)
-- **Created** a new "**Scripts**" tab dedicated to Lifecycle Events.
-- **Moved** the hook list and script editor from the old Workflow tab to this new tab.
-- **Updated** the Hook List formatting:
-  - Hooks with scripts now display as `HOOK_NAME (N scripts)` (e.g., `STEP_START (1 script)`).
-  - Hooks with no scripts display just the name (e.g., `EXPERIMENT_START`), preserving the original clean look.
+![Tool List after create](file:///home/andrew/.gemini/antigravity/brain/a72a1d70-f05e-4028-8587-e715cc3f8d6f/.system_generated/click_feedback/click_feedback_1768385327815.png)
 
-### 3. Tool Editor (New)
-- **Improved** the "Create Tool" experience.
-- **Pre-populated** the code editor with a helpful Python boilerplate instead of a disappearing placeholder.
-- **Included** examples for accessing environment variables and arguments in the boilerplate.
+---
 
-### 4. Code Structure
-- **Created** `goals-tab.component.ts`: Handles the Goals section.
-- **Created** `scripts-tab.component.ts`: Handles lifecycle hooks and scripts.
-- **Updated** `plan-editor.component.ts`: Integrates the new tabs and removes the old `WorkflowTabComponent`.
-- **Updated** `tool-editor.component.ts`: Implemented the boilerplate injection logic.
-- **Deleted** `workflow-tab.component.ts`: No longer needed.
+## ExperimentPlan CRUD Tests
 
-## Verification
-I have verified the file structure and code changes. The new components correctly implement the requested UI logic and styles.
+| Operation | Result | Notes |
+|-----------|--------|-------|
+| Create    | ✅ Pass | Created "CRUD Test Plan" with description and max steps |
+| Read      | ⚠️ Bug | Edit button links to `/plans` instead of `/plans/:id` |
+| Update    | ✅ Pass | Added Role, Goal, and Script successfully |
+| Delete    | ❌ Fail | No delete button exists in the UI |
 
-I also performed a **browser verification** to ensure the UI looks and behaves as expected:
-1.  **Plan Editor**: Confirmed the new "Goals" and "Scripts" tabs are present and functional. "Add Goal" is now a button.
-2.  **Tool Editor**: Confirmed that navigating to create a new tool pre-fills the code editor with the boilerplate.
+### Role Added Successfully
+![Role in Roles Tab](file:///home/andrew/.gemini/antigravity/brain/a72a1d70-f05e-4028-8587-e715cc3f8d6f/.system_generated/click_feedback/click_feedback_1768447260438.png)
 
-### Screenshots
-![Tool Editor Boilerplate](/home/andrew/.gemini/antigravity/brain/71dc90f1-f0ff-4cec-87a5-4ed958f8f8a2/tool_editor_boilerplate_1768279074215.png)
+### Goal Added Successfully
+![Goal in Goals Tab](file:///home/andrew/.gemini/antigravity/brain/a72a1d70-f05e-4028-8587-e715cc3f8d6f/.system_generated/click_feedback/click_feedback_1768447311940.png)
 
-### Files Created/Modified
-- `src/app/features/plans/plan-editor/goals-tab.component.ts` [NEW]
-- `src/app/features/plans/plan-editor/scripts-tab.component.ts` [NEW]
-- `src/app/features/plans/plan-editor/plan-editor.component.ts` [MODIFIED]
-- `src/app/features/tools/tool-editor.component.ts` [MODIFIED]
-- `src/app/features/plans/plan-editor/workflow-tab.component.ts` [DELETED]
+---
+
+## Bugs Discovered
+
+### Bug 1: Plan Edit Button Routing
+- **Location**: Plan List (`/plans`)
+- **Issue**: "Edit" button `href` is `/plans` instead of `/plans/:id`
+- **Workaround**: Manually navigate to `/plans/:id` using the ID from the API
+- **Status**: ✅ FIXED (routing was already correct, initial test was pre-proxy)
+
+### ~~Bug 2: Missing Plan Delete~~
+- **Status**: ✅ FIXED (implementation below)
+
+---
+
+## Plan Delete Implementation
+
+Added delete button and functionality to `plan-list.component.ts`:
+
+```typescript
+deletePlan(plan: ExperimentPlan): void {
+    if (confirm(`Are you sure you want to delete "${plan.name}"?`)) {
+        this.planService.deletePlan(plan._id).subscribe({
+            next: () => this.loadPlans(),
+            error: (err) => console.error('Failed to delete plan:', err)
+        });
+    }
+}
+```
+
+![Delete button visible in Plan List](file:///home/andrew/.gemini/antigravity/brain/a72a1d70-f05e-4028-8587-e715cc3f8d6f/.system_generated/click_feedback/click_feedback_1768448611338.png)
+
+---
+
+## Recordings
+- Tool CRUD: [tool_crud_test.webp](file:///home/andrew/.gemini/antigravity/brain/a72a1d70-f05e-4028-8587-e715cc3f8d6f/tool_crud_test_1768385194615.webp)
+- Plan CRUD: [plan_crud_test.webp](file:///home/andrew/.gemini/antigravity/brain/a72a1d70-f05e-4028-8587-e715cc3f8d6f/plan_crud_test_1768385695731.webp)
+- Plan Delete: [plan_delete_test.webp](file:///home/andrew/.gemini/antigravity/brain/a72a1d70-f05e-4028-8587-e715cc3f8d6f/plan_delete_test_1768448604532.webp)

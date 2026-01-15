@@ -32,11 +32,11 @@ import { PlanService, ExperimentPlan } from '../../core/services/plan.service';
               <!-- Role Chips -->
               <div class="flex items-center flex-wrap gap-2 mt-4">
                 <span class="text-sm text-gray-500">ROLES:</span>
-                <span *ngFor="let role of plan.roles" 
+                <span *ngFor="let role of plan.roles || []" 
                       class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">
                   {{ role.name }}
                 </span>
-                <span *ngIf="plan.roles.length === 0" class="text-sm text-gray-400 italic">
+                <span *ngIf="(plan.roles || []).length === 0" class="text-sm text-gray-400 italic">
                   No roles defined
                 </span>
               </div>
@@ -44,7 +44,7 @@ import { PlanService, ExperimentPlan } from '../../core/services/plan.service';
               <!-- Stats -->
               <div class="flex items-center gap-6 mt-4 text-sm text-gray-500">
                 <span>LIMIT: {{ plan.maxSteps }} Steps</span>
-                <span>GOALS: {{ plan.goals.length }} Defined</span>
+                <span>GOALS: {{ (plan.goals || []).length }} Defined</span>
               </div>
               
               <!-- Last Run (placeholder) -->
