@@ -1,48 +1,154 @@
-# Fix Frontend-Backend Integration Implementation Plan
+# Input Validation & Sanitization (Story 058)
 
-## Goal Description
-The frontend application (Angular) is currently unable to communicate with the backend API due to missing proxy configuration and a missing `ExperimentService`. This plan outlines the steps to configure the development proxy and implement the missing service and component logic to enable Experiment management from the UI.
+Implement unobtrusive but intuitive input validation for fields that require it, enforcing validation in both frontend (with red-highlighting and messages) and backend (with schema validation).
 
 ## User Review Required
+
+> [!IMPORTANT]
+> **Python Code Validation Scope**: Story 058 requires validating Goal condition expressions and Script code by "running them in a Python container." This requires calling a backend validation endpoint. Should we:
+> 1. **Create a new `/api/validate/python` endpoint** - Executes Python code in a sandboxed container and returns syntax/runtime errors
+> 2. **Client-side syntax check only** - Use a regex or basic parser to check Python syntax client-side (no security guarantee, but faster)
+> 3. **Defer Python validation to save time** - Just check that code is not empty, validate fully on experiment launch
+
 > [!NOTE]
-> This change introduces a proxy configuration for development (`ng serve`) to forward `/api` requests to `localhost:3000`. This is standard practice but relies on the backend running on port 3000.
+> The frontend currently uses `ngModel` template-driven forms. Adding validation will require visual error states and error messages. This approach integrates naturally with the existing patterns.
+
+---
 
 ## Proposed Changes
 
-### Frontend Configuration
-#### [NEW] [proxy.conf.json](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/proxy.conf.json)
-- Create a new file to map `/api` requests to `http://localhost:3000`.
+### Frontend Validation Utilities
 
-#### [MODIFY] [angular.json](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/angular.json)
-- Update the `serve` architect target to include `"proxyConfig": "src/proxy.conf.json"`.
+#### [NEW] [validation.utils.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/core/utils/validation.utils.ts)
 
-### Frontend Services
-#### [NEW] [experiment.service.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/core/services/experiment.service.ts)
-- Implement `ExperimentService` with methods:
-    - `getExperiments()`
-    - `getExperiment(id)`
-    - `createExperiment(planId)`
-    - `controlExperiment(id, command)`
-    - `getLogs(id)`
-- Use `HttpClient` and follow patterns from `PlanService`.
+Create a new validation utilities file with reusable validation functions:
+- `isValidPythonIdentifier(name: string): boolean` - Validates Python function/variable names
+- `isValidJson(json: string): {valid: boolean, error?: string}` - JSON schema validation
+- `isPositiveInteger(value: any): boolean` - Integer > 0 validation
+- `getValidationError(control: string, value: any): string | null` - Centralized error message generator
 
-### Frontend Components
-#### [MODIFY] [experiment-list.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/experiments/experiment-list.component.ts)
-- Inject `ExperimentService`.
-- Fetch experiments on `ngOnInit`.
-- Display the list of experiments (name, status, etc.).
+---
+
+### Tool Editor Validation
+
+#### [MODIFY] [tool-editor.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/tools/tool-editor.component.ts)
+
+- Add validation state tracking: `nameError`, `namespaceError`, `parametersError`, `codeError`
+- Add real-time validation on `(ngModelChange)` for name fields
+- Add visual error indicators (red borders, error messages) for:
+  - **Name**: Must be valid Python function name (regex: `^[a-zA-Z_][a-zA-Z0-9_]*$`)
+  - **Namespace**: Must be valid Python identifier
+  - **Parameters**: Must be valid JSON (already partially implemented)
+- Disable "Save" button when validation errors exist
+- Add error messages below invalid fields
+
+---
+
+### Plan Editor General Tab Validation
+
+#### [MODIFY] [general-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/general-tab.component.ts)
+
+- Add validation for `maxSteps`:
+  - Must be a positive integer > 0
+  - Add `@Output() isValidChange = new EventEmitter<boolean>()`
+- Add visual error indicator when `maxSteps` is invalid
+- Emit validation state to parent `plan-editor.component.ts`
+
+---
+
+### Plan Editor Environment Tab Validation
+
+#### [MODIFY] [environment-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/environment-tab.component.ts)
+
+- Add validation per-row for:
+  - **Variable Key**: Must be valid Python identifier (regex: `^[a-zA-Z_][a-zA-Z0-9_]*$`)
+  - **Variable Value**: Must be parseable as the selected type
+- Track errors per variable: `variableErrors: { [key: number]: string }`
+- Add `@Output() isValidChange = new EventEmitter<boolean>()`
+- Red highlight on invalid fields
+- Show inline error messages
+
+---
+
+### Plan Editor Goals Tab Validation
+
+#### [MODIFY] [goals-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/goals-tab.component.ts)
+
+First, need to view this file to understand its current structure.
+
+- Add validation for Goal condition expressions:
+  - Non-empty check
+  - Basic Python syntax check (check for unmatched brackets, common errors)
+  - (Optional, based on user decision) Backend validation endpoint call
+- Track errors per goal
+- Red highlight on invalid conditions
+
+---
+
+### Plan Editor Scripts Tab Validation
+
+#### [MODIFY] [scripts-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/scripts-tab.component.ts)
+
+First, need to view this file to understand its current structure.
+
+- Add validation for Script code:
+  - Non-empty check
+  - Basic Python syntax check
+  - (Optional, based on user decision) Backend validation endpoint call
+- Track errors per script
+- Red highlight on invalid code fields
+
+---
+
+### Backend Validation Endpoint (Optional - depends on user decision)
+
+#### [NEW] [validation.routes.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/routes/validation.routes.js)
+
+If server-side Python validation is desired:
+```javascript
+// POST /api/validate/python
+// Body: { code: string, env?: object }
+// Response: { valid: boolean, error?: string }
+```
+
+#### [NEW] [validation.controller.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/controllers/validation.controller.js)
+
+Controller to execute Python code in a sandboxed container with timeout.
+
+---
 
 ## Verification Plan
 
 ### Automated Tests
-- Run `ng test` to verify the new generic `ExperimentService` and updated `ExperimentListComponent`.
-```bash
-cd frontend
-npm test
-```
+
+#### Backend Tests
+**Command**: `cd backend && npm test`
+
+Existing tests in `backend/tests/api/tool/` verify API behavior. New functionality to test:
+- If Python validation endpoint is added: Write tests in `backend/tests/api/validation.test.js`
+- Test valid/invalid Python code returns appropriate responses
+- Test timeout handling for malicious code
+
+#### Frontend Tests  
+**Command**: `cd frontend && npm test`
+
+The project uses Jasmine+Karma for Angular testing. Currently only `app.component.spec.ts` exists.
+- Add unit tests for `validation.utils.ts` functions
+- Tests should verify Python identifier regex works correctly
 
 ### Manual Verification
-1.  **Start Backend**: Ensure backend is running (`npm run dev` in `backend`).
-2.  **Start Frontend**: Run `npm start` in `frontend` (this runs `ng serve`).
-3.  **Check Network**: Open browser to `http://localhost:4200/experiments`. Inspect Network tab. 
-4.  **Verify**: Confirm `GET /api/experiments` returns a 200 OK response (JSON array) and not a 404 HTML error.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Open Tool Editor, enter `123tool` as name | Red border appears, error message: "Must start with a letter" |
+| 2 | Enter `my-tool` as name | Red border, error message: "Only letters, numbers, and underscores allowed" |
+| 3 | Enter `my_tool` as name | Green/normal border, no error |
+| 4 | Enter `{invalid json` in parameters | Red border, "Invalid JSON" error |
+| 5 | Try to save with errors | Save button disabled or shows warning |
+| 6 | Open Plan Editor General tab, set maxSteps to 0 | Red border, error message |
+| 7 | Set maxSteps to -5 | Red border, error message |
+| 8 | Set maxSteps to 10 | No error |
+| 9 | Open Environment tab, add variable with key `123var` | Red border on key field |
+| 10 | Add variable with key `my_var`, type Number, value "abc" | Red border on value field |
+| 11 | Fix value to "100" | Error clears |
+

@@ -1,11 +1,14 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { isValidPythonIdentifier, getPythonIdentifierError, validateEnvValue } from '../../../core/utils/validation.utils';
 
 interface EnvVariable {
   key: string;
   type: string;
   value: string;
+  keyError?: string;
+  valueError?: string;
 }
 
 @Component({
@@ -31,13 +34,16 @@ interface EnvVariable {
             <td class="py-2 pr-4">
               <input type="text" 
                      [(ngModel)]="variable.key"
-                     (ngModelChange)="onVariableChange()"
+                     (ngModelChange)="onVariableKeyChange(i)"
                      placeholder="variable_name"
-                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                     class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                     [class.border-red-500]="variable.keyError"
+                     [class.border-gray-300]="!variable.keyError">
+              <p *ngIf="variable.keyError" class="mt-1 text-xs text-red-600">{{ variable.keyError }}</p>
             </td>
             <td class="py-2 pr-4">
               <select [(ngModel)]="variable.type"
-                      (ngModelChange)="onVariableChange()"
+                      (ngModelChange)="onVariableTypeChange(i)"
                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
                 <option value="string">String</option>
                 <option value="number">Number</option>
@@ -49,9 +55,12 @@ interface EnvVariable {
             <td class="py-2 pr-4">
               <input type="text" 
                      [(ngModel)]="variable.value"
-                     (ngModelChange)="onVariableChange()"
+                     (ngModelChange)="onVariableValueChange(i)"
                      [placeholder]="getPlaceholder(variable.type)"
-                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-mono">
+                     class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
+                     [class.border-red-500]="variable.valueError"
+                     [class.border-gray-300]="!variable.valueError">
+              <p *ngIf="variable.valueError" class="mt-1 text-xs text-red-600">{{ variable.valueError }}</p>
             </td>
             <td class="py-2">
               <button (click)="removeVariable(i)"
@@ -68,10 +77,14 @@ interface EnvVariable {
               <input type="text" 
                      #newKeyInput
                      [(ngModel)]="newVariable.key"
+                     (ngModelChange)="validateNewKey()"
                      (focus)="onNewRowFocus()"
                      (blur)="onNewRowBlur()"
                      placeholder="Add new variable..."
-                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white">
+                     class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white"
+                     [class.border-red-500]="newVariable.keyError"
+                     [class.border-gray-300]="!newVariable.keyError">
+              <p *ngIf="newVariable.keyError" class="mt-1 text-xs text-red-600">{{ newVariable.keyError }}</p>
             </td>
             <td class="py-2 pr-4">
               <select [(ngModel)]="newVariable.type"
@@ -88,11 +101,15 @@ interface EnvVariable {
             <td class="py-2 pr-4">
               <input type="text" 
                      [(ngModel)]="newVariable.value"
+                     (ngModelChange)="validateNewValue()"
                      (focus)="onNewRowFocus()"
                      (blur)="onNewRowBlur()"
                      (keydown.tab)="onNewValueTab($any($event))"
                      [placeholder]="getPlaceholder(newVariable.type)"
-                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-mono bg-white">
+                     class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-mono bg-white"
+                     [class.border-red-500]="newVariable.valueError"
+                     [class.border-gray-300]="!newVariable.valueError">
+              <p *ngIf="newVariable.valueError" class="mt-1 text-xs text-red-600">{{ newVariable.valueError }}</p>
             </td>
             <td></td>
           </tr>
@@ -100,7 +117,7 @@ interface EnvVariable {
       </table>
       
       <p class="mt-2 text-xs text-gray-500">
-        Type a variable name to add a new row. Press Tab to move between fields.
+        Variable names must be valid Python identifiers (start with letter/underscore, only letters/numbers/underscores).
       </p>
     </div>
   `
@@ -110,13 +127,17 @@ export class EnvironmentTabComponent {
     this.variables = Object.entries(value || {}).map(([key, val]) => ({
       key,
       type: this.detectType(val),
-      value: typeof val === 'object' ? JSON.stringify(val) : String(val)
+      value: typeof val === 'object' ? JSON.stringify(val) : String(val),
+      keyError: '',
+      valueError: ''
     }));
+    this.validateAllVariables();
   }
   @Output() environmentChange = new EventEmitter<{ [key: string]: any }>();
+  @Output() isValidChange = new EventEmitter<boolean>();
 
   variables: EnvVariable[] = [];
-  newVariable: EnvVariable = { key: '', type: 'string', value: '' };
+  newVariable: EnvVariable = { key: '', type: 'string', value: '', keyError: '', valueError: '' };
 
   private isInNewRow = false;
   private blurTimeout: any = null;
@@ -153,8 +174,38 @@ export class EnvironmentTabComponent {
     }
   }
 
-  onVariableChange(): void {
+  onVariableKeyChange(index: number): void {
+    const variable = this.variables[index];
+    variable.keyError = variable.key ? (getPythonIdentifierError(variable.key) || '') : '';
     this.emitEnvironment();
+  }
+
+  onVariableTypeChange(index: number): void {
+    this.onVariableValueChange(index); // Re-validate value for new type
+  }
+
+  onVariableValueChange(index: number): void {
+    const variable = this.variables[index];
+    const result = validateEnvValue(variable.value, variable.type);
+    variable.valueError = result.valid ? '' : (result.error || '');
+    this.emitEnvironment();
+  }
+
+  validateNewKey(): void {
+    if (this.newVariable.key) {
+      this.newVariable.keyError = getPythonIdentifierError(this.newVariable.key) || '';
+    } else {
+      this.newVariable.keyError = '';
+    }
+  }
+
+  validateNewValue(): void {
+    if (this.newVariable.value) {
+      const result = validateEnvValue(this.newVariable.value, this.newVariable.type);
+      this.newVariable.valueError = result.valid ? '' : (result.error || '');
+    } else {
+      this.newVariable.valueError = '';
+    }
   }
 
   // Called when any field in the new row gains focus
@@ -179,7 +230,7 @@ export class EnvironmentTabComponent {
 
   // Called when Tab is pressed on the value field of the new row
   onNewValueTab(event: KeyboardEvent): void {
-    if (this.newVariable.key) {
+    if (this.newVariable.key && !this.newVariable.keyError && !this.newVariable.valueError) {
       // Commit and reset, then let natural tab move to next element
       this.commitNewVariable();
 
@@ -191,11 +242,11 @@ export class EnvironmentTabComponent {
     }
   }
 
-  // Commits the new variable to the list if it has a key
+  // Commits the new variable to the list if it has a valid key
   private commitNewVariable(): void {
-    if (this.newVariable.key.trim()) {
+    if (this.newVariable.key.trim() && !this.newVariable.keyError && !this.newVariable.valueError) {
       this.variables.push({ ...this.newVariable });
-      this.newVariable = { key: '', type: 'string', value: '' };
+      this.newVariable = { key: '', type: 'string', value: '', keyError: '', valueError: '' };
       this.emitEnvironment();
     }
   }
@@ -205,13 +256,31 @@ export class EnvironmentTabComponent {
     this.emitEnvironment();
   }
 
+  private validateAllVariables(): void {
+    for (let i = 0; i < this.variables.length; i++) {
+      const variable = this.variables[i];
+      if (variable.key) {
+        variable.keyError = getPythonIdentifierError(variable.key) || '';
+      }
+      const result = validateEnvValue(variable.value, variable.type);
+      variable.valueError = result.valid ? '' : (result.error || '');
+    }
+    this.emitValidity();
+  }
+
   private emitEnvironment(): void {
     const env: { [key: string]: any } = {};
     for (const variable of this.variables) {
-      if (variable.key) {
+      if (variable.key && !variable.keyError && !variable.valueError) {
         env[variable.key] = this.parseValue(variable);
       }
     }
     this.environmentChange.emit(env);
+    this.emitValidity();
+  }
+
+  private emitValidity(): void {
+    const hasErrors = this.variables.some(v => v.keyError || v.valueError);
+    this.isValidChange.emit(!hasErrors);
   }
 }

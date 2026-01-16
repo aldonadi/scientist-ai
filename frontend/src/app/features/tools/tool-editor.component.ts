@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { ToolService, Tool, CreateToolDto } from '../../core/services/tool.service';
+import { isValidPythonIdentifier, getPythonIdentifierError, validateJson, checkPythonSyntax } from '../../core/utils/validation.utils';
 
 const DEFAULT_TOOL_CODE = `def execute(env, args):
     """
@@ -66,16 +67,24 @@ const DEFAULT_TOOL_CODE = `def execute(env, args):
               <label class="block text-sm font-medium text-gray-700 mb-1">Namespace *</label>
               <input type="text" 
                      [(ngModel)]="tool.namespace"
+                     (ngModelChange)="validateNamespace()"
                      placeholder="e.g., finance_v1"
-                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                     class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                     [class.border-red-500]="namespaceError"
+                     [class.border-gray-300]="!namespaceError">
+              <p *ngIf="namespaceError" class="mt-1 text-xs text-red-600">{{ namespaceError }}</p>
             </div>
             
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
               <input type="text" 
                      [(ngModel)]="tool.name"
+                     (ngModelChange)="validateName()"
                      placeholder="e.g., get_stock_quote"
-                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                     class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                     [class.border-red-500]="nameError"
+                     [class.border-gray-300]="!nameError">
+              <p *ngIf="nameError" class="mt-1 text-xs text-red-600">{{ nameError }}</p>
             </div>
             
             <div>
@@ -95,10 +104,12 @@ const DEFAULT_TOOL_CODE = `def execute(env, args):
                 </button>
               </div>
               <textarea [(ngModel)]="parametersJson"
+                        (ngModelChange)="validateParameters()"
                         rows="8"
                         placeholder='{"type": "object", "properties": {...}}'
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        [class.border-red-500]="parametersError"></textarea>
+                        class="w-full px-3 py-2 border rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        [class.border-red-500]="parametersError"
+                        [class.border-gray-300]="!parametersError"></textarea>
               <p *ngIf="parametersError" class="mt-1 text-xs text-red-600">{{ parametersError }}</p>
             </div>
           </div>
@@ -108,11 +119,17 @@ const DEFAULT_TOOL_CODE = `def execute(env, args):
         <div class="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden">
           <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
             <h2 class="text-lg font-semibold text-gray-900">Python Code</h2>
-            <span class="text-xs text-gray-500">The execute(env, args) function is the entry point</span>
+            <div class="flex items-center space-x-2">
+              <span *ngIf="codeError" class="text-xs text-red-600">{{ codeError }}</span>
+              <span class="text-xs text-gray-500">The execute(env, args) function is the entry point</span>
+            </div>
           </div>
           <div class="flex-1 relative">
             <textarea [(ngModel)]="tool.code"
+                      (ngModelChange)="validateCode()"
                       class="absolute inset-0 w-full h-full p-4 font-mono text-sm bg-gray-900 text-green-400 resize-none focus:outline-none"
+                      [class.border-2]="codeError"
+                      [class.border-red-500]="codeError"
                       spellcheck="false"></textarea>
           </div>
         </div>
@@ -133,7 +150,12 @@ export class ToolEditorComponent implements OnInit {
   };
 
   parametersJson = '{}';
+
+  // Validation errors
+  namespaceError = '';
+  nameError = '';
   parametersError = '';
+  codeError = '';
 
   constructor(
     private toolService: ToolService,
@@ -175,19 +197,45 @@ export class ToolEditorComponent implements OnInit {
     });
   }
 
-  isValid(): boolean {
-    return !!(this.tool.namespace && this.tool.name && this.tool.description && this.tool.code);
+  validateNamespace(): void {
+    this.namespaceError = getPythonIdentifierError(this.tool.namespace) || '';
+  }
+
+  validateName(): void {
+    this.nameError = getPythonIdentifierError(this.tool.name) || '';
   }
 
   validateParameters(): boolean {
-    try {
-      this.tool.parameters = JSON.parse(this.parametersJson);
-      this.parametersError = '';
-      return true;
-    } catch (e) {
-      this.parametersError = 'Invalid JSON';
+    const result = validateJson(this.parametersJson);
+    if (result.valid) {
+      try {
+        this.tool.parameters = this.parametersJson.trim() ? JSON.parse(this.parametersJson) : {};
+        this.parametersError = '';
+        return true;
+      } catch (e) {
+        this.parametersError = 'Invalid JSON';
+        return false;
+      }
+    } else {
+      this.parametersError = result.error || 'Invalid JSON';
       return false;
     }
+  }
+
+  validateCode(): void {
+    const result = checkPythonSyntax(this.tool.code);
+    this.codeError = result.valid ? '' : (result.error || '');
+  }
+
+  isValid(): boolean {
+    // Run all validations
+    const namespaceValid = isValidPythonIdentifier(this.tool.namespace);
+    const nameValid = isValidPythonIdentifier(this.tool.name);
+    const descriptionValid = !!this.tool.description;
+    const codeValid = !!this.tool.code;
+    const paramsValid = !this.parametersError;
+
+    return namespaceValid && nameValid && descriptionValid && codeValid && paramsValid;
   }
 
   generateSchema(): void {
@@ -221,6 +269,7 @@ export class ToolEditorComponent implements OnInit {
 
     this.parametersJson = JSON.stringify(schema, null, 2);
     this.tool.parameters = schema;
+    this.parametersError = '';
   }
 
   save(): void {

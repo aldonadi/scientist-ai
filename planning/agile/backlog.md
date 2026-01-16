@@ -77,4 +77,4 @@ Status can be:
 | 059_fix_frontend_backend_integration               | 3      | DONE        |
 | 035_ui_experiment_monitor                          | 8      | NOT READY   |
 | 036_ui_realtime_logs                               | 5      | NOT READY   |
-| 058_input_validation                               | 5      | READY       |
+| 058_input_validation                               | 5      | REVIEW      |

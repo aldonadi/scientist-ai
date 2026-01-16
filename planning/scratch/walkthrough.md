@@ -1,70 +1,60 @@
-# Browser Integration Test Walkthrough
+# Story 058: Input Validation Implementation
 
-Full CRUD integration tests were performed via browser automation for **Tools** and **ExperimentPlans**.
+## Summary
+Implemented comprehensive frontend input validation for Tools, Plans, Environment Variables, Goals, and Scripts with visual error indicators (red borders and inline error messages).
 
-## Tool CRUD Tests ✅ All Passed
+## Files Changed
 
-| Operation | Result | Notes |
-|-----------|--------|-------|
-| Create    | ✅ Pass | Created `crud_test_tool` with namespace, description, and code |
-| Read      | ✅ Pass | Tool appeared in list, details loaded correctly |
-| Update    | ✅ Pass | Description updated and persisted |
-| Delete    | ✅ Pass | Tool removed from list after confirmation |
+### New Files
+| File | Purpose |
+|------|---------|
+| [validation.utils.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/core/utils/validation.utils.ts) | Reusable validation functions |
 
-![Tool List after create](file:///home/andrew/.gemini/antigravity/brain/a72a1d70-f05e-4028-8587-e715cc3f8d6f/.system_generated/click_feedback/click_feedback_1768385327815.png)
+### Modified Files
+| File | Changes |
+|------|---------|
+| [tool-editor.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/tools/tool-editor.component.ts) | Added namespace, name, parameters (JSON), and code validation |
+| [general-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/general-tab.component.ts) | Added maxSteps validation (positive integer) |
+| [environment-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/environment-tab.component.ts) | Added variable key and value type validation |
+| [goals-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/goals-tab.component.ts) | Added condition expression validation |
+| [scripts-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/scripts-tab.component.ts) | Added script code validation |
 
----
-
-## ExperimentPlan CRUD Tests
-
-| Operation | Result | Notes |
-|-----------|--------|-------|
-| Create    | ✅ Pass | Created "CRUD Test Plan" with description and max steps |
-| Read      | ⚠️ Bug | Edit button links to `/plans` instead of `/plans/:id` |
-| Update    | ✅ Pass | Added Role, Goal, and Script successfully |
-| Delete    | ❌ Fail | No delete button exists in the UI |
-
-### Role Added Successfully
-![Role in Roles Tab](file:///home/andrew/.gemini/antigravity/brain/a72a1d70-f05e-4028-8587-e715cc3f8d6f/.system_generated/click_feedback/click_feedback_1768447260438.png)
-
-### Goal Added Successfully
-![Goal in Goals Tab](file:///home/andrew/.gemini/antigravity/brain/a72a1d70-f05e-4028-8587-e715cc3f8d6f/.system_generated/click_feedback/click_feedback_1768447311940.png)
-
----
-
-## Bugs Discovered
-
-### Bug 1: Plan Edit Button Routing
-- **Location**: Plan List (`/plans`)
-- **Issue**: "Edit" button `href` is `/plans` instead of `/plans/:id`
-- **Workaround**: Manually navigate to `/plans/:id` using the ID from the API
-- **Status**: ✅ FIXED (routing was already correct, initial test was pre-proxy)
-
-### ~~Bug 2: Missing Plan Delete~~
-- **Status**: ✅ FIXED (implementation below)
-
----
-
-## Plan Delete Implementation
-
-Added delete button and functionality to `plan-list.component.ts`:
+## Validation Functions
 
 ```typescript
-deletePlan(plan: ExperimentPlan): void {
-    if (confirm(`Are you sure you want to delete "${plan.name}"?`)) {
-        this.planService.deletePlan(plan._id).subscribe({
-            next: () => this.loadPlans(),
-            error: (err) => console.error('Failed to delete plan:', err)
-        });
-    }
-}
+// Python identifier validation (for tool names, namespaces, variable names)
+isValidPythonIdentifier(name: string): boolean
+getPythonIdentifierError(name: string): string | null
+
+// JSON validation (for parameter schemas)
+validateJson(json: string): { valid: boolean; error?: string }
+
+// Positive integer validation (for maxSteps)
+isPositiveInteger(value: any): boolean
+getPositiveIntegerError(value: any): string | null
+
+// Environment value validation (type-compatible values)
+validateEnvValue(value: string, type: string): { valid: boolean; error?: string }
+
+// Basic Python syntax check (bracket matching)
+checkPythonSyntax(code: string): { valid: boolean; error?: string }
 ```
 
-![Delete button visible in Plan List](file:///home/andrew/.gemini/antigravity/brain/a72a1d70-f05e-4028-8587-e715cc3f8d6f/.system_generated/click_feedback/click_feedback_1768448611338.png)
+## Verification
 
----
+✅ **Frontend Build**: Successful (9.764 seconds)
+```
+Application bundle generation complete.
+Output location: /home/andrew/Projects/Code/web/scientist-ai/frontend/dist/frontend
+```
 
-## Recordings
-- Tool CRUD: [tool_crud_test.webp](file:///home/andrew/.gemini/antigravity/brain/a72a1d70-f05e-4028-8587-e715cc3f8d6f/tool_crud_test_1768385194615.webp)
-- Plan CRUD: [plan_crud_test.webp](file:///home/andrew/.gemini/antigravity/brain/a72a1d70-f05e-4028-8587-e715cc3f8d6f/plan_crud_test_1768385695731.webp)
-- Plan Delete: [plan_delete_test.webp](file:///home/andrew/.gemini/antigravity/brain/a72a1d70-f05e-4028-8587-e715cc3f8d6f/plan_delete_test_1768448604532.webp)
+## Manual Testing Checklist
+
+| Test | Expected Result |
+|------|-----------------|
+| Enter `123tool` as tool name | Red border + "Must start with a letter or underscore" |
+| Enter `my-tool` as tool name | Red border + "Only letters, numbers, and underscores allowed" |
+| Enter `{invalid json` in parameters | Red border + "Invalid JSON" |
+| Set maxSteps to 0 | Red border + "Must be greater than 0" |
+| Add env var with key `123var` | Red border + error message |
+| Add env var with type Number, value "abc" | Red border + "Must be a valid number" |
