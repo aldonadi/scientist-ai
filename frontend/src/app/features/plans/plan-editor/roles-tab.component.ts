@@ -48,8 +48,8 @@ import { ToolService, Tool } from '../../../core/services/tool.service';
                 {{ role.name || 'Unnamed Role' }}
               </button>
             </td>
-            <td class="py-3 text-gray-600">{{ role.modelConfig?.modelName || 'Not set' }}</td>
-            <td class="py-3 text-gray-600">{{ role.tools?.length || 0 }}</td>
+            <td class="py-3 text-gray-600">{{ role.modelConfig.modelName || 'Not set' }}</td>
+            <td class="py-3 text-gray-600">{{ role.tools.length || 0 }}</td>
             <td class="py-3 text-right">
               <button (click)="editRole(i)" class="text-blue-600 hover:text-blue-800 text-sm mr-4">Edit</button>
               <button (click)="removeRole(i)" class="text-red-600 hover:text-red-800 text-sm">Del</button>
