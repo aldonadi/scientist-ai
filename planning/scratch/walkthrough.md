@@ -1,60 +1,69 @@
-# Story 058: Input Validation Implementation
+# Walkthrough: Story 035 - Experiment Monitor UI
 
 ## Summary
-Implemented comprehensive frontend input validation for Tools, Plans, Environment Variables, Goals, and Scripts with visual error indicators (red borders and inline error messages).
 
-## Files Changed
+Implemented the comprehensive "Scientist" dashboard for monitoring running experiments. This 8-point story adds a full-featured experiment monitor with a 3-panel layout.
 
-### New Files
-| File | Purpose |
-|------|---------|
-| [validation.utils.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/core/utils/validation.utils.ts) | Reusable validation functions |
+## Changes Made
 
-### Modified Files
-| File | Changes |
-|------|---------|
-| [tool-editor.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/tools/tool-editor.component.ts) | Added namespace, name, parameters (JSON), and code validation |
-| [general-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/general-tab.component.ts) | Added maxSteps validation (positive integer) |
-| [environment-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/environment-tab.component.ts) | Added variable key and value type validation |
-| [goals-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/goals-tab.component.ts) | Added condition expression validation |
-| [scripts-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/scripts-tab.component.ts) | Added script code validation |
+### New Components
 
-## Validation Functions
+#### [log-feed.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/experiments/log-feed.component.ts)
 
-```typescript
-// Python identifier validation (for tool names, namespaces, variable names)
-isValidPythonIdentifier(name: string): boolean
-getPythonIdentifierError(name: string): string | null
+Reusable log feed component with:
+- Color-coded log entries by source type (system=gray, role=blue, tool=green, error=red)
+- Timestamp formatting
+- Auto-scroll behavior that disables when user scrolls up
+- Optional data payload display
 
-// JSON validation (for parameter schemas)
-validateJson(json: string): { valid: boolean; error?: string }
+#### [json-tree.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/experiments/json-tree.component.ts)
 
-// Positive integer validation (for maxSteps)
-isPositiveInteger(value: any): boolean
-getPositiveIntegerError(value: any): string | null
+Expandable JSON tree viewer with:
+- Collapsible object and array nodes
+- Syntax highlighting (keys=purple, strings=green, numbers=blue, booleans=orange)
+- First-level auto-expansion
+- Click to toggle expand/collapse
 
-// Environment value validation (type-compatible values)
-validateEnvValue(value: string, type: string): { valid: boolean; error?: string }
+### Modified Components
 
-// Basic Python syntax check (bracket matching)
-checkPythonSyntax(code: string): { valid: boolean; error?: string }
-```
+#### [experiment-monitor.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/experiments/experiment-monitor.component.ts)
+
+Complete rewrite with:
+- **Header**: Status badge, step counter, experiment ID
+- **Controls**: Pause/Resume/Stop buttons connected to `ExperimentService`
+- **3-Panel Layout**:
+  - Left: Live log feed using LogFeedComponent
+  - Center: Role activity (thinking, tool calls)
+  - Right: Environment inspector using JsonTreeComponent
+- **Polling**: Auto-refreshes every 2 seconds while running
+- **Result Banner**: Shows completion status with result message
+
+render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/experiments/experiment-monitor.component.ts)
+
+### Exports
+
+#### [index.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/experiments/index.ts)
+
+Added exports for new components.
 
 ## Verification
 
-✅ **Frontend Build**: Successful (9.764 seconds)
+### Build Status
 ```
-Application bundle generation complete.
-Output location: /home/andrew/Projects/Code/web/scientist-ai/frontend/dist/frontend
+✔ Building...
+Application bundle generation complete. [9.017 seconds]
+Exit code: 0
 ```
 
-## Manual Testing Checklist
+### Acceptance Criteria
+| Criterion | Status |
+|-----------|--------|
+| Shows current status/step | ✅ |
+| 3-panel layout (Logs, Activity, Environment) | ✅ |
+| Log feed component | ✅ |
+| JSON tree view for environment | ✅ |
 
-| Test | Expected Result |
-|------|-----------------|
-| Enter `123tool` as tool name | Red border + "Must start with a letter or underscore" |
-| Enter `my-tool` as tool name | Red border + "Only letters, numbers, and underscores allowed" |
-| Enter `{invalid json` in parameters | Red border + "Invalid JSON" |
-| Set maxSteps to 0 | Red border + "Must be greater than 0" |
-| Add env var with key `123var` | Red border + error message |
-| Add env var with type Number, value "abc" | Red border + "Must be a valid number" |
+## Next Steps
+
+- **Story 036**: Implement SSE streaming to replace polling with real-time updates
+- Manual testing with a running experiment

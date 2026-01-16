@@ -1,29 +1,35 @@
-# Task: Implement Input Validation (Story 058)
+# Story 035: Implement Experiment Monitor View
 
-## Current Status
-- [x] Survey backlog, spec, and incomplete user stories
-- [x] Survey codebase to understand current state
-- [x] Create implementation plan for Story 058
-- [x] User approval of implementation plan
-- [x] Implementing validation changes
-- [x] Frontend build verification passed
+## Task Breakdown
 
-## Story 058 - Input Validation & Sanitization
+### Planning Phase
+- [x] Review story requirements and acceptance criteria
+- [x] Survey existing experiment components and services
+- [x] Review backend log schema
+- [x] Create implementation plan
 
-### Acceptance Criteria
-- [x] **Tool Names**: Validate as Python function names (start with letter/underscore, only letters/numbers/underscores)
-- [x] **Tool Parameter Schema**: Validate as valid JSON
-- [x] **ExperimentPlan Safety Limits**: Validate as integer > 0
-- [x] **ExperimentPlan Environment Variables**: 
-    - Names: Valid Python variable names
-    - Values: Compatible with variable type
-- [x] **Goal Condition Expression**: Validate with basic Python syntax check
-- [x] **Script Code**: Validate with basic Python syntax check
+### Execution Phase
+- [x] Enhance ExperimentMonitorComponent with full 3-panel layout
+  - [x] Header with experiment status, name, step counter
+  - [x] Controls (Pause/Resume/Stop) connected to service
+- [x] Create LogFeedComponent
+  - [x] Display log entries with timestamp, source, message
+  - [x] Color-code by source type
+  - [x] Auto-scroll to bottom
+- [x] Create JsonTreeComponent for environment display
+  - [x] Expandable/collapsible nodes
+  - [x] Syntax highlighting
+- [x] Integrate services to fetch real data
+  - [x] Load experiment on init
+  - [x] Load logs on init
+  - [x] Poll for updates (SSE is Story 036)
 
-## Files Changed
-- `frontend/src/app/core/utils/validation.utils.ts` - NEW: Validation utility functions
-- `frontend/src/app/features/tools/tool-editor.component.ts` - Added namespace/name/code validation
-- `frontend/src/app/features/plans/plan-editor/general-tab.component.ts` - Added maxSteps validation
-- `frontend/src/app/features/plans/plan-editor/environment-tab.component.ts` - Added key/value validation  
-- `frontend/src/app/features/plans/plan-editor/goals-tab.component.ts` - Added condition script validation
-- `frontend/src/app/features/plans/plan-editor/scripts-tab.component.ts` - Added code validation
+### Verification Phase
+- [x] Frontend build passes
+- [ ] Manual testing with real experiment data
+
+## Acceptance Criteria (from Story)
+- [x] Shows current status/step.
+- [x] 3-panel layout (Logs, Activity, Environment).
+- [x] Log feed component.
+- [x] JSON tree view for environment.
