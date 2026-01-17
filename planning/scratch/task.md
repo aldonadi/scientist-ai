@@ -36,6 +36,7 @@
 - [x] Fix Goal Evaluation Python Scope (`env` vs `env_obj`)
 - [x] Fix Python `.get()` Support (Replaced `SimpleNamespace` with `DotDict`)
 - [x] Fix Provider Type Resolution (Fetch Provider doc by ObjectId in `processRole`)
+- [x] Fix Frontend Log Parsing (Map `{logs: []}` object to `Log[]` array)
 
 ## Acceptance Criteria (from Story)
 - [x] Shows current status/step.

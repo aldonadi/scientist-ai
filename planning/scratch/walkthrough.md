@@ -138,6 +138,11 @@ This confirms the architectural fix robustly handles state management for the en
 - **Root Cause**: `ExperimentOrchestrator` was using the `provider` ObjectId directly from the plan as the provider type string (e.g., 'OLLAMA').
 - **Fix**: Updated `ExperimentOrchestrator.processRole` to fetch the referenced `Provider` document from the database and extract the correct `type` and `baseUrl`.
 
+### Bug Fix: Frontend Log Feed Empty
+- **Issue**: Live Log Feed showed "0" entries even when backend logs existed.
+- **Root Cause**: Backend API returns `{ logs: [], pagination: {} }` object, but `ExperimentService` expected `LogEntry[]` array. `ExperimentMonitorComponent` failed silently when iterating over the object.
+- **Fix**: Added `map(res => res.logs)` to `ExperimentService.getLogs()` to extract the array correctly.
+
 render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/plan-editor.component.ts)
 render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/roles-tab.component.ts)
 render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/routes/provider.routes.js)

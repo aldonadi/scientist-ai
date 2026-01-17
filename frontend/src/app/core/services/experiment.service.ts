@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 export interface Experiment {
     _id: string;
@@ -48,7 +49,9 @@ export class ExperimentService {
     }
 
     getLogs(id: string): Observable<any[]> {
-        return this.http.get<any[]>(`${this.apiUrl}/${id}/logs`);
+        return this.http.get<any>(`${this.apiUrl}/${id}/logs`).pipe(
+            map(response => response.logs || [])
+        );
     }
 
     deleteExperiment(id: string): Observable<void> {
