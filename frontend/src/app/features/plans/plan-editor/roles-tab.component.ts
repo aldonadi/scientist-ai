@@ -181,7 +181,7 @@ import { ProviderService } from '../../../core/services/provider.service';
           </div>
         </div>
       </div>
-    </div>
+
   `
 })
 export class RolesTabComponent implements OnChanges {
