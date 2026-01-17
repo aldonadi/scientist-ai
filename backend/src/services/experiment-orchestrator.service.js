@@ -491,14 +491,23 @@ class ExperimentOrchestrator {
 import os
 import json
 import sys
+from types import SimpleNamespace
 
 try:
     env_str = os.environ.get('EXPERIMENT_ENV', '{}')
-    env = json.loads(env_str)
+    env_dict = json.loads(env_str)
+    
+    # Recursive conversion for dot notation
+    def dict_to_obj(d):
+        if isinstance(d, dict):
+            return SimpleNamespace(**{k: dict_to_obj(v) for k, v in d.items()})
+        return d
+
+    env = dict_to_obj(env_dict)
     condition = os.environ.get('GOAL_CONDITION', 'False')
     
-    # Evaluate locally using env as the variable scope
-    result = eval(condition, {}, env)
+    # Evaluate locally using env object in scope
+    result = eval(condition, {}, {'env': env})
     
     print(json.dumps({'result': result}))
 except Exception as e:

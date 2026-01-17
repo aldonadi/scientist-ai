@@ -127,6 +127,11 @@ This confirms the architectural fix robustly handles state management for the en
 - **Fix**: Added `trackByIndex` to `GoalsTabComponent` and `ScriptsTabComponent`.
 - **Verification**: Browser test confirmed "test" could be typed without interruption.
 
+### Bug Fix: Goal Evaluation Scope
+- **Issue**: Experiment Failed with `Error: name 'env' is not defined`.
+- **Root Cause**: Python `eval` was called with `env` dict as locals, which exposes keys as variables but does NOT expose the variable `env` itself for dot notation.
+- **Fix**: Wrapped `env` dict in `SimpleNamespace` (recursive) and passed it as `{'env': env_obj}` to `eval` locals. This allows `env.money` syntax to work.
+
 render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/plan-editor.component.ts)
 render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/roles-tab.component.ts)
 render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/routes/provider.routes.js)

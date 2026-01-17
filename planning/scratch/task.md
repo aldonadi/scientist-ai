@@ -33,6 +33,7 @@
 - [x] Verify Tab State Persistence (Roles, Scripts, Goals via [hidden] fix)
 - [x] Fix Plan List UI Counts (Backend `listPlans` projection, Frontend `goalCount`)
 - [x] Fix Input Focus Loss in Goals/Scripts (Added `trackBy`)
+- [x] Fix Goal Evaluation Python Scope (`env` vs `env_obj`)
 
 ## Acceptance Criteria (from Story)
 - [x] Shows current status/step.
