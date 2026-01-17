@@ -29,10 +29,13 @@ export interface LogEntry {
           <span class="shrink-0 w-16 font-semibold" [ngClass]="getSourceClass(log.source)">
             [{{ log.source | uppercase }}]
           </span>
-          <span class="flex-1 break-words">{{ log.message }}</span>
+            <span class="flex-1 break-words">{{ log.message }}</span>
+            <button *ngIf="log.data" (click)="toggleData(log)" class="text-xs text-blue-500 hover:text-blue-700 ml-2">
+              {{ isExpanded(log) ? '[-]' : '[+]' }}
+            </button>
         </div>
-        <div *ngIf="log.data" class="mt-1 ml-36 text-gray-500 text-[10px] bg-gray-50 p-2 rounded">
-          {{ formatData(log.data) }}
+        <div *ngIf="log.data && isExpanded(log)" class="mt-1 ml-36 text-gray-500 text-[10px] bg-gray-50 p-2 rounded overflow-x-auto">
+          <pre>{{ formatData(log.data) }}</pre>
         </div>
       </div>
     </div>
@@ -117,9 +120,23 @@ export class LogFeedComponent implements OnChanges, AfterViewChecked {
         });
     }
 
+    expandedLogs = new Set<string>();
+
+    toggleData(log: LogEntry): void {
+        if (this.expandedLogs.has(log._id)) {
+            this.expandedLogs.delete(log._id);
+        } else {
+            this.expandedLogs.add(log._id);
+        }
+    }
+
+    isExpanded(log: LogEntry): boolean {
+        return this.expandedLogs.has(log._id);
+    }
+
     formatData(data: any): string {
         try {
-            return JSON.stringify(data, null, 2).substring(0, 200);
+            return JSON.stringify(data, null, 2);
         } catch {
             return String(data);
         }

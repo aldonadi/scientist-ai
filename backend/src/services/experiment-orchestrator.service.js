@@ -400,8 +400,6 @@ class ExperimentOrchestrator {
                         toolCalls.push(event);
                     }
                 }
-                // ... rest of logic loop ...
-
 
                 // If we got tool calls, we must execute them and continue the loop
                 if (toolCalls.length > 0) {
@@ -700,7 +698,7 @@ except Exception as e:
                 []
             );
 
-            // Log script output
+            // Log script output (Simplified)
             this.eventBus.emit(EventTypes.LOG, {
                 experimentId: this.experiment._id,
                 stepNumber: this.experiment.currentStep,

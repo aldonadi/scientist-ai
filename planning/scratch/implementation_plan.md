@@ -50,13 +50,51 @@ Enhance experiment stability by implementing configurable retries for inference 
 #### [MODIFY] [roles-tab.component.html](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/tabs/roles-tab/roles-tab.component.html)
 - Update UI template.
 
-### Role Editor UI Enhancements (New)
+### Role Editor UI Enhancements (Story 060)
 #### [MODIFY] [provider.controller.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/controllers/provider.controller.js)
 - Add `testProviderModel` to handle single-shot inference tests.
 #### [MODIFY] [roles-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/roles-tab.component.ts)
 - Sort model list.
 - Rename 'Test' -> 'Fetch Models'.
 - Add 'Test Model' button and logic.
+
+### Fix Plan Save & Add Dirty Check (Story 061)
+#### [NEW] [toast.service.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/core/services/toast.service.ts)
+- Create simple Toast service (success/error/info).
+#### [NEW] [toast.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/shared/components/toast/toast.component.ts)
+- Create Toast overlay component.
+#### [MODIFY] [app.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/app.component.ts)
+- Embed `<app-toast>` in main layout.
+#### [NEW] [unsaved-changes.guard.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/core/guards/unsaved-changes.guard.ts)
+- Create `CanDeactivate` guard interface.
+#### [MODIFY] [plan-editor.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/plan-editor.component.ts)
+- Implement `CanDeactivate` interface (compare `initialPlan` vs `currentPlan`).
+- Integrate `ToastService` for save feedback.
+- Debug payload construction (log payload before save).
+#### [MODIFY] [app.routes.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/app.routes.ts)
+- Apply guard to plan editor routes.
+
+## Story 062: Fix Experiment Controls & Improve Logging
+
+### Backend
+#### [MODIFY] [experiment.controller.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/controllers/experiment.controller.js)
+- Verify/Implement `controlExperiment` method (pause/resume/stop).
+- Ensure it updates the Experiment document status correctly.
+- Ensure it handles invalid transitions (e.g. Resume from STOPPED).
+
+#### [MODIFY] [experiment-orchestrator.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/experiment-orchestrator.service.js)
+- **Log Noise**: Modify `executeHook` to log less verbose output.
+    - Instead of logging full `stdout` in the message, put it in `data` only.
+    - Change message to "Hook X Executed".
+- **Log Visibility**: Ensure Model Thoughts/Tool Calls are logged clearly (they seem to be, but verify).
+
+### Frontend
+#### [MODIFY] [experiment-monitor.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/experiments/experiment-monitor.component.ts)
+- Verify `control` method functionality (done, seems correct).
+- (Optional) Improve `LogFeedComponent` to hide/collapse verbose data.
+
+#### [MODIFY] [log-feed.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/experiments/log-feed.component.ts)
+- Update to render logs more cleanly (maybe hide `data` object by default).
 
 ## Verification Plan
 
@@ -67,3 +105,8 @@ Enhance experiment stability by implementing configurable retries for inference 
 ### Manual Verification
 - **Retry**: Configure a plan with a non-existent model (fails 404). Run experiment. Verify it retries 3 times then fails.
 - **Model List**: Open Plan Editor -> Roles. Select Ollama Provider. Verify Dropdown populates. Click "Test Connection".
+- **Manual**: Run an experiment (e.g. BlackJack).
+- **Manual**: Click Pause. Verify Status changes to PAUSED. Verify Orchestrator stops logging steps.
+- **Manual**: Click Resume. Verify it continues.
+- **Manual**: Click Stop. Verify it stops.
+- **Manual**: Check Logs. Hooks should be less spammy.

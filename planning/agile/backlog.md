@@ -80,3 +80,4 @@ Status can be:
 | 058_input_validation                               | 5      | REVIEW      |
 | 060_enhance_role_editor_ui                         | 3      | DONE        |
 | 061_fix_plan_save_and_dirty_check                  | 3      | DONE        |
+| 062_fix_controls_and_logging                       | 3      | IN-PROGRESS |

@@ -1,6 +1,42 @@
-# Story 060: Enhance Role Editor UI
+# Story 061: Fix Plan Save & Add Dirty Check
 
 ## Task Breakdown
+
+### Planning Phase
+- [x] Create User Story 061
+- [x] Register in Backlog
+- [ ] Analyze Component & Service
+- [ ] Update Implementation Plan
+
+### Execution Phase
+- [x] Fix Save Payload/Logic (Debug "Not Saving")
+- [x] Implement Toast Notification Service/Component
+- [x] Implement `CanDeactivate` Guard / Dirty Check Logic in Component
+
+### Verification Phase
+- [x] Verify Save persists data (Browser)
+- [x] Verify Toast appears
+- [x] Verify Dirty Guard prompts on navigation
+
+# Story 062: Fix Experiment Controls & Improve Logging
+
+## Task Breakdown
+
+### Planning Phase
+- [x] Create User Story 062
+- [x] Register in Backlog
+- [ ] Analyze Control Flow (Frontend -> API -> Orchestrator)
+- [ ] Update Implementation Plan
+
+### Execution Phase
+- [x] Fix Frontend Control Bindings in `ExperimentMonitorComponent`
+- [x] Verify Backend Control Endpoint (Added Case Normalization & Full Object Return)
+- [x] Tune Log Verbosity in `ExperimentOrchestrator`
+- [x] Enhance `LogFeedComponent` with collapsible data
+
+### Verification Phase
+- [x] Manual Test: Run Experiment, Pause, Resume, Stop.
+- [x] Manual Test: Check Log Feed for clarity.
 
 ### Planning Phase
 - [x] Create User Story 060

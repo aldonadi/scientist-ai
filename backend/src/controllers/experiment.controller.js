@@ -71,7 +71,10 @@ const launchExperiment = async (req, res, next) => {
 const controlExperiment = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { command } = req.body;
+        const rawCommand = req.body.command;
+        const command = rawCommand ? rawCommand.toUpperCase() : null;
+
+        console.log(`[ExperimentControl] Received command: ${command} for experiment: ${id}`);
 
         if (!['PAUSE', 'RESUME', 'STOP'].includes(command)) {
             return res.status(400).json({
@@ -159,12 +162,7 @@ const controlExperiment = async (req, res, next) => {
             }
         }
 
-        res.json({
-            success: true,
-            oldStatus,
-            newStatus,
-            experimentId: experiment._id
-        });
+        res.json(experiment);
 
     } catch (error) {
         next(error);
