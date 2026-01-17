@@ -172,7 +172,7 @@ export class PlanEditorComponent implements OnInit {
         this.plan = {
           name: plan.name,
           description: plan.description,
-          initialEnvironment: plan.initialEnvironment?.variables || {},
+          initialEnvironment: plan.initialEnvironment ? plan.initialEnvironment['variables'] : {},
           roles: plan.roles || [],
           goals: plan.goals || [],
           scripts: plan.scripts || [],
