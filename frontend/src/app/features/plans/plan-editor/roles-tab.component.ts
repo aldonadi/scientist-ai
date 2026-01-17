@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Role } from '../../../core/services/plan.service';
@@ -100,9 +100,8 @@ import { ToolService, Tool } from '../../../core/services/tool.service';
               <select [(ngModel)]="editingRole.modelConfig.provider"
                       (ngModelChange)="onRoleChange()"
                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                <option value="ollama">Ollama</option>
-                <option value="openai">OpenAI</option>
-                <option value="anthropic">Anthropic</option>
+                <option value="" disabled>Select Provider</option>
+                <option *ngFor="let p of providers" [value]="p._id">{{ p.name }} ({{ p.type }})</option>
               </select>
             </div>
             <div>
@@ -155,8 +154,9 @@ import { ToolService, Tool } from '../../../core/services/tool.service';
     </div>
   `
 })
-export class RolesTabComponent {
+export class RolesTabComponent implements OnChanges {
   @Input() roles: Role[] = [];
+  @Input() providers: any[] = [];
   @Output() rolesChange = new EventEmitter<Role[]>();
 
   editingIndex: number | null = null;
@@ -173,10 +173,23 @@ export class RolesTabComponent {
     this.loadTools();
   }
 
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['providers'] && this.providers.length > 0) {
+      // If we have an empty new role being edited, update its default provider
+      if (this.editingIndex !== null && !this.editingRole.modelConfig.provider) {
+        this.editingRole.modelConfig.provider = this.providers[0]._id;
+      }
+    }
+  }
+
   createEmptyRole(): Role {
     return {
       name: '',
-      modelConfig: { provider: 'ollama', modelName: '', temperature: 0.7 },
+      modelConfig: {
+        provider: this.providers && this.providers.length > 0 ? this.providers[0]._id : '',
+        modelName: '',
+        temperature: 0.7
+      },
       systemPrompt: '',
       tools: [],
       variableWhitelist: []
@@ -200,7 +213,7 @@ export class RolesTabComponent {
 
   editRole(index: number): void {
     this.editingIndex = index;
-    this.editingRole = this.roles[index];
+    this.editingRole = JSON.parse(JSON.stringify(this.roles[index])); // Deep copy
   }
 
   closeEditor(): void {

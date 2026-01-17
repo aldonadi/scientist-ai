@@ -26,7 +26,10 @@
 
 ### Verification Phase
 - [x] Frontend build passes
-- [ ] Manual testing with real experiment data
+- [x] Manual testing to Create Plan (Blocked by 400/500 errors - Resolved)
+  - [x] Seed Default Provider (Ollama)
+  - [x] Fix Backend Plan Schema Validation (Provider validation, script logic)
+  - [x] Fix Frontend Plan Editor Payload Format (Env types, hook casing)
 
 ## Acceptance Criteria (from Story)
 - [x] Shows current status/step.

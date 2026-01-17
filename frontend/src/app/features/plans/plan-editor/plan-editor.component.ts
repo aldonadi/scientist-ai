@@ -1,6 +1,7 @@
 import { Component, OnInit, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { Router, ActivatedRoute } from '@angular/router';
 import { PlanService, ExperimentPlan, CreatePlanDto, Role, Goal, Script } from '../../../core/services/plan.service';
 import { GeneralTabComponent } from './general-tab.component';
@@ -78,7 +79,8 @@ import { ScriptsTabComponent } from './scripts-tab.component';
         
         <app-roles-tab 
           *ngIf="activeTab === 'roles'"
-          [(roles)]="plan.roles">
+          [(roles)]="plan.roles"
+          [providers]="providers">
         </app-roles-tab>
         
         <app-goals-tab 
@@ -108,6 +110,8 @@ export class PlanEditorComponent implements OnInit {
     { id: 'scripts', label: 'Scripts' }
   ];
 
+  providers: any[] = [];
+
   plan: {
     name: string;
     description: string;
@@ -129,7 +133,8 @@ export class PlanEditorComponent implements OnInit {
   constructor(
     private planService: PlanService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private http: HttpClient
   ) { }
 
   ngOnInit(): void {
@@ -139,6 +144,14 @@ export class PlanEditorComponent implements OnInit {
       this.isNew = false;
       this.loadPlan();
     }
+    this.fetchProviders();
+  }
+
+  fetchProviders(): void {
+    this.http.get<any[]>('/api/providers').subscribe({
+      next: (data) => this.providers = data,
+      error: (err) => console.error('Failed to load providers:', err)
+    });
   }
 
   loadPlan(): void {
@@ -149,7 +162,7 @@ export class PlanEditorComponent implements OnInit {
         this.plan = {
           name: plan.name,
           description: plan.description,
-          initialEnvironment: plan.initialEnvironment || {},
+          initialEnvironment: plan.initialEnvironment?.variables || {},
           roles: plan.roles || [],
           goals: plan.goals || [],
           scripts: plan.scripts || [],
@@ -167,14 +180,47 @@ export class PlanEditorComponent implements OnInit {
     return !!(this.plan.name && this.plan.description);
   }
 
+  detectType(value: any): string {
+    if (Array.isArray(value)) return 'array';
+    if (typeof value === 'object') return 'object';
+    if (typeof value === 'number') return 'number';
+    if (typeof value === 'boolean') return 'boolean';
+    return 'string';
+  }
+
   save(): void {
+    // Transform payload for backend
+    const variableTypes: { [key: string]: string } = {};
+    Object.entries(this.plan.initialEnvironment).forEach(([key, val]) => {
+      variableTypes[key] = this.detectType(val);
+    });
+
+    const payload: any = {
+      name: this.plan.name,
+      description: this.plan.description,
+      maxSteps: this.plan.maxSteps,
+      initialEnvironment: {
+        variables: this.plan.initialEnvironment,
+        variableTypes: variableTypes
+      },
+      roles: this.plan.roles,
+      scripts: this.plan.scripts,
+      goals: this.plan.goals.map((g: any) => ({
+        description: g.description,
+        condition: g.conditionScript || g.condition // Handle both cases just to be safe
+      }))
+    };
+
     const action = this.isNew
-      ? this.planService.createPlan(this.plan)
-      : this.planService.updatePlan(this.id!, this.plan);
+      ? this.planService.createPlan(payload)
+      : this.planService.updatePlan(this.id!, payload);
 
     action.subscribe({
       next: () => this.router.navigate(['/plans']),
-      error: (err) => console.error('Failed to save plan:', err)
+      error: (err) => {
+        console.error('Failed to save plan:', err);
+        alert('Failed to save plan: ' + (err.error?.message || err.message));
+      }
     });
   }
 
