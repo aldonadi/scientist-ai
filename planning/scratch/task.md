@@ -37,6 +37,14 @@
 - [x] Fix Python `.get()` Support (Replaced `SimpleNamespace` with `DotDict`)
 - [x] Fix Provider Type Resolution (Fetch Provider doc by ObjectId in `processRole`)
 - [x] Fix Frontend Log Parsing (Map `{logs: []}` object to `Log[]` array)
+- [x] Fix Role Persistence (Remove `.populate('roles.tools')` in `getPlan`)
+- [x] Fix Resume Duplication (Check `OrchestratorRegistry` in `controlExperiment`)
+- [x] Implement Inference Error Handling (Retry Logic)
+    - [x] Add `maxStepRetries` to ExperimentPlan Schema
+    - [x] Update `processRole` in Orchestrator to handle retries
+- [x] Implement Model List API & UI
+    - [x] Backend: `GET /api/providers/:id/models`
+    - [x] Frontend: Model Dropdown and Connection Test Button
 
 ## Acceptance Criteria (from Story)
 - [x] Shows current status/step.

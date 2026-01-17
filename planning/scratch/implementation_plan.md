@@ -1,31 +1,61 @@
-# Fix Input Focus Loss in Plan Editor Tabs
+# Implementation Plan - Reliability & Model Management
 
-The user reported that typing in the Goal condition input causes focus loss after every character. This is caused by Angular destroying and recreating the DOM elements upon every keystroke because the parent component emits a new array reference, triggering a full list re-render in `*ngFor`. The same issue affects the Scripts tab.
+## Goal Description
+Enhance experiment stability by implementing configurable retries for inference steps and improve the user experience by allowing model selection from a provider-sourced list.
 
 ## User Review Required
-No breaking changes. This is a frontend performance/UX fix.
+> [!IMPORTANT]
+> **Schema Change**: Adding `maxStepRetries` to `ExperimentPlan`. Defaults to 3. Existing plans will need a migration or default value.
+> **API Change**: New endpoint `GET /api/providers/:id/models`.
 
 ## Proposed Changes
 
-### Frontend Components
-#### [MODIFY] [goals-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/goals-tab.component.ts)
-- Add `trackByIndex(index: number): number { return index; }` method.
-- Update `*ngFor="let goal of goalsWithErrors"` to include `; trackBy: trackByIndex`.
+### Backend
 
-#### [MODIFY] [scripts-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/scripts-tab.component.ts)
-- Add `trackByIndex(index: number): number { return index; }` method.
-- Update `*ngFor="let script of getEventScripts()"` to include `; trackBy: trackByIndex`.
+#### [MODIFY] [experimentPlan.model.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/models/experimentPlan.model.js)
+- Add `maxStepRetries` (Number, default: 3) to schema.
+
+#### [MODIFY] [experiment-orchestrator.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/experiment-orchestrator.service.js)
+- In `processRole`: Wrap the Inference/Tool Loop in a `try/catch` block with a retry counter.
+- If error occurs:
+    - Log error.
+    - Increment retry count.
+    - If `retryCount < maxStepRetries`, continue (retry).
+    - Else, throw Error (halts experiment).
+
+#### [MODIFY] [provider.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/provider/provider.service.js)
+- Add `listModels(providerConfig)` method.
+- Update `OllamaStrategy` and `OpenAIStrategy` to implement `listModels`.
+
+#### [MODIFY] [provider.controller.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/controllers/provider.controller.js)
+- Add `getProviderModels(req, res)` method.
+- Route: `GET /:id/models`.
+
+#### [MODIFY] [provider.routes.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/routes/provider.routes.js)
+- Register new route.
+
+### Frontend
+
+#### [MODIFY] [plan.service.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/core/services/plan.service.ts)
+- Update `ExperimentPlan` interface to include `maxStepRetries`.
+
+#### [MODIFY] [provider.service.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/core/services/provider.service.ts)
+- Add `getProviderModels(id: string): Observable<string[]>` method.
+
+#### [MODIFY] [roles-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/tabs/roles-tab/roles-tab.component.ts)
+- In `editRole`, load models for the selected provider.
+- Replace Model Input Reference with a `<select>` or Combobox.
+- Add "Test Connection" button next to Model Select. (Calls `getProviderModels` and shows success/fail).
+
+#### [MODIFY] [roles-tab.component.html](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/tabs/roles-tab/roles-tab.component.html)
+- Update UI template.
 
 ## Verification Plan
 
-### Browser Test
-Run a browser subagent task:
-1. Navigate to `/plans/696afdf7f8822c5ed7cbb782` (BlackJack).
-2. Go to **Goals Tab**.
-3. Create a new Goal.
-4. Type "Test" in condition.
-   - **Check**: Does focus remain in the input for all 4 characters?
-5. Go to **Scripts Tab**.
-6. Create a new Script.
-7. Type in Code.
-   - **Check**: Does focus remain?
+### Automated Tests
+- **Unit Tests**: Test `ExperimentOrchestrator` retry logic with mock Provider failing N times.
+- **Integration Tests**: Verify `GET /models` returns list from mock/real Ollama.
+
+### Manual Verification
+- **Retry**: Configure a plan with a non-existent model (fails 404). Run experiment. Verify it retries 3 times then fails.
+- **Model List**: Open Plan Editor -> Roles. Select Ollama Provider. Verify Dropdown populates. Click "Test Connection".

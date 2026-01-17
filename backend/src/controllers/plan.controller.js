@@ -120,7 +120,7 @@ exports.getPlan = async (req, res, next) => {
         }
 
         const plan = await ExperimentPlan.findById(id)
-            .populate('roles.tools') // Populate tool details
+            // .populate('roles.tools') // REMOVED: Frontend needs IDs for editing, not objects. Populating breaks saving.
             .lean();
 
         if (!plan) {

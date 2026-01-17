@@ -26,6 +26,12 @@ const ExperimentPlanSchema = new Schema({
         type: environmentSchema,
         default: () => ({ variables: {}, variableTypes: {} })
     },
+    maxStepRetries: {
+        type: Number,
+        default: 3,
+        min: 0,
+        max: 10
+    },
     roles: [RoleSchema],
     goals: [GoalSchema],
     scripts: [ScriptSchema],

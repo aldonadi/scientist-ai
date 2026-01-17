@@ -105,18 +105,27 @@ const controlExperiment = async (req, res, next) => {
             }
         } else if (command === 'RESUME') {
             if (experiment.status === 'PAUSED') {
-                const orchestrator = new ExperimentOrchestrator(experiment._id);
+                // Check if an orchestrator is already running/resident
+                const existingOrchestrator = OrchestratorRegistry.getInstance().get(experiment._id);
 
-                // Register for streaming visibility
-                OrchestratorRegistry.getInstance().register(experiment._id, orchestrator);
+                if (existingOrchestrator) {
+                    // Already exists. Updating the status in DB (below) will trigger it to continue its loop.
+                    console.log(`[Resume] Orchestrator already exists for ${experiment._id}. Resuming existing instance.`);
+                } else {
+                    // Use start() to spin up a new one
+                    const orchestrator = new ExperimentOrchestrator(experiment._id);
 
-                orchestrator.start()
-                    .catch(err => {
-                        console.error(`Orchestartor resume failed for ${experiment._id}:`, err);
-                    })
-                    .finally(() => {
-                        OrchestratorRegistry.getInstance().remove(experiment._id);
-                    });
+                    // Register for streaming visibility
+                    OrchestratorRegistry.getInstance().register(experiment._id, orchestrator);
+
+                    orchestrator.start()
+                        .catch(err => {
+                            console.error(`Orchestrator resume failed for ${experiment._id}:`, err);
+                        })
+                        .finally(() => {
+                            OrchestratorRegistry.getInstance().remove(experiment._id);
+                        });
+                }
 
                 experiment.status = 'RUNNING';
                 await experiment.save();

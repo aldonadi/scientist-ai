@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Role } from '../../../core/services/plan.service';
 import { ToolService, Tool } from '../../../core/services/tool.service';
+import { ProviderService } from '../../../core/services/provider.service';
+
 
 @Component({
   selector: 'app-roles-tab',
@@ -94,23 +96,51 @@ import { ToolService, Tool } from '../../../core/services/tool.service';
                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
           </div>
           
-          <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Provider</label>
-              <select [(ngModel)]="editingRole.modelConfig.provider"
-                      (ngModelChange)="onRoleChange()"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                <option value="" disabled>Select Provider</option>
-                <option *ngFor="let p of providers" [value]="p._id">{{ p.name }} ({{ p.type }})</option>
-              </select>
+              <div class="flex gap-2">
+                <select [(ngModel)]="editingRole.modelConfig.provider"
+                        (ngModelChange)="onProviderChange()"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  <option value="" disabled>Select Provider</option>
+                  <option *ngFor="let p of providers" [value]="p._id">{{ p.name }} ({{ p.type }})</option>
+                </select>
+                <button (click)="testConnection()" 
+                        [disabled]="!editingRole.modelConfig.provider || loadingModels"
+                        class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg border border-gray-300 text-sm whitespace-nowrap disabled:opacity-50">
+                    {{ loadingModels ? '...' : 'Test' }}
+                </button>
+              </div>
+              <div *ngIf="connectionStatus" class="mt-1 text-xs" 
+                   [ngClass]="connectionStatus.success ? 'text-green-600' : 'text-red-600'">
+                  {{ connectionStatus.message }}
+              </div>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Model</label>
-              <input type="text" 
-                     [(ngModel)]="editingRole.modelConfig.modelName"
-                     (ngModelChange)="onRoleChange()"
-                     placeholder="e.g., llama3, gpt-4"
-                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              
+              <div *ngIf="availableModels.length > 0; else manualInput">
+                  <select [(ngModel)]="editingRole.modelConfig.modelName"
+                          (ngModelChange)="onRoleChange()"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                      <option value="" disabled>Select Model</option>
+                      <option *ngFor="let m of availableModels" [value]="m">{{ m }}</option>
+                  </select>
+                  <div class="text-xs text-right mt-1">
+                      <button (click)="availableModels = []" class="text-blue-500 hover:text-blue-700">Switch to Manual Input</button>
+                  </div>
+              </div>
+              
+              <ng-template #manualInput>
+                  <input type="text" 
+                         [(ngModel)]="editingRole.modelConfig.modelName"
+                         (ngModelChange)="onRoleChange()"
+                         placeholder="e.g., llama3, gpt-4"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  <div class="text-xs text-right mt-1" *ngIf="editingRole.modelConfig.provider">
+                      <button (click)="loadModels(editingRole.modelConfig.provider)" class="text-blue-500 hover:text-blue-700">Fetch Models</button>
+                  </div>
+              </ng-template>
             </div>
           </div>
           
@@ -167,11 +197,19 @@ export class RolesTabComponent implements OnChanges {
   toolSearch = '';
   showToolDropdown = false;
 
+  availableModels: string[] = [];
+  loadingModels = false;
+  connectionStatus: { success?: boolean; message?: string } | null = null;
+
   private draggedIndex: number | null = null;
 
-  constructor(private toolService: ToolService) {
+  constructor(
+    private toolService: ToolService,
+    private providerService: ProviderService
+  ) {
     this.loadTools();
   }
+
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['providers'] && this.providers.length > 0) {
@@ -237,6 +275,43 @@ export class RolesTabComponent implements OnChanges {
       this.emitChange();
     }
   }
+
+  onProviderChange(): void {
+    this.onRoleChange();
+    const providerId = this.editingRole.modelConfig.provider;
+    if (providerId) {
+      this.loadModels(providerId);
+    } else {
+      this.availableModels = [];
+    }
+  }
+
+  loadModels(providerId: string): void {
+    this.loadingModels = true;
+    this.connectionStatus = null;
+    this.availableModels = [];
+
+    this.providerService.getModels(providerId).subscribe({
+      next: (models) => {
+        this.availableModels = models;
+        this.loadingModels = false;
+        this.connectionStatus = { success: true, message: 'Connected' };
+      },
+      error: (err) => {
+        console.error('Failed to load models', err);
+        this.loadingModels = false;
+        this.connectionStatus = { success: false, message: 'Failed to Fetch Models' };
+      }
+    });
+  }
+
+  testConnection(): void {
+    const providerId = this.editingRole.modelConfig.provider;
+    if (providerId) {
+      this.loadModels(providerId);
+    }
+  }
+
 
   // Drag and Drop
   onDragStart(event: DragEvent, index: number): void {

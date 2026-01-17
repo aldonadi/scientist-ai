@@ -39,6 +39,7 @@ export interface ExperimentPlan {
     updatedAt?: string;
     roleCount?: number;
     goalCount?: number;
+    maxStepRetries?: number;
 }
 
 export interface CreatePlanDto {

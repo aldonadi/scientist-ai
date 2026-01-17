@@ -338,15 +338,56 @@ class ExperimentOrchestrator {
 
             const modelName = role.modelConfig ? role.modelConfig.modelName : 'llama3';
 
-            try {
-                const stream = await ProviderService.chat(
-                    providerConfig,
-                    modelName,
-                    currentMessages,
-                    toolsForProvider,
-                    { temperature: role.modelConfig?.temperature || 0.7 }
-                );
+            const maxRetries = this.plan.maxStepRetries || 3;
+            let retryCount = 0;
+            let success = false;
+            let stream = null;
 
+            while (!success && retryCount <= maxRetries) {
+                try {
+                    stream = await ProviderService.chat(
+                        providerConfig,
+                        modelName,
+                        currentMessages,
+                        toolsForProvider,
+                        { temperature: role.modelConfig?.temperature || 0.7 }
+                    );
+                    success = true;
+                } catch (chatErr) {
+                    retryCount++;
+                    this.eventBus.emit(EventTypes.LOG, {
+                        experimentId: this.experiment._id,
+                        stepNumber: this.experiment.currentStep,
+                        source: 'SYSTEM',
+                        message: `Inference attempt ${retryCount}/${maxRetries + 1} failed: ${chatErr.message}`,
+                        data: { error: chatErr.message }
+                    });
+
+                    if (retryCount > maxRetries) {
+                        // Stop the loop completely
+                        shouldContinue = false;
+                        // Throw a special error that the outer loop catches to stop the role?
+                        // Or just let the outer logic handle 'shouldContinue = false'.
+                        // If we just break, 'stream' is null.
+                        break;
+                    }
+
+                    // Simple backoff wait (1s * retryCount)
+                    await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+                }
+            }
+
+            if (!success || !stream) {
+                shouldContinue = false;
+                // Don't throw, just log (already logged failure) and stop role.
+                // This effectively "skips" the rest of the role logic if inference fails.
+                // If critical failure is desired, we should throw.
+                // User said: "halt the experiment after max retries".
+                // So we SHOULD throw.
+                throw new Error(`Inference failed after ${maxRetries} retries.`);
+            }
+
+            try {
                 for await (const event of stream) {
                     if (event.type === 'text') {
                         accumulatedResponse += event.content;
@@ -359,6 +400,8 @@ class ExperimentOrchestrator {
                         toolCalls.push(event);
                     }
                 }
+                // ... rest of logic loop ...
+
 
                 // If we got tool calls, we must execute them and continue the loop
                 if (toolCalls.length > 0) {
