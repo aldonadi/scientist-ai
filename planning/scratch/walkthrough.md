@@ -131,6 +131,7 @@ This confirms the architectural fix robustly handles state management for the en
 - **Issue**: Experiment Failed with `Error: name 'env' is not defined`.
 - **Root Cause**: Python `eval` was called with `env` dict as locals, which exposes keys as variables but does NOT expose the variable `env` itself for dot notation.
 - **Fix**: Wrapped `env` dict in `SimpleNamespace` (recursive) and passed it as `{'env': env_obj}` to `eval` locals. This allows `env.money` syntax to work.
+- **Update**: Replaced `SimpleNamespace` with custom `DotDict` class because `SimpleNamespace` breaks `env.get()` calls. `DotDict` inherits from `dict` but adds `__getattr__`, supporting both `env.prop` and `env.get('prop')`.
 
 render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/plan-editor.component.ts)
 render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/roles-tab.component.ts)

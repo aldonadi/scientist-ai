@@ -491,19 +491,24 @@ class ExperimentOrchestrator {
 import os
 import json
 import sys
-from types import SimpleNamespace
 
 try:
     env_str = os.environ.get('EXPERIMENT_ENV', '{}')
     env_dict = json.loads(env_str)
     
-    # Recursive conversion for dot notation
-    def dict_to_obj(d):
+    class DotDict(dict):
+        def __getattr__(self, key):
+            if key not in self:
+                raise AttributeError(key)
+            return self[key]
+
+    # Recursive conversion for dot notation while keeping dict methods
+    def to_dot_dict(d):
         if isinstance(d, dict):
-            return SimpleNamespace(**{k: dict_to_obj(v) for k, v in d.items()})
+            return DotDict({k: to_dot_dict(v) for k, v in d.items()})
         return d
 
-    env = dict_to_obj(env_dict)
+    env = to_dot_dict(env_dict)
     condition = os.environ.get('GOAL_CONDITION', 'False')
     
     # Evaluate locally using env object in scope

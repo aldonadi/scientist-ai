@@ -34,6 +34,7 @@
 - [x] Fix Plan List UI Counts (Backend `listPlans` projection, Frontend `goalCount`)
 - [x] Fix Input Focus Loss in Goals/Scripts (Added `trackBy`)
 - [x] Fix Goal Evaluation Python Scope (`env` vs `env_obj`)
+- [x] Fix Python `.get()` Support (Replaced `SimpleNamespace` with `DotDict`)
 
 ## Acceptance Criteria (from Story)
 - [x] Shows current status/step.
