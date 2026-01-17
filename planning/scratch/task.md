@@ -1,6 +1,20 @@
-# Story 035: Implement Experiment Monitor View
+# Story 060: Enhance Role Editor UI
 
 ## Task Breakdown
+
+### Planning Phase
+- [x] Create User Story 060
+- [x] Register in Backlog
+- [ ] Create Implementation Plan (Updated)
+
+### Execution Phase
+- [x] Backend: Add `testProviderModel` endpoint
+- [x] Frontend: Update `ProviderService`
+- [x] Frontend: Update `RolesTabComponent` (Sort, Rename, Test Button)
+- [x] Frontend: Update `RolesTabTemplate`
+
+### Verification Phase
+- [x] Manual Verification (Browser Subagent)
 
 ### Planning Phase
 - [x] Review story requirements and acceptance criteria
@@ -45,6 +59,13 @@
 - [x] Implement Model List API & UI
     - [x] Backend: `GET /api/providers/:id/models`
     - [x] Frontend: Model Dropdown and Connection Test Button
+- [ ] Enhance Role Editor UI (User Feedback)
+    - [ ] Rename 'Test' to 'Fetch Models'
+    - [ ] Implement 'Test Model' Inference Button
+        - [ ] Backend: `POST /api/providers/:id/test` (consume chat stream)
+        - [ ] Frontend: Service method + UI Button + Status Display
+    - [ ] Layout Tweaks (Manual Input positioning)
+    - [ ] Sort Model List Alphabetically
 
 ## Acceptance Criteria (from Story)
 - [x] Shows current status/step.

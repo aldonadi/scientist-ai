@@ -78,3 +78,4 @@ Status can be:
 | 035_ui_experiment_monitor                          | 8      | IN-PROGRESS |
 | 036_ui_realtime_logs                               | 5      | NOT READY   |
 | 058_input_validation                               | 5      | REVIEW      |
+| 060_enhance_role_editor_ui                         | 3      | IN-PROGRESS |

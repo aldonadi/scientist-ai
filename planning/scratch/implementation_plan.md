@@ -50,6 +50,14 @@ Enhance experiment stability by implementing configurable retries for inference 
 #### [MODIFY] [roles-tab.component.html](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/tabs/roles-tab/roles-tab.component.html)
 - Update UI template.
 
+### Role Editor UI Enhancements (New)
+#### [MODIFY] [provider.controller.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/controllers/provider.controller.js)
+- Add `testProviderModel` to handle single-shot inference tests.
+#### [MODIFY] [roles-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/roles-tab.component.ts)
+- Sort model list.
+- Rename 'Test' -> 'Fetch Models'.
+- Add 'Test Model' button and logic.
+
 ## Verification Plan
 
 ### Automated Tests

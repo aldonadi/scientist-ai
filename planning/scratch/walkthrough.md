@@ -35,12 +35,21 @@ This update addresses critical stability bugs and adds key features for experime
   - Clicking "Test" validates the connection and fetches available models.
   - Model input transforms into a Dropdown for easy selection.
 
+### Role Editor Enhancements (Story 060)
+**Goal**: Improve usability of the Role Editor.
+**Implementation**:
+- **Rename**: "Test" button -> "Fetch Models".
+- **Test Model**: Added a new button to perform a live inference test with the selected model.
+- **Sorting**: Model dropdown now sorts alphabetically.
+- **Layout**: Fixed positioning of "Switch to Manual Input".
+
 ## Verification
 
 ### Role Persistence
 Verified via valid save flow:
 ![Save Success](file:///home/andrew/.gemini/antigravity/brain/9eedb052-a975-46c9-b043-612e0d79e354/.system_generated/click_feedback/click_feedback_1768665502922.png)
 
-### Model List UI
-Verified "Test" button and Dropdown population:
-![Test Button](file:///home/andrew/.gemini/antigravity/brain/9eedb052-a975-46c9-b043-612e0d79e354/provider_test_button_check_1768666386030.png)
+### Model List UI & Test Feature
+Verified "Fetch Models", Dropdown population, and "Test Model" success:
+![Fetch Models](file:///home/andrew/.gemini/antigravity/brain/9eedb052-a975-46c9-b043-612e0d79e354/.system_generated/click_feedback/click_feedback_1768676803062.png)
+![Test Model Success](file:///home/andrew/.gemini/antigravity/brain/9eedb052-a975-46c9-b043-612e0d79e354/.system_generated/click_feedback/click_feedback_1768677083076.png)
