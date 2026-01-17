@@ -26,7 +26,7 @@ interface GoalWithError extends Goal {
       </div>
       
       <div class="space-y-4">
-        <div *ngFor="let goal of goalsWithErrors; let i = index" 
+        <div *ngFor="let goal of goalsWithErrors; let i = index; trackBy: trackByIndex" 
              class="border rounded-lg p-4"
              [class.border-red-300]="goal.error"
              [class.border-gray-200]="!goal.error">
@@ -105,6 +105,10 @@ export class GoalsTabComponent {
       }
     }
     this.emitValidity();
+  }
+
+  trackByIndex(index: number, obj: any): any {
+    return index;
   }
 
   emitGoals(): void {

@@ -66,7 +66,7 @@ const LIFECYCLE_EVENTS = [
         
         <!-- Scripts for selected event -->
         <div class="space-y-4">
-          <div *ngFor="let script of getEventScripts(); let i = index"
+          <div *ngFor="let script of getEventScripts(); let i = index; trackBy: trackByIndex"
                class="border rounded-lg p-3"
                [class.border-red-300]="script.error"
                [class.border-gray-200]="!script.error"
@@ -231,6 +231,10 @@ export class ScriptsTabComponent {
     const scripts: Script[] = this.scriptsWithErrors.map(({ error, ...script }) => script);
     this.scriptsChange.emit(scripts);
     this.emitValidity();
+  }
+
+  trackByIndex(index: number, obj: any): any {
+    return index;
   }
 
   private emitValidity(): void {

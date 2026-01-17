@@ -121,6 +121,12 @@ Verified that other tabs also retain state:
 
 This confirms the architectural fix robustly handles state management for the entire Plan Editor.
 
+### Bug Fix: Input Focus Loss
+- **Issue**: Typing in Goals/Scripts inputs caused focus loss after 1 character.
+- **Root Cause**: `*ngFor` loops lacked `trackBy`, causing full DOM re-render on every keystroke when parent component updated the array reference.
+- **Fix**: Added `trackByIndex` to `GoalsTabComponent` and `ScriptsTabComponent`.
+- **Verification**: Browser test confirmed "test" could be typed without interruption.
+
 render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/plan-editor.component.ts)
 render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/roles-tab.component.ts)
 render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/routes/provider.routes.js)
