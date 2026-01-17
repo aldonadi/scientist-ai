@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -65,31 +65,38 @@ import { ScriptsTabComponent } from './scripts-tab.component';
       
       <!-- Tab Content -->
       <div class="flex-1 min-h-0">
+        <!-- We use [class.hidden] instead of *ngIf to preserve component state across tab switches -->
+        
         <app-general-tab 
-          *ngIf="activeTab === 'general'"
+          class="h-full block"
+          [class.hidden]="activeTab !== 'general'"
           [(name)]="plan.name"
           [(description)]="plan.description"
           [(maxSteps)]="plan.maxSteps">
         </app-general-tab>
         
         <app-environment-tab 
-          *ngIf="activeTab === 'environment'"
+          class="h-full block"
+          [class.hidden]="activeTab !== 'environment'"
           [(environment)]="plan.initialEnvironment">
         </app-environment-tab>
         
         <app-roles-tab 
-          *ngIf="activeTab === 'roles'"
+          class="h-full block"
+          [class.hidden]="activeTab !== 'roles'"
           [(roles)]="plan.roles"
           [providers]="providers">
         </app-roles-tab>
         
         <app-goals-tab 
-          *ngIf="activeTab === 'goals'"
+          class="h-full block"
+          [class.hidden]="activeTab !== 'goals'"
           [(goals)]="plan.goals">
         </app-goals-tab>
         
         <app-scripts-tab 
-          *ngIf="activeTab === 'scripts'"
+          class="h-full block"
+          [class.hidden]="activeTab !== 'scripts'"
           [(scripts)]="plan.scripts">
         </app-scripts-tab>
       </div>
@@ -98,6 +105,9 @@ import { ScriptsTabComponent } from './scripts-tab.component';
 })
 export class PlanEditorComponent implements OnInit {
   @Input() id?: string;
+
+  // Access the child component to get full state (variables + types)
+  @ViewChild(EnvironmentTabComponent) envTab!: EnvironmentTabComponent;
 
   isNew = true;
   activeTab = 'general';
@@ -180,34 +190,43 @@ export class PlanEditorComponent implements OnInit {
     return !!(this.plan.name && this.plan.description);
   }
 
-  detectType(value: any): string {
-    if (Array.isArray(value)) return 'array';
-    if (typeof value === 'object') return 'object';
-    if (typeof value === 'number') return 'number';
-    if (typeof value === 'boolean') return 'boolean';
-    return 'string';
-  }
-
   save(): void {
     // Transform payload for backend
+    // Use the authoritative state from EnvironmentTabComponent if available
+    const variables: { [key: string]: any } = {};
     const variableTypes: { [key: string]: string } = {};
-    Object.entries(this.plan.initialEnvironment).forEach(([key, val]) => {
-      variableTypes[key] = this.detectType(val);
-    });
+
+    if (this.envTab && this.envTab.variables) {
+      this.envTab.variables.forEach(v => {
+        if (v.key && !v.keyError) {
+          variables[v.key] = this.envTab.parseValue(v);
+          variableTypes[v.key] = v.type;
+        }
+      });
+    } else {
+      // Fallback if tab component is not available (should not happen with hidden tabs, 
+      // but strictly possible if not rendered yet)
+      Object.entries(this.plan.initialEnvironment).forEach(([key, val]) => {
+        variables[key] = val;
+        // Simple type inference fallback
+        variableTypes[key] = typeof val === 'object' ? (Array.isArray(val) ? 'array' : 'object') : typeof val;
+        if (variableTypes[key] === 'number') variableTypes[key] = 'number'; // frontend uses 'number', backend maps it
+      });
+    }
 
     const payload: any = {
       name: this.plan.name,
       description: this.plan.description,
       maxSteps: this.plan.maxSteps,
       initialEnvironment: {
-        variables: this.plan.initialEnvironment,
+        variables: variables,
         variableTypes: variableTypes
       },
       roles: this.plan.roles,
       scripts: this.plan.scripts,
       goals: this.plan.goals.map((g: any) => ({
         description: g.description,
-        condition: g.conditionScript || g.condition // Handle both cases just to be safe
+        condition: g.conditionScript || g.condition
       }))
     };
 

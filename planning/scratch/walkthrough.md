@@ -96,6 +96,23 @@ Resolved `400 Bad Request` / `500 Internal Server Error` preventing "BlackJack" 
 - **Browser Run**: Successfully navigated to `/plans/new`, filled form, and saved.
 - **API Check**: Confirmed "BlackJack" plan exists in DB with correct `rules`, `goals`, `scripts`, and `initialEnvironment`.
 
+- **API Check**: Confirmed "BlackJack" plan exists in DB with correct `rules`, `goals`, `scripts`, and `initialEnvironment`.
+
+## Bug Fix: Environment Data Binding
+
+Addressed issue where Environment variables were lost when switching tabs before saving.
+
+### Root Cause
+The `PlanEditorComponent` used `*ngIf` to validly display only the active tab. This caused the `EnvironmentTabComponent` to be destroyed when switching to other tabs (like Roles or Scripts). Consequently, its internal state (specifically the `variables` array which tracks data types and validation state) was lost. The parent component only held a "flat" key-value object via two-way binding, which was insufficient to reconstruct the full typed schema required by the backend, leading to empty or invalid environment payloads on save.
+
+### Fix Implementation
+1.  **State Preservation**: Replaced `*ngIf` with `[class.hidden]` in `PlanEditorComponent`. This keeps all tab components instantiated and alive in the DOM (hidden via CSS), allowing them to retain their internal state regardless of visibility.
+2.  **Direct State Access**: Implemented `@ViewChild(EnvironmentTabComponent)` in the parent `PlanEditorComponent`. The `save()` method now directly queries the child component's authoritative state to construct the payload, ensuring accurate variable types and values are sent to the backend without relying on lossy inference or potentially stale events.
+
+### Verification
+- **Test Case**: Created "EnvTest" plan. Added numeric variable `test_var=123`. Switched tabs. Saved.
+- **Result**: `test_var` was correctly persisted to the database.
+
 render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/plan-editor.component.ts)
 render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/roles-tab.component.ts)
 render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/routes/provider.routes.js)
