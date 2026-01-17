@@ -30,6 +30,8 @@
   - [x] Seed Default Provider (Ollama)
   - [x] Fix Backend Plan Schema Validation (Provider validation, script logic)
   - [x] Fix Frontend Plan Editor Payload Format (Env types, hook casing)
+- [x] Verify Tab State Persistence (Roles, Scripts, Goals via [hidden] fix)
+- [x] Fix Plan List UI Counts (Backend `listPlans` projection, Frontend `goalCount`)
 
 ## Acceptance Criteria (from Story)
 - [x] Shows current status/step.

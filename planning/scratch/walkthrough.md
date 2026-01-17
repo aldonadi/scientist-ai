@@ -113,6 +113,14 @@ The `PlanEditorComponent` used `*ngIf` to validly display only the active tab. T
 - **Test Case**: Created "EnvTest" plan. Added numeric variable `test_var=123`. Switched tabs. Saved.
 - **Result**: `test_var` was correctly persisted to the database.
 
+### Tab Persistence Verification
+Verified that other tabs also retain state:
+- **Roles**: Added "Role1", switched tabs, returned. Role remained in list.
+- **Scripts**: Added script code, switched tabs, returned. Code content was preserved.
+- **Goals**: Added goal, switched tabs, returned. Goal description and condition were preserved.
+
+This confirms the architectural fix robustly handles state management for the entire Plan Editor.
+
 render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/plan-editor.component.ts)
 render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/roles-tab.component.ts)
 render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/routes/provider.routes.js)

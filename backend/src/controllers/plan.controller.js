@@ -95,6 +95,7 @@ exports.listPlans = async (req, res, next) => {
             description: plan.description,
             roleCount: plan.roles ? plan.roles.length : 0,
             goalCount: plan.goals ? plan.goals.length : 0,
+            roles: plan.roles ? plan.roles.map(r => ({ name: r.name })) : [],
             createdAt: plan.createdAt,
             updatedAt: plan.updatedAt
         }));

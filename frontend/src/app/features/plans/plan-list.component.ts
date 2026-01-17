@@ -44,7 +44,7 @@ import { PlanService, ExperimentPlan } from '../../core/services/plan.service';
               <!-- Stats -->
               <div class="flex items-center gap-6 mt-4 text-sm text-gray-500">
                 <span>LIMIT: {{ plan.maxSteps }} Steps</span>
-                <span>GOALS: {{ (plan.goals || []).length }} Defined</span>
+                <span>GOALS: {{ plan.goalCount }} Defined</span>
               </div>
               
               <!-- Last Run (placeholder) -->
