@@ -2,6 +2,7 @@ const { EventBus, EventTypes } = require('./event-bus');
 const { Experiment } = require('../models/experiment.model');
 const { ExperimentPlan } = require('../models/experimentPlan.model');
 const Tool = require('../models/tool.model');
+const { Provider } = require('../models/provider.model');
 const { deepCopy } = require('../models/schemas/environment.schema');
 const Logger = require('./logger.service');
 const ContainerPoolManager = require('./container-pool.service');
@@ -320,15 +321,21 @@ class ExperimentOrchestrator {
             accumulatedResponse = '';
             toolCalls = [];
 
-            // We need to pass the config. For now using defaults or role.modelConfig if available
-            // Assuming role.modelConfig has the provider and modelName
+            // We need to resolve the Provider configuration from the DB
+            // role.modelConfig.provider is an ObjectId reference
+            const providerDoc = await Provider.findById(role.modelConfig.provider);
+            if (!providerDoc) {
+                // If the provider ID is missing (e.g. from bad seeding or deletion), we can't proceed.
+                // Log and break?
+                throw new Error(`Provider not found with ID: ${role.modelConfig.provider}`);
+            }
 
-            // Temporarily constructed provider object for the service
-            // This should ideally come from a populated modelConfig
             const providerConfig = {
-                type: role.modelConfig ? role.modelConfig.provider : 'OLLAMA', // Default
-                baseUrl: process.env.OLLAMA_HOST || 'http://localhost:11434' // TODO: Get from DB/Config
+                type: providerDoc.type,
+                baseUrl: providerDoc.baseUrl,
+                apiKey: providerDoc.apiKeyRef ? process.env[providerDoc.apiKeyRef] : undefined
             };
+
             const modelName = role.modelConfig ? role.modelConfig.modelName : 'llama3';
 
             try {

@@ -35,6 +35,7 @@
 - [x] Fix Input Focus Loss in Goals/Scripts (Added `trackBy`)
 - [x] Fix Goal Evaluation Python Scope (`env` vs `env_obj`)
 - [x] Fix Python `.get()` Support (Replaced `SimpleNamespace` with `DotDict`)
+- [x] Fix Provider Type Resolution (Fetch Provider doc by ObjectId in `processRole`)
 
 ## Acceptance Criteria (from Story)
 - [x] Shows current status/step.
