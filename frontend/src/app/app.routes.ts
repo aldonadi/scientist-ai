@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { LayoutComponent } from './core/layout';
+import { unsavedChangesGuard } from './core/guards/unsaved-changes.guard';
 
 export const routes: Routes = [
     {
@@ -33,11 +34,13 @@ export const routes: Routes = [
             },
             {
                 path: 'plans/new',
-                loadComponent: () => import('./features/plans/plan-editor/plan-editor.component').then(m => m.PlanEditorComponent)
+                loadComponent: () => import('./features/plans/plan-editor/plan-editor.component').then(m => m.PlanEditorComponent),
+                canDeactivate: [unsavedChangesGuard]
             },
             {
                 path: 'plans/:id',
-                loadComponent: () => import('./features/plans/plan-editor/plan-editor.component').then(m => m.PlanEditorComponent)
+                loadComponent: () => import('./features/plans/plan-editor/plan-editor.component').then(m => m.PlanEditorComponent),
+                canDeactivate: [unsavedChangesGuard]
             },
             {
                 path: 'experiments',

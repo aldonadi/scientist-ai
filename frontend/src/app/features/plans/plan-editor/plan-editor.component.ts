@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router, ActivatedRoute } from '@angular/router';
 import { PlanService, ExperimentPlan, CreatePlanDto, Role, Goal, Script } from '../../../core/services/plan.service';
+import { ToastService } from '../../../core/services/toast.service';
+import { CanComponentDeactivate } from '../../../core/guards/unsaved-changes.guard';
 import { GeneralTabComponent } from './general-tab.component';
 import { EnvironmentTabComponent } from './environment-tab.component';
 import { RolesTabComponent } from './roles-tab.component';
@@ -33,6 +35,9 @@ import { ScriptsTabComponent } from './scripts-tab.component';
           <h1 class="text-2xl font-bold text-gray-900">
             {{ isNew ? 'Create Plan' : 'Edit Plan: ' + plan.name }}
           </h1>
+          <span *ngIf="isDirty()" class="ml-3 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full border border-amber-200">
+             ● Unsaved Changes
+          </span>
         </div>
         <div class="flex items-center space-x-3">
           <button (click)="goBack()" 
@@ -103,7 +108,7 @@ import { ScriptsTabComponent } from './scripts-tab.component';
     </div>
   `
 })
-export class PlanEditorComponent implements OnInit {
+export class PlanEditorComponent implements OnInit, CanComponentDeactivate {
   @Input() id?: string;
 
   // Access the child component to get full state (variables + types)
@@ -140,8 +145,12 @@ export class PlanEditorComponent implements OnInit {
       maxSteps: 20
     };
 
+  // Snapshot of initial state for dirty check
+  private initialPlanState: string = '';
+
   constructor(
     private planService: PlanService,
+    private toastService: ToastService,
     private router: Router,
     private route: ActivatedRoute,
     private http: HttpClient
@@ -178,6 +187,7 @@ export class PlanEditorComponent implements OnInit {
           scripts: plan.scripts || [],
           maxSteps: plan.maxSteps || 20
         };
+        this.saveInitialState();
       },
       error: (err) => {
         console.error('Failed to load plan:', err);
@@ -226,21 +236,66 @@ export class PlanEditorComponent implements OnInit {
       scripts: this.plan.scripts,
       goals: this.plan.goals.map((g: any) => ({
         description: g.description,
-        condition: g.conditionScript || g.condition
+        conditionScript: g.conditionScript || g.condition // Use conditionScript to match backend schema
       }))
     };
+
+    console.log('[PlanEditor] Saving Plan Payload:', payload);
 
     const action = this.isNew
       ? this.planService.createPlan(payload)
       : this.planService.updatePlan(this.id!, payload);
 
     action.subscribe({
-      next: () => this.router.navigate(['/plans']),
+      next: (savedPlan) => {
+        this.toastService.success('Experiment Plan Saved Successfully');
+        // Update initial state to new saved state
+        this.saveInitialState();
+
+        // If it was new, we might want to navigate to the edit URL of the new plan, 
+        // OR just go back. User story implies redirect is fine, but maybe we stay?
+        // Let's stick to existing behavior (navigate back) but rely on the toast.
+        // Wait, if we redirect immediately, the toast might be lost if it's not global per-se 
+        // (but ToastService is root, and ToastComponent is in AppComponent, so it persists!)
+        setTimeout(() => this.router.navigate(['/plans']), 500);
+      },
       error: (err) => {
         console.error('Failed to save plan:', err);
-        alert('Failed to save plan: ' + (err.error?.message || err.message));
+        this.toastService.error('Failed to save plan: ' + (err.error?.message || err.message));
       }
     });
+  }
+
+  saveInitialState(): void {
+    // We serialize the relevant parts of the plan to detect changes later.
+    // NOTE: This simple JSON stringify comparison might have issues with order, 
+    // but for simple plan structures it's usually "good enough".
+    this.initialPlanState = JSON.stringify(this.getCleanPlanObject());
+  }
+
+  getCleanPlanObject(): any {
+    // Return a clean object of the plan data, filtering out UI-specific stuff if any
+    return {
+      name: this.plan.name,
+      description: this.plan.description,
+      maxSteps: this.plan.maxSteps,
+      initialEnvironment: this.plan.initialEnvironment,
+      roles: this.plan.roles,
+      goals: this.plan.goals,
+      scripts: this.plan.scripts
+    };
+  }
+
+  isDirty(): boolean {
+    const currentState = JSON.stringify(this.getCleanPlanObject());
+    return this.initialPlanState !== currentState;
+  }
+
+  canDeactivate(): boolean {
+    if (this.isDirty()) {
+      return confirm(`Are you sure you want to leave without saving changes to the '${this.plan.name}' Experiment Plan?`);
+    }
+    return true;
   }
 
   goBack(): void {
