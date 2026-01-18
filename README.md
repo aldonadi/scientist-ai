@@ -127,3 +127,28 @@ Uses Jasmine + Karma for unit and component tests.
    ```
 
 4. Open `http://localhost:4200` in your browser.
+
+---
+
+## How to Run: Lemonade Stand Simulation
+
+This repository includes a sophisticated "Lemonade Stand" simulation designed to test complex agent behaviors, environment variable management, and tool usage.
+
+### 1. Create Tools
+The simulation relies on a set of tools in the `lemonade_stand` namespace. These should be created first.
+- **Tools**: `purchase_lemons`, `purchase_cups`, `purchase_sugar`, `purchase_ice`, `set_advertised_drink_price`, `sell_lemonade`, `mix_lemonade`, `write_journal_entry`, `take_loan`, `repay_loan`.
+
+### 2. Create Experiment Plan
+Create a new Experiment Plan with the following configuration:
+- **Environment**: Initialize `cash_on_hand` (50), `loan_balance` (0), inventory counts, `journal` array [], and `stats` object {}.
+- **Role**: "Lemonade Stand Operator" with the `lemonade_stand` tools and access to relevant environment variables via the whitelist.
+- **Goals**: 
+  - **Success**: `env.stats.current_net_worth >= 1000`
+  - **Failure**: `env.cash_on_hand <= 0 and env.loan_balance >= 200`
+- **Scripts**: 
+  - `STEP_START`: Handle ice melting, calculating customers based on price, and accruing loan interest.
+  - `STEP_END`: Update net worth statistics.
+
+### 3. Run Experiment
+Go to the **Plans** page in the frontend (http://localhost:4200/plans) and click **Run** on the "Lemonade Stand Simulation" plan.
+Monitor the `stats` environment variable in the **Experiment Monitor** to watch the agent's progress!
