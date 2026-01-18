@@ -3,6 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
+export interface ChatMessage {
+    role: 'system' | 'user' | 'assistant' | 'tool';
+    content: string;
+    tool_calls?: any[];
+    timestamp: string;
+}
+
 export interface Experiment {
     _id: string;
     planId: string;
@@ -14,6 +21,7 @@ export interface Experiment {
     result?: string;
     createdAt?: string;
     updatedAt?: string;
+    roleHistory?: { [key: string]: ChatMessage[] };
 }
 
 export interface CreateExperimentDto {

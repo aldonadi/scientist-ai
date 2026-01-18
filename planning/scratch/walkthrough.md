@@ -36,3 +36,14 @@ Created `backend/tests/services/experiment-orchestrator.history.test.js`.
 
 ### Manual Verification
 The implementation ensures that as the experiment progresses, the `User` prompt for Step N includes the full conversation history from Step 1 to N-1, allowing the model to reference past actions.
+
+## User Interface
+
+Added a **Chat History** tab to the Experiment Monitor page:
+- **Role Selection Sidebar**: Choose which Role's perspective to view.
+- **Message Stream**:
+  - **System Prompts**: Displayed discretely.
+  - **Step Prompts (User)**: Blue bubbles showing the constructed prompt for the step.
+  - **Assistant Responses**: White bubbles showing the model's text response.
+  - **Tool Calls**: Embedded within the assistant's response, showing the function and arguments.
+  - **Tool Results**: Distinct gray blocks showing the JSON output from the tool execution.
