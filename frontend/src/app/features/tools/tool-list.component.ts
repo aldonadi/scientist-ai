@@ -112,7 +112,7 @@ import { ToolService, Tool } from '../../core/services/tool.service';
 
     <!-- Fixed Position Tooltip (rendered outside overflow container) -->
     <div *ngIf="previewTool"
-         class="fixed z-[9999] w-96 max-h-[60vh] bg-gray-900 text-green-400 p-4 rounded-lg shadow-xl font-mono text-xs whitespace-pre overflow-auto pointer-events-none"
+         class="fixed z-[9999] w-max max-w-[80vw] max-h-[60vh] bg-gray-900 text-green-400 p-4 rounded-lg shadow-xl font-mono text-xs whitespace-pre overflow-auto pointer-events-none"
          [style.left.px]="tooltipX"
          [style.top.px]="tooltipY">
       <div class="text-gray-500 mb-2">[PREVIEW]</div>
