@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { PlanService, ExperimentPlan } from '../../core/services/plan.service';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -207,6 +208,9 @@ export class PlanListComponent implements OnInit {
   searchQuery = '';
   autoOpenOnRun = true;
 
+  // Map of planId -> last run info
+  planLastRun: { [planId: string]: { time: Date; status: string } } = {};
+
   // Duplicate modal state
   showDuplicateModal = false;
   duplicateName = '';
@@ -232,11 +236,13 @@ export class PlanListComponent implements OnInit {
     private planService: PlanService,
     private confirmService: ConfirmService,
     private toastService: ToastService,
-    private router: Router
+    private router: Router,
+    private http: HttpClient
   ) { }
 
   ngOnInit(): void {
     this.loadPlans();
+    this.loadExperiments();
   }
 
   loadPlans(): void {
@@ -249,9 +255,54 @@ export class PlanListComponent implements OnInit {
     });
   }
 
+  loadExperiments(): void {
+    this.http.get<any[]>('/api/experiments').subscribe({
+      next: (experiments) => {
+        // Build a map of planId -> most recent experiment
+        this.planLastRun = {};
+        for (const exp of experiments) {
+          const expTime = new Date(exp.startTime || exp.createdAt);
+          const existing = this.planLastRun[exp.planId];
+
+          if (!existing || expTime > existing.time) {
+            this.planLastRun[exp.planId] = {
+              time: expTime,
+              status: exp.status
+            };
+          }
+        }
+      },
+      error: (err) => console.error('Failed to load experiments:', err)
+    });
+  }
+
   getLastRun(plan: ExperimentPlan): string {
-    // This would come from experiment data in a real app
-    return 'Never';
+    const lastRun = this.planLastRun[plan._id];
+    if (!lastRun) {
+      return 'Never';
+    }
+
+    // Format as relative time or date
+    const now = new Date();
+    const diff = now.getTime() - lastRun.time.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    let timeStr: string;
+    if (minutes < 1) {
+      timeStr = 'Just now';
+    } else if (minutes < 60) {
+      timeStr = `${minutes}m ago`;
+    } else if (hours < 24) {
+      timeStr = `${hours}h ago`;
+    } else if (days < 7) {
+      timeStr = `${days}d ago`;
+    } else {
+      timeStr = lastRun.time.toLocaleDateString();
+    }
+
+    return `${timeStr} (${lastRun.status})`;
   }
 
   async runPlan(plan: ExperimentPlan): Promise<void> {
