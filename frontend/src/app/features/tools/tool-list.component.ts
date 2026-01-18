@@ -1,14 +1,14 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ToolService, Tool } from '../../core/services/tool.service';
 
 @Component({
-    selector: 'app-tool-list',
-    standalone: true,
-    imports: [CommonModule, RouterLink, FormsModule],
-    template: `
+  selector: 'app-tool-list',
+  standalone: true,
+  imports: [CommonModule, RouterLink, FormsModule],
+  template: `
     <div class="space-y-6">
       <!-- Header -->
       <div class="flex items-center justify-between">
@@ -52,21 +52,12 @@ import { ToolService, Tool } from '../../core/services/tool.service';
             <tr *ngFor="let tool of filteredTools" 
                 class="hover:bg-gray-50 transition-colors group">
               <td class="px-6 py-4">
-                <div class="relative">
-                  <a [routerLink]="['/tools', tool._id]" 
-                     class="text-blue-600 hover:text-blue-800 font-medium"
-                     (mouseenter)="showPreview(tool)"
-                     (mouseleave)="hidePreview()">
+                <a [routerLink]="['/tools', tool._id]" 
+                   class="text-blue-600 hover:text-blue-800 font-medium"
+                   (mouseenter)="showPreview($event, tool)"
+                   (mouseleave)="hidePreview()">
                     {{ tool.name }}
-                  </a>
-                  
-                  <!-- Code Preview Tooltip -->
-                  <div *ngIf="previewTool?._id === tool._id"
-                       class="absolute z-50 left-0 top-8 w-96 bg-gray-900 text-green-400 p-4 rounded-lg shadow-xl font-mono text-xs whitespace-pre overflow-hidden">
-                    <div class="text-gray-500 mb-2">[PREVIEW]</div>
-                    {{ getPreviewCode(tool) }}
-                  </div>
-                </div>
+                </a>
               </td>
               <td class="px-6 py-4 text-gray-600">{{ tool.namespace }}</td>
               <td class="px-6 py-4 text-gray-500 text-sm">{{ formatDate(tool.updatedAt) }}</td>
@@ -118,124 +109,176 @@ import { ToolService, Tool } from '../../core/services/tool.service';
         </div>
       </div>
     </div>
+
+    <!-- Fixed Position Tooltip (rendered outside overflow container) -->
+    <div *ngIf="previewTool"
+         class="fixed z-[9999] w-96 max-h-[60vh] bg-gray-900 text-green-400 p-4 rounded-lg shadow-xl font-mono text-xs whitespace-pre overflow-auto pointer-events-none"
+         [style.left.px]="tooltipX"
+         [style.top.px]="tooltipY">
+      <div class="text-gray-500 mb-2">[PREVIEW]</div>
+      {{ getPreviewCode(previewTool) }}
+    </div>
   `
 })
 export class ToolListComponent implements OnInit {
-    tools: Tool[] = [];
-    filteredTools: Tool[] = [];
-    namespaces: string[] = [];
+  tools: Tool[] = [];
+  filteredTools: Tool[] = [];
+  namespaces: string[] = [];
 
-    searchQuery = '';
-    selectedNamespace = '';
+  searchQuery = '';
+  selectedNamespace = '';
 
-    previewTool: Tool | null = null;
+  previewTool: Tool | null = null;
+  tooltipX = 0;
+  tooltipY = 0;
 
-    currentPage = 1;
-    pageSize = 10;
-    totalTools = 0;
+  currentPage = 1;
+  pageSize = 10;
+  totalTools = 0;
 
-    Math = Math;
+  Math = Math;
 
-    constructor(private toolService: ToolService) { }
+  constructor(private toolService: ToolService) { }
 
-    ngOnInit(): void {
-        this.loadTools();
+  ngOnInit(): void {
+    this.loadTools();
+  }
+
+  get totalPages(): number {
+    return Math.ceil(this.totalTools / this.pageSize);
+  }
+
+  get pages(): number[] {
+    const pages = [];
+    for (let i = 1; i <= Math.min(this.totalPages, 5); i++) {
+      pages.push(i);
     }
+    return pages;
+  }
 
-    get totalPages(): number {
-        return Math.ceil(this.totalTools / this.pageSize);
-    }
-
-    get pages(): number[] {
-        const pages = [];
-        for (let i = 1; i <= Math.min(this.totalPages, 5); i++) {
-            pages.push(i);
-        }
-        return pages;
-    }
-
-    loadTools(): void {
-        this.toolService.getTools().subscribe({
-            next: (tools) => {
-                this.tools = tools;
-                this.totalTools = tools.length;
-                this.namespaces = [...new Set(tools.map(t => t.namespace))];
-                this.filterTools();
-            },
-            error: (err) => console.error('Failed to load tools:', err)
-        });
-    }
-
-    filterTools(): void {
-        let filtered = this.tools;
-
-        if (this.searchQuery) {
-            const query = this.searchQuery.toLowerCase();
-            filtered = filtered.filter(t =>
-                t.name.toLowerCase().includes(query) ||
-                t.description.toLowerCase().includes(query)
-            );
-        }
-
-        if (this.selectedNamespace) {
-            filtered = filtered.filter(t => t.namespace === this.selectedNamespace);
-        }
-
-        this.totalTools = filtered.length;
-        const start = (this.currentPage - 1) * this.pageSize;
-        this.filteredTools = filtered.slice(start, start + this.pageSize);
-    }
-
-    showPreview(tool: Tool): void {
-        this.previewTool = tool;
-    }
-
-    hidePreview(): void {
-        this.previewTool = null;
-    }
-
-    getPreviewCode(tool: Tool): string {
-        const lines = tool.code.split('\n').slice(0, 7);
-        return lines.join('\n');
-    }
-
-    formatDate(dateStr: string): string {
-        const date = new Date(dateStr);
-        const now = new Date();
-        const diff = now.getTime() - date.getTime();
-
-        if (diff < 60000) return 'Just now';
-        if (diff < 3600000) return `${Math.floor(diff / 60000)} mins ago`;
-        if (diff < 86400000) return `${Math.floor(diff / 3600000)} hours ago`;
-        if (diff < 172800000) return 'Yesterday';
-        return date.toLocaleDateString();
-    }
-
-    deleteTool(tool: Tool): void {
-        if (confirm(`Delete tool "${tool.namespace}/${tool.name}"?`)) {
-            this.toolService.deleteTool(tool._id).subscribe({
-                next: () => this.loadTools(),
-                error: (err) => console.error('Failed to delete tool:', err)
-            });
-        }
-    }
-
-    prevPage(): void {
-        if (this.currentPage > 1) {
-            this.currentPage--;
-            this.filterTools();
-        }
-    }
-
-    nextPage(): void {
-        if (this.currentPage < this.totalPages) {
-            this.currentPage++;
-            this.filterTools();
-        }
-    }
-
-    goToPage(page: number): void {
-        this.currentPage = page;
+  loadTools(): void {
+    this.toolService.getTools().subscribe({
+      next: (tools) => {
+        this.tools = tools;
+        this.totalTools = tools.length;
+        this.namespaces = [...new Set(tools.map(t => t.namespace))];
         this.filterTools();
+      },
+      error: (err) => console.error('Failed to load tools:', err)
+    });
+  }
+
+  filterTools(): void {
+    let filtered = this.tools;
+
+    if (this.searchQuery) {
+      const query = this.searchQuery.toLowerCase();
+      filtered = filtered.filter(t =>
+        t.name.toLowerCase().includes(query) ||
+        t.description.toLowerCase().includes(query)
+      );
     }
+
+    if (this.selectedNamespace) {
+      filtered = filtered.filter(t => t.namespace === this.selectedNamespace);
+    }
+
+    this.totalTools = filtered.length;
+    const start = (this.currentPage - 1) * this.pageSize;
+    this.filteredTools = filtered.slice(start, start + this.pageSize);
+  }
+
+  showPreview(event: MouseEvent, tool: Tool): void {
+    this.previewTool = tool;
+    this.updateTooltipPosition(event);
+  }
+
+  hidePreview(): void {
+    this.previewTool = null;
+  }
+
+  @HostListener('document:mousemove', ['$event'])
+  onMouseMove(event: MouseEvent): void {
+    if (this.previewTool) {
+      this.updateTooltipPosition(event);
+    }
+  }
+
+  private updateTooltipPosition(event: MouseEvent): void {
+    const tooltipWidth = 384; // w-96 = 24rem = 384px
+    const tooltipHeight = 300; // Approximate max height
+    const padding = 16;
+
+    // Start position: to the right and slightly below cursor
+    let x = event.clientX + padding;
+    let y = event.clientY + padding;
+
+    // Check right edge - if tooltip would overflow, show on left side of cursor
+    if (x + tooltipWidth > window.innerWidth - padding) {
+      x = event.clientX - tooltipWidth - padding;
+    }
+
+    // Check bottom edge - if tooltip would overflow, show above cursor
+    if (y + tooltipHeight > window.innerHeight - padding) {
+      y = window.innerHeight - tooltipHeight - padding;
+    }
+
+    // Ensure we don't go past top edge
+    if (y < padding) {
+      y = padding;
+    }
+
+    // Ensure we don't go past left edge
+    if (x < padding) {
+      x = padding;
+    }
+
+    this.tooltipX = x;
+    this.tooltipY = y;
+  }
+
+  getPreviewCode(tool: Tool): string {
+    const lines = tool.code.split('\n').slice(0, 15);
+    return lines.join('\n');
+  }
+
+  formatDate(dateStr: string): string {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)} mins ago`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)} hours ago`;
+    if (diff < 172800000) return 'Yesterday';
+    return date.toLocaleDateString();
+  }
+
+  deleteTool(tool: Tool): void {
+    if (confirm(`Delete tool "${tool.namespace}/${tool.name}"?`)) {
+      this.toolService.deleteTool(tool._id).subscribe({
+        next: () => this.loadTools(),
+        error: (err) => console.error('Failed to delete tool:', err)
+      });
+    }
+  }
+
+  prevPage(): void {
+    if (this.currentPage > 1) {
+      this.currentPage--;
+      this.filterTools();
+    }
+  }
+
+  nextPage(): void {
+    if (this.currentPage < this.totalPages) {
+      this.currentPage++;
+      this.filterTools();
+    }
+  }
+
+  goToPage(page: number): void {
+    this.currentPage = page;
+    this.filterTools();
+  }
 }
