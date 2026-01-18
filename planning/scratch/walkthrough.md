@@ -1,45 +1,84 @@
-# Variable Visibility Per Role - Walkthrough
+# Walkthrough - Add Plan Link to Experiment Monitor
 
-## Summary
-Implemented Story 063: Users can now configure which environment variables each Role sees "for free" in their system prompt.
+## Changes
 
-## What Was Built
+### Experiment Monitor Component
 
-### 1. Environment Tab - Expand/Collapse Rows
-- Each variable row has an expand chevron (▶/▼)
-- Expanding shows role visibility checkboxes
-- "Visible" column shows summary (e.g. "2 Roles", "All")
+I updated `ExperimentMonitorComponent` to display the name of the associated `ExperimentPlan` in the header.
 
-![Environment Tab with expanded row](file:///home/andrew/.gemini/antigravity/brain/319cb8c0-e7cc-4689-b50d-bacfc1d99556/.system_generated/click_feedback/click_feedback_1768766819511.png)
+#### `experiment-monitor.component.ts`
 
-### 2. Role Editor - Chip-Based Variable Picker
-- Replaced comma-separated text input with chips
-- Searchable dropdown shows all environment variables with type and value
-- "Select All" / "Clear All" quick action
+-   **Dependencies**: Injected `PlanService` to fetch plan details.
+-   **Logic**: Added `loadPlan` method which is called during `loadExperiment` if the experiment has a `planId`.
+-   **Template**: Added a specific section in the header to show the plan name with a `routerLink` to the plan editor.
 
-![Role Editor with variable picker](file:///home/andrew/.gemini/antigravity/brain/319cb8c0-e7cc-4689-b50d-bacfc1d99556/.system_generated/click_feedback/click_feedback_1768766853254.png)
+```typescript
+// experiment-monitor.component.ts
 
-### 3. Visibility Matrix Modal
-- Accessible from both Environment and Roles tabs
-- Grid layout: Variables × Roles
-- Row/column bulk actions (All/None)
-- Changes sync bidirectionally
+// ... imports
+import { PlanService } from '../../core/services/plan.service';
 
-![Visibility Matrix Modal](file:///home/andrew/.gemini/antigravity/brain/319cb8c0-e7cc-4689-b50d-bacfc1d99556/.system_generated/click_feedback/click_feedback_1768766862230.png)
+// ... component decorator
+@Component({
+  // ...
+  imports: [CommonModule, RouterLink, LogFeedComponent, JsonTreeComponent], // Added RouterLink
+  template: \`
+    <!-- ... -->
+            <div class="flex items-center gap-2 text-sm text-gray-500">
+              <span>{{ id }}</span>
+              <span *ngIf="planName" class="text-gray-300">|</span>
+              <a *ngIf="planName" 
+                 [routerLink]="['/plans', experiment?.planId]" 
+                 class="text-blue-600 hover:text-blue-800 hover:underline transition-colors cursor-pointer">
+                {{ planName }}
+              </a>
+            </div>
+    <!-- ... -->
+  \`
+})
+export class ExperimentMonitorComponent implements OnInit, OnDestroy {
+  // ...
+  planName?: string;
 
-## Files Changed
+  constructor(
+    // ...
+    private planService: PlanService
+  ) { }
 
-| File | Change |
-|------|--------|
-| [visibility-matrix-modal.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/visibility-matrix-modal.component.ts) | **NEW** - Grid modal with toggle logic |
-| [environment-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/environment-tab.component.ts) | Added expand/collapse, role checkboxes |
-| [roles-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/roles-tab.component.ts) | Replaced text input with chip picker |
-| [plan-editor.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/plan-editor.component.ts) | Wired data between tabs |
-| [index.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/index.ts) | Export new component |
+  // ...
 
-## Verification
+  loadExperiment(): void {
+    // ...
+    this.experimentService.getExperiment(this.id).subscribe({
+      next: (exp) => {
+        this.experiment = exp;
+        if (!this.planName && exp.planId) {
+          this.loadPlan(exp.planId);
+        }
+      },
+      // ...
+    });
+  }
 
-✅ Frontend build passes (`npm run build`)  
-✅ Browser testing confirmed all features working
+  loadPlan(planId: string): void {
+    this.planService.getPlan(planId).subscribe({
+      next: (plan) => {
+        this.planName = plan.name;
+      },
+      // ...
+    });
+  }
+}
+```
 
-![Recording of feature testing](file:///home/andrew/.gemini/antigravity/brain/319cb8c0-e7cc-4689-b50d-bacfc1d99556/visibility_feature_test_1768766797862.webp)
+## Verification Results
+
+### Automated Tests
+-   Ran `npm run build` in `frontend` directory.
+-   **Result**: Build completed successfully!
+
+### Manual Verification
+-   **Action**: Navigate to an Experiment Monitor page.
+-   **Expectation**: See the Plan Name (e.g., "My Experiment Plan") next to the Experiment ID in the header.
+-   **Action**: Click the Plan Name.
+-   **Expectation**: Navigate to the Plan Editor for that plan.
