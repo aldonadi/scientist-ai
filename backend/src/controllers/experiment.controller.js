@@ -71,7 +71,10 @@ const launchExperiment = async (req, res, next) => {
 const controlExperiment = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { command } = req.body;
+        const rawCommand = req.body.command;
+        const command = rawCommand ? rawCommand.toUpperCase() : null;
+
+        console.log(`[ExperimentControl] Received command: ${command} for experiment: ${id}`);
 
         if (!['PAUSE', 'RESUME', 'STOP'].includes(command)) {
             return res.status(400).json({
@@ -105,18 +108,27 @@ const controlExperiment = async (req, res, next) => {
             }
         } else if (command === 'RESUME') {
             if (experiment.status === 'PAUSED') {
-                const orchestrator = new ExperimentOrchestrator(experiment._id);
+                // Check if an orchestrator is already running/resident
+                const existingOrchestrator = OrchestratorRegistry.getInstance().get(experiment._id);
 
-                // Register for streaming visibility
-                OrchestratorRegistry.getInstance().register(experiment._id, orchestrator);
+                if (existingOrchestrator) {
+                    // Already exists. Updating the status in DB (below) will trigger it to continue its loop.
+                    console.log(`[Resume] Orchestrator already exists for ${experiment._id}. Resuming existing instance.`);
+                } else {
+                    // Use start() to spin up a new one
+                    const orchestrator = new ExperimentOrchestrator(experiment._id);
 
-                orchestrator.start()
-                    .catch(err => {
-                        console.error(`Orchestartor resume failed for ${experiment._id}:`, err);
-                    })
-                    .finally(() => {
-                        OrchestratorRegistry.getInstance().remove(experiment._id);
-                    });
+                    // Register for streaming visibility
+                    OrchestratorRegistry.getInstance().register(experiment._id, orchestrator);
+
+                    orchestrator.start()
+                        .catch(err => {
+                            console.error(`Orchestrator resume failed for ${experiment._id}:`, err);
+                        })
+                        .finally(() => {
+                            OrchestratorRegistry.getInstance().remove(experiment._id);
+                        });
+                }
 
                 experiment.status = 'RUNNING';
                 await experiment.save();
@@ -150,12 +162,7 @@ const controlExperiment = async (req, res, next) => {
             }
         }
 
-        res.json({
-            success: true,
-            oldStatus,
-            newStatus,
-            experimentId: experiment._id
-        });
+        res.json(experiment);
 
     } catch (error) {
         next(error);

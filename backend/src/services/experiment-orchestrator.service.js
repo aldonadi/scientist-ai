@@ -2,6 +2,7 @@ const { EventBus, EventTypes } = require('./event-bus');
 const { Experiment } = require('../models/experiment.model');
 const { ExperimentPlan } = require('../models/experimentPlan.model');
 const Tool = require('../models/tool.model');
+const { Provider } = require('../models/provider.model');
 const { deepCopy } = require('../models/schemas/environment.schema');
 const Logger = require('./logger.service');
 const ContainerPoolManager = require('./container-pool.service');
@@ -51,6 +52,7 @@ class ExperimentOrchestrator {
                 // Mongoose handles basic object assignment well.
                 // We will set it, but we need to save to persist.
                 this.experiment.currentEnvironment = this.plan.initialEnvironment;
+                this.experiment.markModified('currentEnvironment');
                 await this.experiment.save();
             }
         }
@@ -84,7 +86,7 @@ class ExperimentOrchestrator {
         }
         await this.experiment.save();
 
-        this.eventBus.emit(EventTypes.EXPERIMENT_START, {
+        await this.eventBus.emitAsync(EventTypes.EXPERIMENT_START, {
             experimentId: this.experiment._id,
             planName: this.plan.name
         });
@@ -142,7 +144,7 @@ class ExperimentOrchestrator {
                     const duration = this.experiment.endTime - this.experiment.startTime;
 
                     await this.experiment.save();
-                    this.eventBus.emit(EventTypes.EXPERIMENT_END, {
+                    await this.eventBus.emitAsync(EventTypes.EXPERIMENT_END, {
                         experimentId: this.experiment._id,
                         result: goalMet,
                         duration: duration
@@ -159,7 +161,7 @@ class ExperimentOrchestrator {
                     const duration = this.experiment.endTime - this.experiment.startTime;
 
                     await this.experiment.save();
-                    this.eventBus.emit(EventTypes.EXPERIMENT_END, {
+                    await this.eventBus.emitAsync(EventTypes.EXPERIMENT_END, {
                         experimentId: this.experiment._id,
                         result: 'Max Steps Exceeded',
                         duration: duration
@@ -184,7 +186,7 @@ class ExperimentOrchestrator {
 
                 await this.experiment.save();
 
-                this.eventBus.emit(EventTypes.EXPERIMENT_END, {
+                await this.eventBus.emitAsync(EventTypes.EXPERIMENT_END, {
                     experimentId: this.experiment._id,
                     result: 'Failed',
                     duration: duration,
@@ -201,7 +203,7 @@ class ExperimentOrchestrator {
     async processStep() {
         const step = this.experiment.currentStep;
 
-        this.eventBus.emit(EventTypes.STEP_START, {
+        await this.eventBus.emitAsync(EventTypes.STEP_START, {
             experimentId: this.experiment._id,
             stepNumber: step
         });
@@ -211,7 +213,7 @@ class ExperimentOrchestrator {
             await this.processRole(role);
         }
 
-        this.eventBus.emit(EventTypes.STEP_END, {
+        await this.eventBus.emitAsync(EventTypes.STEP_END, {
             experimentId: this.experiment._id,
             stepNumber: step,
             environmentSnapshot: this.experiment.currentEnvironment
@@ -223,7 +225,7 @@ class ExperimentOrchestrator {
      * Constructs the prompt, resolves tools, and emits the MODEL_PROMPT event.
      */
     async processRole(role) {
-        this.eventBus.emit(EventTypes.ROLE_START, {
+        await this.eventBus.emitAsync(EventTypes.ROLE_START, {
             experimentId: this.experiment._id,
             roleName: role.name
         });
@@ -295,7 +297,7 @@ class ExperimentOrchestrator {
 
         // 4. Emit MODEL_PROMPT
         // Hooks can listen to this and modify 'messages' if needed.
-        this.eventBus.emit(EventTypes.MODEL_PROMPT, {
+        await this.eventBus.emitAsync(EventTypes.MODEL_PROMPT, {
             experimentId: this.experiment._id,
             roleName: role.name,
             messages: messages,
@@ -320,26 +322,73 @@ class ExperimentOrchestrator {
             accumulatedResponse = '';
             toolCalls = [];
 
-            // We need to pass the config. For now using defaults or role.modelConfig if available
-            // Assuming role.modelConfig has the provider and modelName
+            // We need to resolve the Provider configuration from the DB
+            // role.modelConfig.provider is an ObjectId reference
+            const providerDoc = await Provider.findById(role.modelConfig.provider);
+            if (!providerDoc) {
+                // If the provider ID is missing (e.g. from bad seeding or deletion), we can't proceed.
+                // Log and break?
+                throw new Error(`Provider not found with ID: ${role.modelConfig.provider}`);
+            }
 
-            // Temporarily constructed provider object for the service
-            // This should ideally come from a populated modelConfig
             const providerConfig = {
-                type: role.modelConfig ? role.modelConfig.provider : 'OLLAMA', // Default
-                baseUrl: process.env.OLLAMA_HOST || 'http://localhost:11434' // TODO: Get from DB/Config
+                type: providerDoc.type,
+                baseUrl: providerDoc.baseUrl,
+                apiKey: providerDoc.apiKeyRef ? process.env[providerDoc.apiKeyRef] : undefined
             };
+
             const modelName = role.modelConfig ? role.modelConfig.modelName : 'llama3';
 
-            try {
-                const stream = await ProviderService.chat(
-                    providerConfig,
-                    modelName,
-                    currentMessages,
-                    toolsForProvider,
-                    { temperature: role.modelConfig?.temperature || 0.7 }
-                );
+            const maxRetries = this.plan.maxStepRetries || 3;
+            let retryCount = 0;
+            let success = false;
+            let stream = null;
 
+            while (!success && retryCount <= maxRetries) {
+                try {
+                    stream = await ProviderService.chat(
+                        providerConfig,
+                        modelName,
+                        currentMessages,
+                        toolsForProvider,
+                        { temperature: role.modelConfig?.temperature || 0.7 }
+                    );
+                    success = true;
+                } catch (chatErr) {
+                    retryCount++;
+                    this.eventBus.emit(EventTypes.LOG, {
+                        experimentId: this.experiment._id,
+                        stepNumber: this.experiment.currentStep,
+                        source: 'SYSTEM',
+                        message: `Inference attempt ${retryCount}/${maxRetries + 1} failed: ${chatErr.message}`,
+                        data: { error: chatErr.message }
+                    });
+
+                    if (retryCount > maxRetries) {
+                        // Stop the loop completely
+                        shouldContinue = false;
+                        // Throw a special error that the outer loop catches to stop the role?
+                        // Or just let the outer logic handle 'shouldContinue = false'.
+                        // If we just break, 'stream' is null.
+                        break;
+                    }
+
+                    // Simple backoff wait (1s * retryCount)
+                    await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+                }
+            }
+
+            if (!success || !stream) {
+                shouldContinue = false;
+                // Don't throw, just log (already logged failure) and stop role.
+                // This effectively "skips" the rest of the role logic if inference fails.
+                // If critical failure is desired, we should throw.
+                // User said: "halt the experiment after max retries".
+                // So we SHOULD throw.
+                throw new Error(`Inference failed after ${maxRetries} retries.`);
+            }
+
+            try {
                 for await (const event of stream) {
                     if (event.type === 'text') {
                         accumulatedResponse += event.content;
@@ -370,16 +419,25 @@ class ExperimentOrchestrator {
 
                     for (const call of toolCalls) {
                         // Emit BEFORE_TOOL_CALL for hooks
-                        this.eventBus.emit(EventTypes.BEFORE_TOOL_CALL, {
+                        await this.eventBus.emitAsync(EventTypes.BEFORE_TOOL_CALL, {
                             experimentId: this.experiment._id,
                             toolName: call.toolName,
                             args: call.args
                         });
 
-                        this.eventBus.emit(EventTypes.TOOL_CALL, {
+                        await this.eventBus.emitAsync(EventTypes.TOOL_CALL, {
                             experimentId: this.experiment._id,
                             toolName: call.toolName,
                             args: call.args
+                        });
+
+                        // Log tool call for UI visibility
+                        this.eventBus.emit(EventTypes.LOG, {
+                            experimentId: this.experiment._id,
+                            stepNumber: this.experiment.currentStep,
+                            source: 'TOOL',
+                            message: `Calling tool: ${call.toolName}`,
+                            data: { arguments: call.args }
                         });
 
                         // 1. Acquire Container
@@ -394,23 +452,94 @@ class ExperimentOrchestrator {
                         let result = '';
                         let error = null;
 
+                        // Create Python wrapper that calls the tool's execute() function
+                        // and outputs the modified environment as JSON
+                        const toolWrapper = `
+import os
+import json
+import sys
+import traceback
+
+try:
+    # Load environment and arguments from env vars
+    env_str = os.environ.get('TOOL_ENV', '{}')
+    args_str = os.environ.get('TOOL_ARGS', '{}')
+    
+    env = json.loads(env_str)
+    args = json.loads(args_str) if args_str else {}
+    
+    # User tool code - defines execute(env, args)
+    user_code = os.environ.get('TOOL_CODE', '')
+    
+    # Create namespace for exec
+    exec_namespace = {
+        'os': os,
+        'json': json,
+        'sys': sys
+    }
+    
+    # Execute tool code to define execute() function
+    exec(user_code, exec_namespace)
+    
+    # Call the execute function
+    result = None
+    if 'execute' in exec_namespace and callable(exec_namespace['execute']):
+        result = exec_namespace['execute'](env, args)
+    else:
+        raise Exception("Tool code must define an execute(env, args) function")
+    
+    # Output modified environment and result as JSON
+    print(json.dumps({
+        'success': True,
+        'environment': env,
+        'result': result if result is not None else ''
+    }))
+except Exception as e:
+    traceback.print_exc()
+    print(json.dumps({'success': False, 'error': str(e)}))
+`;
+
                         try {
-                            // 3. Execute
+                            // 3. Execute with wrapper
                             const execResult = await container.execute(
-                                toolDoc.code,
-                                filteredEnv.variables, // Pass the environment
-                                call.args
+                                toolWrapper,
+                                {
+                                    TOOL_ENV: JSON.stringify(this.experiment.currentEnvironment.variables),
+                                    TOOL_ARGS: JSON.stringify(call.args || {}),
+                                    TOOL_CODE: toolDoc.code
+                                },
+                                []
                             );
 
                             // 4. Handle Result
                             try {
                                 const jsonOutput = JSON.parse(execResult.stdout);
-                                // Merge into environment
-                                Object.assign(this.experiment.currentEnvironment.variables, jsonOutput);
-                                // Also update our local filtered copy for the next loop iteration visibility?
-                                Object.assign(filteredEnv.variables, jsonOutput);
-                                result = jsonOutput;
+
+                                if (!jsonOutput.success) {
+                                    throw new Error(jsonOutput.error || 'Tool execution failed');
+                                }
+
+                                // Merge environment changes from tool
+                                if (jsonOutput.environment) {
+                                    Object.assign(this.experiment.currentEnvironment.variables, jsonOutput.environment);
+                                    this.experiment.markModified('currentEnvironment');
+                                    // Also update our local filtered copy
+                                    Object.assign(filteredEnv.variables, jsonOutput.environment);
+                                }
+                                result = jsonOutput.result || jsonOutput.environment;
                             } catch (parseErr) {
+                                // Log that tool didn't return valid JSON
+                                this.eventBus.emit(EventTypes.LOG, {
+                                    experimentId: this.experiment._id,
+                                    stepNumber: this.experiment.currentStep,
+                                    source: 'TOOL',
+                                    message: `Tool ${call.toolName} did not return valid JSON - environment not updated`,
+                                    data: {
+                                        rawOutput: execResult.stdout,
+                                        stderr: execResult.stderr,
+                                        parseError: parseErr.message
+                                    }
+                                });
                                 result = execResult.stdout;
                             }
 
@@ -424,7 +553,7 @@ class ExperimentOrchestrator {
                             await container.destroy(); // One-shot
                         }
 
-                        this.eventBus.emit(EventTypes.TOOL_RESULT, {
+                        await this.eventBus.emitAsync(EventTypes.TOOL_RESULT, {
                             experimentId: this.experiment._id,
                             toolName: call.toolName,
                             result: error ? { error } : result,
@@ -439,7 +568,7 @@ class ExperimentOrchestrator {
                         });
 
                         // Emit AFTER_TOOL_CALL for hooks
-                        this.eventBus.emit(EventTypes.AFTER_TOOL_CALL, {
+                        await this.eventBus.emitAsync(EventTypes.AFTER_TOOL_CALL, {
                             experimentId: this.experiment._id,
                             toolName: call.toolName,
                             result: error ? { error } : result
@@ -450,7 +579,7 @@ class ExperimentOrchestrator {
                     loopCount++;
                 } else {
                     // No tool calls, just normal completion
-                    this.eventBus.emit(EventTypes.MODEL_RESPONSE_COMPLETE, {
+                    await this.eventBus.emitAsync(EventTypes.MODEL_RESPONSE_COMPLETE, {
                         experimentId: this.experiment._id,
                         roleName: role.name,
                         fullResponse: accumulatedResponse
@@ -494,11 +623,25 @@ import sys
 
 try:
     env_str = os.environ.get('EXPERIMENT_ENV', '{}')
-    env = json.loads(env_str)
+    env_dict = json.loads(env_str)
+    
+    class DotDict(dict):
+        def __getattr__(self, key):
+            if key not in self:
+                raise AttributeError(key)
+            return self[key]
+
+    # Recursive conversion for dot notation while keeping dict methods
+    def to_dot_dict(d):
+        if isinstance(d, dict):
+            return DotDict({k: to_dot_dict(v) for k, v in d.items()})
+        return d
+
+    env = to_dot_dict(env_dict)
     condition = os.environ.get('GOAL_CONDITION', 'False')
     
-    # Evaluate locally using env as the variable scope
-    result = eval(condition, {}, env)
+    # Evaluate locally using env object in scope
+    result = eval(condition, {}, {'env': env})
     
     print(json.dumps({'result': result}))
 except Exception as e:
@@ -596,7 +739,7 @@ except Exception as e:
                     status: this.experiment.status,
                     currentStep: this.experiment.currentStep
                 },
-                environment: deepCopy(this.experiment.currentEnvironment),
+                environment: JSON.parse(JSON.stringify(this.experiment.currentEnvironment.variables)),
                 event: eventPayload
             };
 
@@ -607,23 +750,66 @@ except Exception as e:
 import os
 import json
 import sys
+import traceback
 
 try:
+    # Helper for dot notation access - IMPORTANT: converts nested dicts IN-PLACE
+    class DotDict(dict):
+        def __getattr__(self, key):
+            if key not in self:
+                raise AttributeError(key)
+            val = self[key]
+            # Convert nested dict IN-PLACE to DotDict so mutations are reflected
+            if isinstance(val, dict) and not isinstance(val, DotDict):
+                val = DotDict(val)
+                self[key] = val  # Store the converted version back!
+            return val
+        
+        def __setattr__(self, key, value):
+            self[key] = value
+
+    # Interactive context for top-level code
     context_str = os.environ.get('HOOK_CONTEXT', '{}')
-    context = json.loads(context_str)
+    context_dict = json.loads(context_str)
     
-    experiment = context.get('experiment', {})
-    env = context.get('environment', {}).get('variables', {})
-    event = context.get('event', {})
+    # Create a robust context object
+    context = DotDict(context_dict)
     
-    # User code has access to: experiment, env, event
-    # User code can modify 'env' dict
+    # For backward compatibility with top-level scripts that expect 'experiment', 'env', 'event' locals
+    experiment = context_dict.get('experiment', {})
+    env = context_dict.get('environment', {}) # IT IS NOW JUST VARIABLES
+    event = context_dict.get('event', {})
+    
     user_code = os.environ.get('HOOK_CODE', '')
-    exec(user_code)
     
+    # Create a namespace for exec - this is CRITICAL for capturing user-defined functions
+    exec_namespace = {
+        'context': context,
+        'experiment': experiment,
+        'env': env,
+        'event': event,
+        'os': os,
+        'json': json,
+        'sys': sys
+    }
+    
+    # Execute the user code in the shared namespace
+    exec(user_code, exec_namespace)
+    
+    # Check if a 'run' function was defined in the exec namespace and call it
+    if 'run' in exec_namespace and callable(exec_namespace['run']):
+        exec_namespace['run'](context)
+        
+        # Sync changes back from context['environment'] to our 'env' local
+        if 'environment' in context:
+            env = context['environment']
+            if isinstance(env, DotDict):
+                env = dict(env)  # Convert back to regular dict for JSON serialization
+            
     # Output modified environment
     print(json.dumps({'success': True, 'environment': env}))
 except Exception as e:
+    traceback.print_exc()
     print(json.dumps({'success': False, 'error': str(e)}))
 `;
 
@@ -664,6 +850,7 @@ except Exception as e:
             // Merge environment changes back
             if (output.environment) {
                 Object.assign(this.experiment.currentEnvironment.variables, output.environment);
+                this.experiment.markModified('currentEnvironment');
             }
 
         } catch (e) {

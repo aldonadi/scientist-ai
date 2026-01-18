@@ -66,13 +66,18 @@ Status can be:
 | 053_plan_duplicate_endpoint                        | 2      | DONE        |
 | 054_llm_retry_logic                                | 3      | DONE        |
 | 055_sse_streaming_endpoint                         | 5      | DONE        |
-| 029_setup_frontend_layout                          | 3      | NOT READY   |
-| 030_ui_tool_list                                   | 2      | NOT READY   |
-| 031_ui_tool_editor                                 | 5      | NOT READY   |
-| 032_ui_plan_list                                   | 2      | NOT READY   |
-| 033_ui_plan_editor_basic                           | 3      | NOT READY   |
-| 034_ui_plan_editor_roles                           | 5      | NOT READY   |
-| 035_ui_experiment_monitor                          | 8      | NOT READY   |
+| 029_setup_frontend_layout                          | 3      | DONE        |
+| 030_ui_tool_list                                   | 2      | IN-PROGRESS |
+| 031_ui_tool_editor                                 | 5      | REVIEW      |
+| 032_ui_plan_list                                   | 2      | REVIEW      |
+| 057_ui_plan_editor_general                         | 3      | REVIEW      |
+| 033_ui_plan_editor_environment                     | 3      | REVIEW      |
+| 034_ui_plan_editor_roles                           | 5      | REVIEW      |
+| 056_ui_plan_editor_workflow_scripts                | 5      | REVIEW      |
+| 059_fix_frontend_backend_integration               | 3      | DONE        |
+| 035_ui_experiment_monitor                          | 8      | IN-PROGRESS |
 | 036_ui_realtime_logs                               | 5      | NOT READY   |
-
-
+| 058_input_validation                               | 5      | REVIEW      |
+| 060_enhance_role_editor_ui                         | 3      | DONE        |
+| 061_fix_plan_save_and_dirty_check                  | 3      | DONE        |
+| 062_fix_controls_and_logging                       | 3      | IN-PROGRESS |
