@@ -2,8 +2,14 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { ExperimentService, Experiment } from '../../core/services/experiment.service';
+import { HttpClient } from '@angular/common/http';
 
 type ExperimentStatus = 'INITIALIZING' | 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'FAILED' | 'STOPPED';
+
+interface ExperimentWithPlan extends Experiment {
+  planName: string;
+  maxSteps: number;
+}
 
 @Component({
   selector: 'app-experiment-list',
@@ -51,8 +57,8 @@ type ExperimentStatus = 'INITIALIZING' | 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'F
           <thead class="bg-gray-50">
             <tr>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan ID</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experiment ID</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Time</th>
               <th scope="col" class="relative px-6 py-3">
                 <span class="sr-only">Actions</span>
@@ -71,14 +77,14 @@ type ExperimentStatus = 'INITIALIZING' | 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'F
                   'bg-orange-100 text-orange-800': experiment.status === 'PAUSED',
                   'bg-gray-100 text-gray-800': experiment.status === 'STOPPED'
                 }" class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full">
-                  {{ experiment.status }}
+                  {{ getStatusDisplay(experiment) }}
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {{ experiment._id }}
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                {{ experiment.planName }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {{ experiment.planId }}
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400 font-mono text-xs">
+                {{ experiment._id }}
               </td>
                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 {{ experiment.startTime | date:'medium' }}
@@ -94,16 +100,18 @@ type ExperimentStatus = 'INITIALIZING' | 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'F
   `
 })
 export class ExperimentListComponent implements OnInit, OnDestroy {
-  experiments: Experiment[] = [];
+  experiments: ExperimentWithPlan[] = [];
   statusFilter: ExperimentStatus | null = null;
   availableStatuses: ExperimentStatus[] = ['RUNNING', 'COMPLETED', 'FAILED', 'PAUSED', 'STOPPED'];
 
+  private planDataMap: { [id: string]: { name: string; maxSteps: number } } = {};
   private refreshInterval: any;
   private readonly REFRESH_INTERVAL_MS = 30000; // 30 seconds
 
   constructor(
     private experimentService: ExperimentService,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private http: HttpClient
   ) { }
 
   ngOnInit(): void {
@@ -114,7 +122,7 @@ export class ExperimentListComponent implements OnInit, OnDestroy {
         this.statusFilter = status as ExperimentStatus;
       }
     });
-    this.loadExperiments();
+    this.loadPlansAndExperiments();
     this.startAutoRefresh();
   }
 
@@ -134,15 +142,42 @@ export class ExperimentListComponent implements OnInit, OnDestroy {
     }
   }
 
+  private loadPlansAndExperiments(): void {
+    // First load plans, then experiments
+    this.http.get<any[]>('/api/plans').subscribe({
+      next: (plans) => {
+        this.planDataMap = {};
+        plans.forEach(plan => {
+          this.planDataMap[plan._id] = { name: plan.name, maxSteps: plan.maxSteps || 20 };
+        });
+        this.loadExperiments();
+      },
+      error: (err) => {
+        console.error('Failed to load plans:', err);
+        this.loadExperiments(); // Still try to load experiments
+      }
+    });
+  }
+
   loadExperiments(): void {
     this.experimentService.getExperiments().subscribe({
       next: (experiments) => {
         // Sort: RUNNING experiments first, then by startTime descending
-        this.experiments = experiments.sort((a, b) => {
+        const sorted = experiments.sort((a, b) => {
           if (a.status === 'RUNNING' && b.status !== 'RUNNING') return -1;
           if (a.status !== 'RUNNING' && b.status === 'RUNNING') return 1;
           // Both same status, sort by startTime descending
           return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
+        });
+
+        // Map to include plan data
+        this.experiments = sorted.map(exp => {
+          const planData = this.planDataMap[exp.planId] || { name: 'Unknown Plan', maxSteps: 20 };
+          return {
+            ...exp,
+            planName: planData.name,
+            maxSteps: planData.maxSteps
+          };
         });
       },
       error: (error) => {
@@ -155,11 +190,18 @@ export class ExperimentListComponent implements OnInit, OnDestroy {
     this.statusFilter = status;
   }
 
-  get filteredExperiments(): Experiment[] {
+  get filteredExperiments(): ExperimentWithPlan[] {
     if (!this.statusFilter) {
       return this.experiments;
     }
     return this.experiments.filter(exp => exp.status === this.statusFilter);
+  }
+
+  getStatusDisplay(experiment: ExperimentWithPlan): string {
+    if (experiment.status === 'RUNNING') {
+      return `RUNNING ${experiment.currentStep}/${experiment.maxSteps}`;
+    }
+    return experiment.status;
   }
 
   getActiveFilterClass(status: ExperimentStatus): string {

@@ -6,6 +6,7 @@ interface RecentExperiment {
   _id: string;
   planId: string;
   planName: string;
+  maxSteps: number;
   status: 'INITIALIZING' | 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'FAILED' | 'STOPPED';
   currentStep: number;
 }
@@ -92,7 +93,7 @@ interface RecentExperiment {
               </span>
               <div class="ml-4">
                 <p class="font-medium text-gray-900">{{ exp.planName }}</p>
-                <p class="text-xs text-gray-400">ID: {{ exp._id }} · Step {{ exp.currentStep }}</p>
+                <p class="text-xs text-gray-400">ID: {{ exp._id }} · Step {{ exp.currentStep }}/{{ exp.maxSteps }}</p>
               </div>
             </div>
             <div class="flex items-center space-x-2">
@@ -170,12 +171,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
         fetch('/api/plans')
       ]);
 
-      let planNameMap: { [id: string]: string } = {};
+      let planDataMap: { [id: string]: { name: string; maxSteps: number } } = {};
 
       if (plansResponse.ok) {
         const plans = await plansResponse.json();
         plans.forEach((plan: any) => {
-          planNameMap[plan._id] = plan.name;
+          planDataMap[plan._id] = { name: plan.name, maxSteps: plan.maxSteps || 20 };
         });
       }
 
@@ -189,14 +190,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
           return dateB.getTime() - dateA.getTime();
         });
 
-        // Map to include plan names
-        this.recentExperiments = sorted.slice(0, 5).map((exp: any) => ({
-          _id: exp._id,
-          planId: exp.planId,
-          planName: planNameMap[exp.planId] || 'Unknown Plan',
-          status: exp.status,
-          currentStep: exp.currentStep || 0
-        }));
+        // Map to include plan names and maxSteps
+        this.recentExperiments = sorted.slice(0, 5).map((exp: any) => {
+          const planData = planDataMap[exp.planId] || { name: 'Unknown Plan', maxSteps: 20 };
+          return {
+            _id: exp._id,
+            planId: exp.planId,
+            planName: planData.name,
+            maxSteps: planData.maxSteps,
+            status: exp.status,
+            currentStep: exp.currentStep || 0
+          };
+        });
 
         this.activeExperiments = experiments.filter((e: any) => e.status === 'RUNNING').length;
         this.queuedCount = experiments.filter((e: any) => e.status === 'INITIALIZING').length;
