@@ -78,7 +78,8 @@ import { ScriptsTabComponent } from './scripts-tab.component';
           [class.hidden]="activeTab !== 'general'"
           [(name)]="plan.name"
           [(description)]="plan.description"
-          [(maxSteps)]="plan.maxSteps">
+          [(maxSteps)]="plan.maxSteps"
+          [(maxStepRetries)]="plan.maxStepRetries">
         </app-general-tab>
         
         <app-environment-tab 
@@ -136,6 +137,7 @@ export class PlanEditorComponent implements OnInit, CanComponentDeactivate {
     goals: Goal[];
     scripts: Script[];
     maxSteps: number;
+    maxStepRetries: number;
   } = {
       name: '',
       description: '',
@@ -143,7 +145,8 @@ export class PlanEditorComponent implements OnInit, CanComponentDeactivate {
       roles: [],
       goals: [],
       scripts: [],
-      maxSteps: 20
+      maxSteps: 20,
+      maxStepRetries: 3
     };
 
   // Snapshot of initial state for dirty check
@@ -189,7 +192,8 @@ export class PlanEditorComponent implements OnInit, CanComponentDeactivate {
           roles: plan.roles || [],
           goals: plan.goals || [],
           scripts: plan.scripts || [],
-          maxSteps: plan.maxSteps || 20
+          maxSteps: plan.maxSteps || 20,
+          maxStepRetries: plan.maxStepRetries !== undefined ? plan.maxStepRetries : 3
         };
         this.saveInitialState();
       },
@@ -232,6 +236,7 @@ export class PlanEditorComponent implements OnInit, CanComponentDeactivate {
       name: this.plan.name,
       description: this.plan.description,
       maxSteps: this.plan.maxSteps,
+      maxStepRetries: this.plan.maxStepRetries,
       initialEnvironment: {
         variables: variables,
         variableTypes: variableTypes
@@ -283,6 +288,7 @@ export class PlanEditorComponent implements OnInit, CanComponentDeactivate {
       name: this.plan.name,
       description: this.plan.description,
       maxSteps: this.plan.maxSteps,
+      maxStepRetries: this.plan.maxStepRetries,
       initialEnvironment: this.plan.initialEnvironment,
       roles: this.plan.roles,
       goals: this.plan.goals,
@@ -346,7 +352,8 @@ export class PlanEditorComponent implements OnInit, CanComponentDeactivate {
             roles: [],
             goals: [],
             scripts: [],
-            maxSteps: 20
+            maxSteps: 20,
+            maxStepRetries: 3
           };
           this.saveInitialState();
         } else {

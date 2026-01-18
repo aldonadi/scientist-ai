@@ -11,7 +11,17 @@
   - [x] Created ConfirmDialogComponent with styled modal UI
   - [x] Cancel button shows "Discard Changes?" modal
   - [x] Navigation guard shows "Unsaved Changes" modal  
-  - [x] Fixed double modal issue with bypassGuard flag
+- [x] **Experiments List Enhancements:**
+  - [x] Replace "Plan ID" with "Experiment Plan Name"
+  - [x] Reorder columns
+  - [x] Update RUNNING badge
+  - [x] Add STEP column
+  - [x] Fix "Last Run" field
+  - [x] Implement Batch Run features
+- [x] **Configurable Safety Limits:**
+  - [x] Add `maxStepRetries` input to `GeneralTabComponent`
+  - [x] Update `PlanEditorComponent` to handle `maxStepRetries`
+  - [x] Verify validation and saving
 
 - [x] Add unsaved changes workflow to Tool Editor
   - [x] Added dirty checking (saveInitialState, isDirty)
