@@ -85,14 +85,17 @@ import { ScriptsTabComponent } from './scripts-tab.component';
         <app-environment-tab 
           class="h-full block"
           [class.hidden]="activeTab !== 'environment'"
-          [(environment)]="plan.initialEnvironment">
+          [(environment)]="plan.initialEnvironment"
+          [roles]="plan.roles"
+          (rolesChange)="plan.roles = $event">
         </app-environment-tab>
         
         <app-roles-tab 
           class="h-full block"
           [class.hidden]="activeTab !== 'roles'"
           [(roles)]="plan.roles"
-          [providers]="providers">
+          [providers]="providers"
+          [environmentVars]="getEnvironmentVars()">
         </app-roles-tab>
         
         <app-goals-tab 
@@ -361,5 +364,35 @@ export class PlanEditorComponent implements OnInit, CanComponentDeactivate {
         }
       }
     }
+  }
+
+  /**
+   * Get environment variables as an array with key, type, and value info
+   * for the Roles tab variable picker.
+   */
+  getEnvironmentVars(): { key: string; type: string; value: any }[] {
+    if (this.envTab && this.envTab.variables) {
+      return this.envTab.variables
+        .filter(v => v.key && !v.keyError)
+        .map(v => ({
+          key: v.key,
+          type: v.type,
+          value: this.envTab.parseValue(v)
+        }));
+    }
+    // Fallback: derive from the plan's initialEnvironment
+    return Object.entries(this.plan.initialEnvironment || {}).map(([key, value]) => ({
+      key,
+      type: this.detectType(value),
+      value
+    }));
+  }
+
+  private detectType(value: any): string {
+    if (Array.isArray(value)) return 'array';
+    if (typeof value === 'object' && value !== null) return 'object';
+    if (typeof value === 'number') return 'number';
+    if (typeof value === 'boolean') return 'boolean';
+    return 'string';
   }
 }

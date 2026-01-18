@@ -1,6 +1,6 @@
 # Variable Visibility Per Role
 
-- **Status:** READY
+- **Status:** REVIEW
 - **Points:** 8
 - **Story ID:** 063
 - **Type:** Feature
@@ -16,28 +16,28 @@ Implement a configurable system that allows users to specify which environment v
 ## Acceptance Criteria
 
 ### Environment Tab (Expand/Collapse Detail Row)
-- [ ] Each variable row has an expand/collapse chevron (▶/▼)
-- [ ] Expanding a row reveals a "Role Visibility" section with checkboxes for each defined Role
-- [ ] Checking/unchecking a role updates that Role's `variableWhitelist` array
-- [ ] A summary column shows "X Roles" or "All" for quick scanning
-- [ ] A button to open the full Visibility Matrix modal is visible
+- [x] Each variable row has an expand/collapse chevron (▶/▼)
+- [x] Expanding a row reveals a "Role Visibility" section with checkboxes for each defined Role
+- [x] Checking/unchecking a role updates that Role's `variableWhitelist` array
+- [x] A summary column shows "X Roles" or "All" for quick scanning
+- [x] A button to open the full Visibility Matrix modal is visible
 
 ### Role Editor Tab (Searchable Variable Picker)
-- [ ] Replace the current comma-separated text input with a chip-based UI
-- [ ] Show selected variables as removable chips (like the tool picker)
-- [ ] Provide a searchable dropdown/popover listing all defined environment variables
-- [ ] Each variable option shows its name, type, and current initial value
-- [ ] Include a "Select All" / "Clear All" quick action
-- [ ] A button to open the full Visibility Matrix modal is visible
+- [x] Replace the current comma-separated text input with a chip-based UI
+- [x] Show selected variables as removable chips (like the tool picker)
+- [x] Provide a searchable dropdown/popover listing all defined environment variables
+- [x] Each variable option shows its name, type, and current initial value
+- [x] Include a "Select All" / "Clear All" quick action
+- [x] A button to open the full Visibility Matrix modal is visible
 
 ### Visibility Matrix Modal (Full Grid View)
-- [ ] Modal can be opened from both Environment tab and Role editor
-- [ ] Displays a grid with Variables as rows and Roles as columns
-- [ ] Each cell is a clickable checkbox (visible/hidden)
-- [ ] Row-level "All" / "None" buttons to set visibility for all roles
-- [ ] Column-level "All" / "None" buttons to set visibility for all variables
-- [ ] Changes are reflected immediately in the underlying data model
-- [ ] Modal has Save/Cancel buttons (or auto-saves with close)
+- [x] Modal can be opened from both Environment tab and Role editor
+- [x] Displays a grid with Variables as rows and Roles as columns
+- [x] Each cell is a clickable checkbox (visible/hidden)
+- [x] Row-level "All" / "None" buttons to set visibility for all roles
+- [x] Column-level "All" / "None" buttons to set visibility for all variables
+- [x] Changes are reflected immediately in the underlying data model
+- [x] Modal has Save/Cancel buttons (or auto-saves with close)
 
 ### Data Model
 - [ ] Uses existing `variableWhitelist: string[]` field on Role schema

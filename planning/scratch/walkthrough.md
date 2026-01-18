@@ -1,43 +1,45 @@
-# Experiment Roles, Tools, and Environment Configuration
+# Variable Visibility Per Role - Walkthrough
 
-All requested features have been implemented and verified.
+## Summary
+Implemented Story 063: Users can now configure which environment variables each Role sees "for free" in their system prompt.
 
-## Changes
+## What Was Built
 
-### 1. Tool Turn Control
-- **Backend**: Added `endsTurn` (boolean) to the Tool schema. Default is `true`.
-- **Orchestrator**: Updated execution logic. If a tool with `endsTurn=true` is called, the Role's turn ends after the tool execution. If `endsTurn=false`, the Role continues its thought process/actions.
-- **Frontend**: Added "Ends Turn" checkbox to the Tool Editor.
+### 1. Environment Tab - Expand/Collapse Rows
+- Each variable row has an expand chevron (▶/▼)
+- Expanding shows role visibility checkboxes
+- "Visible" column shows summary (e.g. "2 Roles", "All")
 
-### 2. Role Environment Variable Isolation
-- **Backend**: Verified existing `variableWhitelist` logic in Role schema.
-- **Orchestrator**: Ensures strict filtering of environment variables based on the whitelist before sending the prompt to the model.
-- **Frontend**: Added "Environment Variable Allowlist" input to the Roles configuration tab.
+![Environment Tab with expanded row](file:///home/andrew/.gemini/antigravity/brain/319cb8c0-e7cc-4689-b50d-bacfc1d99556/.system_generated/click_feedback/click_feedback_1768766819511.png)
 
-### 3. Hook Context
-- **Orchestrator**: Verified that `BEFORE_TOOL_CALL` and `AFTER_TOOL_CALL` events include the `toolName`, allowing hooks to react specifically to the tool being used.
+### 2. Role Editor - Chip-Based Variable Picker
+- Replaced comma-separated text input with chips
+- Searchable dropdown shows all environment variables with type and value
+- "Select All" / "Clear All" quick action
 
-### 4. Environment Data Types
-- **Backend**: Added strict usage of `array` and `object` validators in `environment.schema.js`.
-- **Frontend**: Updated the Environment Tab to explicitly denote "List (Array)" and "Dictionary (Object)" to clarify usage for Python-oriented users. Input for these types parses JSON.
+![Role Editor with variable picker](file:///home/andrew/.gemini/antigravity/brain/319cb8c0-e7cc-4689-b50d-bacfc1d99556/.system_generated/click_feedback/click_feedback_1768766853254.png)
 
-## Verification Results
+### 3. Visibility Matrix Modal
+- Accessible from both Environment and Roles tabs
+- Grid layout: Variables × Roles
+- Row/column bulk actions (All/None)
+- Changes sync bidirectionally
 
-### Automated Tests
-A new test suite `experiment-orchestrator.tool-execution.test.js` was created to verify tool/role logic.
-A new test suite `environment.schema.test.js` was created to verify data type validation.
+![Visibility Matrix Modal](file:///home/andrew/.gemini/antigravity/brain/319cb8c0-e7cc-4689-b50d-bacfc1d99556/.system_generated/click_feedback/click_feedback_1768766862230.png)
 
-| Test Case | Result |
-|-----------|--------|
-| Ends Turn behavior (`endsTurn=true`) | ✅ Passed |
-| Continue Turn behavior (`endsTurn=false`) | ✅ Passed |
-| Default behavior (undefined `endsTurn`) | ✅ Passed |
-| Environment Variable Whitelist filtering | ✅ Passed |
-| Hook Context (`toolName` payload) | ✅ Passed |
-| Environment Schema Validators (Array/Object) | ✅ Passed |
-| End-to-End Environment Data Flow (Int, String, List, Dict) | ✅ Passed |
+## Files Changed
 
-### Usage Guide
-1. **Configure Tool Turn Ending**: Go to Tools -> Edit Tool -> Check/Uncheck "Ends Turn".
-2. **Restrict Role Knowledge**: Go to Plans -> Edit Plan -> Roles -> Edit Role -> "Environment Variable Allowlist".
-3. **Use Complex Env Types**: Go to Plans -> Edit Plan -> Environment -> Add Variable -> Select "List (Array)" or "Dictionary (Object)". Enter value as JSON (e.g. `["a", "b"]` or `{"x": 1}`).
+| File | Change |
+|------|--------|
+| [visibility-matrix-modal.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/visibility-matrix-modal.component.ts) | **NEW** - Grid modal with toggle logic |
+| [environment-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/environment-tab.component.ts) | Added expand/collapse, role checkboxes |
+| [roles-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/roles-tab.component.ts) | Replaced text input with chip picker |
+| [plan-editor.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/plan-editor.component.ts) | Wired data between tabs |
+| [index.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/index.ts) | Export new component |
+
+## Verification
+
+✅ Frontend build passes (`npm run build`)  
+✅ Browser testing confirmed all features working
+
+![Recording of feature testing](file:///home/andrew/.gemini/antigravity/brain/319cb8c0-e7cc-4689-b50d-bacfc1d99556/visibility_feature_test_1768766797862.webp)

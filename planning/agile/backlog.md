@@ -81,4 +81,4 @@ Status can be:
 | 060_enhance_role_editor_ui                         | 3      | DONE        |
 | 061_fix_plan_save_and_dirty_check                  | 3      | DONE        |
 | 062_fix_controls_and_logging                       | 3      | IN-PROGRESS |
-| 063_variable_visibility_per_role                   | 8      | READY       |
+| 063_variable_visibility_per_role                   | 8      | REVIEW      |
