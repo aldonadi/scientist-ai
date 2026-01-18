@@ -2,11 +2,12 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
-interface Experiment {
-  id: string;
-  name: string;
-  status: 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'FAILED';
-  step: number;
+interface RecentExperiment {
+  _id: string;
+  planId: string;
+  planName: string;
+  status: 'INITIALIZING' | 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'FAILED' | 'STOPPED';
+  currentStep: number;
 }
 
 @Component({
@@ -82,28 +83,28 @@ interface Experiment {
               <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm"
                     [ngClass]="{
                       'bg-blue-100 text-blue-600': exp.status === 'RUNNING',
-                      'bg-yellow-100 text-yellow-600': exp.status === 'PAUSED',
+                      'bg-yellow-100 text-yellow-600': exp.status === 'PAUSED' || exp.status === 'INITIALIZING',
                       'bg-green-100 text-green-600': exp.status === 'COMPLETED',
-                      'bg-red-100 text-red-600': exp.status === 'FAILED'
+                      'bg-red-100 text-red-600': exp.status === 'FAILED' || exp.status === 'STOPPED'
                     }">
-                {{ exp.status === 'RUNNING' ? '▶' : exp.status === 'PAUSED' ? '⏸' : exp.status === 'COMPLETED' ? '✓' : '✕' }}
+                {{ getStatusIcon(exp.status) }}
               </span>
               <div class="ml-4">
-                <p class="font-medium text-gray-900">[{{ exp.id }}] "{{ exp.name }}"</p>
-                <p class="text-sm text-gray-500">Step {{ exp.step }}</p>
+                <p class="font-medium text-gray-900">{{ exp.planName }}</p>
+                <p class="text-xs text-gray-400">ID: {{ exp._id }} · Step {{ exp.currentStep }}</p>
               </div>
             </div>
             <div class="flex items-center space-x-2">
               <span class="px-3 py-1 rounded-full text-xs font-medium"
                     [ngClass]="{
                       'bg-blue-100 text-blue-700': exp.status === 'RUNNING',
-                      'bg-yellow-100 text-yellow-700': exp.status === 'PAUSED',
+                      'bg-yellow-100 text-yellow-700': exp.status === 'PAUSED' || exp.status === 'INITIALIZING',
                       'bg-green-100 text-green-700': exp.status === 'COMPLETED',
-                      'bg-red-100 text-red-700': exp.status === 'FAILED'
+                      'bg-red-100 text-red-700': exp.status === 'FAILED' || exp.status === 'STOPPED'
                     }">
                 {{ exp.status }}
               </span>
-              <a [routerLink]="['/experiments', exp.id]" 
+              <a [routerLink]="['/experiments', exp._id]" 
                  class="text-blue-600 hover:text-blue-800 text-sm font-medium">
                 View
               </a>
@@ -122,19 +123,60 @@ export class DashboardComponent implements OnInit {
   activeExperiments = 0;
   systemHealth = '-- %';
   queuedCount = 0;
-  recentExperiments: Experiment[] = [];
+  recentExperiments: RecentExperiment[] = [];
 
   ngOnInit(): void {
     this.loadDashboardData();
   }
 
+  getStatusIcon(status: string): string {
+    switch (status) {
+      case 'RUNNING': return '▶';
+      case 'PAUSED': return '⏸';
+      case 'INITIALIZING': return '⏳';
+      case 'COMPLETED': return '✓';
+      case 'FAILED':
+      case 'STOPPED': return '✕';
+      default: return '?';
+    }
+  }
+
   private async loadDashboardData(): Promise<void> {
     try {
-      // Fetch experiments
-      const expResponse = await fetch('/api/experiments');
+      // Fetch experiments and plans in parallel
+      const [expResponse, plansResponse] = await Promise.all([
+        fetch('/api/experiments'),
+        fetch('/api/plans')
+      ]);
+
+      let planNameMap: { [id: string]: string } = {};
+
+      if (plansResponse.ok) {
+        const plans = await plansResponse.json();
+        plans.forEach((plan: any) => {
+          planNameMap[plan._id] = plan.name;
+        });
+      }
+
       if (expResponse.ok) {
         const experiments = await expResponse.json();
-        this.recentExperiments = experiments.slice(0, 5);
+
+        // Sort by most recent first (using startTime or createdAt)
+        const sorted = experiments.sort((a: any, b: any) => {
+          const dateA = new Date(a.startTime || a.createdAt || 0);
+          const dateB = new Date(b.startTime || b.createdAt || 0);
+          return dateB.getTime() - dateA.getTime();
+        });
+
+        // Map to include plan names
+        this.recentExperiments = sorted.slice(0, 5).map((exp: any) => ({
+          _id: exp._id,
+          planId: exp.planId,
+          planName: planNameMap[exp.planId] || 'Unknown Plan',
+          status: exp.status,
+          currentStep: exp.currentStep || 0
+        }));
+
         this.activeExperiments = experiments.filter((e: any) => e.status === 'RUNNING').length;
         this.queuedCount = experiments.filter((e: any) => e.status === 'INITIALIZING').length;
       }
