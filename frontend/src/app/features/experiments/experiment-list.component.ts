@@ -57,6 +57,7 @@ interface ExperimentWithPlan extends Experiment {
           <thead class="bg-gray-50">
             <tr>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Step</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experiment ID</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Time</th>
@@ -77,8 +78,11 @@ interface ExperimentWithPlan extends Experiment {
                   'bg-orange-100 text-orange-800': experiment.status === 'PAUSED',
                   'bg-gray-100 text-gray-800': experiment.status === 'STOPPED'
                 }" class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full">
-                  {{ getStatusDisplay(experiment) }}
+                  {{ experiment.status }}
                 </span>
+              </td>
+              <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
+                {{ experiment.currentStep }}/{{ experiment.maxSteps }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                 {{ experiment.planName }}
