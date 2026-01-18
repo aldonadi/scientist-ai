@@ -1,34 +1,37 @@
-# Implementation Plan - Fix Hook Execution Logic
+# Experiment List UI Enhancements
 
-## Goal Description
-The "BlackJack" experiment fails to update its environment because the hook code uses a `def run(context):` pattern and expects dot-notation access (e.g., `context.environment`), neither of which is supported by the current `ExperimentOrchestrator` implementation. The goal is to update `executeHook` to support these patterns, ensuring the hook runs effectively.
-
-## User Review Required
-> [!NOTE]
-> This change enhances the backend's Python wrapper for hooks. It acts as a polyfill to support more "pythonic" script writing (functions and dot notation) which the existing data expects.
+Implement three related improvements to the experiment list and dashboard: sort RUNNING experiments to top with green background, add status filter buttons, and link dashboard's "Active Experiments" card to the filtered list.
 
 ## Proposed Changes
 
-### Backend
+### Experiment List Component
 
-#### [MODIFY] [experiment-orchestrator.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/experiment-orchestrator.service.js)
-- Update `executeHook` method's Python script wrapper.
-- **Add `DotDict` class**: Copy the helper class from `evaluateGoals` to allow `context.environment` access.
-- **Convert Context**: Convert the JSON-loaded `context` dict to a `DotDict`.
-- **Invoke Run**: Add logic after `exec(user_code)` to check `if 'run' in locals() and callable(run): run(context)`.
+#### [MODIFY] [experiment-list.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/experiments/experiment-list.component.ts)
+
+1. **Import `ActivatedRoute`** to read query parameters
+2. **Add status filter state**: `statusFilter: string | null = null`
+3. **Add filter buttons UI** above the table with buttons for: All, RUNNING, COMPLETED, FAILED, PAUSED, STOPPED
+4. **Sort experiments**: RUNNING experiments sorted to top, then by chronological order
+5. **Add green background tint** to RUNNING experiment rows using `bg-green-50` class
+6. **Read `?status=X` query param on init** to pre-filter the list
+7. **Add `filteredExperiments` getter** that filters by status when set
+
+---
+
+### Dashboard Component
+
+#### [MODIFY] [dashboard.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/dashboard/dashboard.component.ts)
+
+1. **Make the "Active Experiments" card clickable** when count > 0
+2. **Link to `/experiments?status=RUNNING`** using `routerLink` with `queryParams`
+3. **Add hover styles** to indicate clickability
 
 ## Verification Plan
 
-### Automated Tests
-- None existing for this specific edge case in unit tests (mocks would need deep update).
-- **Verification via BlackJack Experiment**:
-    - Restart backend.
-    - Run "BlackJack" experiment via Browser Subagent.
-    - **Success Criteria**:
-        - `num_tool_calls` increments in the UI (0 -> 1 -> 2).
-        - Logs show "Hook BEFORE_TOOL_CALL executed".
-        - Experiment does not crash.
-    - This implicitly verifies both the `DotDict` access (would crash otherwise) and `run()` invocation (would do nothing otherwise).
-
 ### Manual Verification
-- The browser subagent run IS the manual verification.
+
+1. Navigate to `http://localhost:4200/experiments`
+2. Verify RUNNING experiments appear at top with green-tinted rows
+3. Click each filter button and verify only matching experiments show
+4. Navigate to `http://localhost:4200/experiments?status=RUNNING` directly and verify only RUNNING experiments show
+5. Go to Dashboard, verify "Active Experiments" card links to `/experiments?status=RUNNING` when count > 0

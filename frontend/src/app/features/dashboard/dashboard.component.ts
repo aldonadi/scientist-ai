@@ -3,25 +3,31 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
 interface Experiment {
-    id: string;
-    name: string;
-    status: 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'FAILED';
-    step: number;
+  id: string;
+  name: string;
+  status: 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'FAILED';
+  step: number;
 }
 
 @Component({
-    selector: 'app-dashboard',
-    standalone: true,
-    imports: [CommonModule, RouterLink],
-    template: `
+  selector: 'app-dashboard',
+  standalone: true,
+  imports: [CommonModule, RouterLink],
+  template: `
     <div class="space-y-6">
       <!-- Metric Cards -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 transition-all"
+             [class.cursor-pointer]="activeExperiments > 0"
+             [class.hover:shadow-md]="activeExperiments > 0"
+             [class.hover:border-blue-200]="activeExperiments > 0"
+             [routerLink]="activeExperiments > 0 ? ['/experiments'] : null"
+             [queryParams]="activeExperiments > 0 ? { status: 'RUNNING' } : null">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm text-gray-500">Active Experiments</p>
               <p class="text-3xl font-bold text-gray-900 mt-1">{{ activeExperiments }}</p>
+              <p *ngIf="activeExperiments > 0" class="text-xs text-blue-600 mt-1">Click to view →</p>
             </div>
             <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
               <span class="text-2xl">🧪</span>
@@ -113,34 +119,34 @@ interface Experiment {
   `
 })
 export class DashboardComponent implements OnInit {
-    activeExperiments = 0;
-    systemHealth = '-- %';
-    queuedCount = 0;
-    recentExperiments: Experiment[] = [];
+  activeExperiments = 0;
+  systemHealth = '-- %';
+  queuedCount = 0;
+  recentExperiments: Experiment[] = [];
 
-    ngOnInit(): void {
-        this.loadDashboardData();
+  ngOnInit(): void {
+    this.loadDashboardData();
+  }
+
+  private async loadDashboardData(): Promise<void> {
+    try {
+      // Fetch experiments
+      const expResponse = await fetch('/api/experiments');
+      if (expResponse.ok) {
+        const experiments = await expResponse.json();
+        this.recentExperiments = experiments.slice(0, 5);
+        this.activeExperiments = experiments.filter((e: any) => e.status === 'RUNNING').length;
+        this.queuedCount = experiments.filter((e: any) => e.status === 'INITIALIZING').length;
+      }
+
+      // Fetch health
+      const healthResponse = await fetch('/api/health');
+      if (healthResponse.ok) {
+        const health = await healthResponse.json();
+        this.systemHealth = health.status === 'ok' ? '100% OK' : 'DEGRADED';
+      }
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
     }
-
-    private async loadDashboardData(): Promise<void> {
-        try {
-            // Fetch experiments
-            const expResponse = await fetch('/api/experiments');
-            if (expResponse.ok) {
-                const experiments = await expResponse.json();
-                this.recentExperiments = experiments.slice(0, 5);
-                this.activeExperiments = experiments.filter((e: any) => e.status === 'RUNNING').length;
-                this.queuedCount = experiments.filter((e: any) => e.status === 'INITIALIZING').length;
-            }
-
-            // Fetch health
-            const healthResponse = await fetch('/api/health');
-            if (healthResponse.ok) {
-                const health = await healthResponse.json();
-                this.systemHealth = health.status === 'ok' ? '100% OK' : 'DEGRADED';
-            }
-        } catch (error) {
-            console.error('Failed to load dashboard data:', error);
-        }
-    }
+  }
 }
