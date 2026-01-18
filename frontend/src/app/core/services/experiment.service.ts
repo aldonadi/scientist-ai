@@ -48,8 +48,8 @@ export class ExperimentService {
         return this.http.post<Experiment>(`${this.apiUrl}/${id}/control`, { command });
     }
 
-    getLogs(id: string): Observable<any[]> {
-        return this.http.get<any>(`${this.apiUrl}/${id}/logs`).pipe(
+    getLogs(id: string, limit: number = 500): Observable<any[]> {
+        return this.http.get<any>(`${this.apiUrl}/${id}/logs?limit=${limit}`).pipe(
             map(response => response.logs || [])
         );
     }

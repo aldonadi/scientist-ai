@@ -27,5 +27,13 @@
 - [ ] Report any bugs found
 - [ ] Update README.md with HOWTO section
 
+## Troubleshooting & Logging
+- [ ] Check status/logs of experiment `696d144d0e5d40388448a0b2`
+- [ ] Diagnose runtime issues
+- [ ] Improve logging visibility for end users
+- [x] Fix "50 logs limit" bug in Experiment Monitor
+
+
+
 ## Bug Tracking
 - [ ] Document any bugs found as user stories

@@ -216,7 +216,7 @@ export class ExperimentMonitorComponent implements OnInit, OnDestroy {
   loadLogs(): void {
     if (!this.id) return;
 
-    this.experimentService.getLogs(this.id).subscribe({
+    this.experimentService.getLogs(this.id, 500).subscribe({
       next: (logs) => {
         this.logs = logs;
         this.extractRoleActivities(logs);
