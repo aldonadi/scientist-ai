@@ -25,7 +25,9 @@ const typeValidators = {
     string: (value) => typeof value === 'string',
     int: (value) => Number.isInteger(value),
     float: (value) => typeof value === 'number',
-    bool: (value) => typeof value === 'boolean'
+    bool: (value) => typeof value === 'boolean',
+    array: (value) => Array.isArray(value),
+    object: (value) => typeof value === 'object' && value !== null && !Array.isArray(value)
 };
 
 /**

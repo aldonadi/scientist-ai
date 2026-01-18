@@ -1,81 +1,39 @@
-# Experiment Roles and Tools Configuration
+# Environment Data Types Support
 
-The goal is to enhance the configuration capabilities of Experiment Plans and Tools to support more granular control over Role environment visibility, Tool turn-ending behavior, and Hook context awareness.
+The user wants to add support for `lists/arrays` and `dicts/associative arrays` to the Experiment Environment.
+Currently, the backend schema uses `Schema.Types.Mixed`, so it technically supports any JSON structure.
+The frontend `EnvironmentTabComponent` already has options for `array` and `object` in the dropdown, and `parseValue` logic handles JSON parsing.
 
-## User Review Required
-
-> [!IMPORTANT]
-> **Default Tool Behavior Change**: We are changing the *default* behavior of the Orchestrator regarding Tool execution. Previously, the Orchestrator would *always* continue the turn (allow the Role to react) after a tool call. The new default will be that a Tool Call **ends the turn** (Role stops), unless the Tool is explicitly configured with `endsTurn: false`.
-> **Please confirm if this interpretation of "The default should be the turn DOES end" logic is correct.** 
-> Assumption: "Turn ending" means the current Role finishes its processing for the current Step. 
+However, we need to verify:
+1.  **Backend Validation**: `backend/src/models/schemas/environment.schema.js` has a `validateType` function. It currently checks `typeValidators[typeStr]`. We need to ensure `array` and `object` are supported validators.
+2.  **Frontend Usability**: Ensure the existing `array`/`object` integration works as expected. The user explicitly asked for "lists/arrays and dicts/associative arrays", so we should double-check the naming and functionality. "Object" corresponds to Dicts/Associative Arrays. "Array" corresponds to Lists.
 
 ## Proposed Changes
 
 ### Backend
-
-#### [MODIFY] [tool.model.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/models/tool.model.js)
-- Add `endsTurn` field to `toolSchema`.
-  - Type: `Boolean`
-  - Default: `true`
-
-#### [MODIFY] [experiment-orchestrator.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/experiment-orchestrator.service.js)
-- Update `processRole` loop logic.
-- Fetch `endsTurn` property from the Tool document.
-- Use `endsTurn` to determine if `shouldContinue` should be set to true or false.
-  - If `endsTurn` is true, `shouldContinue = false`.
-  - If `endsTurn` is false, `shouldContinue = true`.
-- Verify `variableWhitelist` logic (no code change expected if existing logic handles `undefined` vs `empty array` correctly, but will triple check).
+#### [MODIFY] [environment.schema.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/models/schemas/environment.schema.js)
+- Add validators for `array` and `object` to `typeValidators`.
+  - `array`: `Array.isArray(value)`
+  - `object`: `typeof value === 'object' && value !== null && !Array.isArray(value)`
 
 ### Frontend
-
-#### [MODIFY] [roles-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/roles-tab.component.ts)
-- Add UI to edit `variableWhitelist` for a Role.
-  - Implement as a simple comma-separated text input (e.g. "varA, varB") for MVP simplicity, or a tag input.
-  - If empty, it means "All Variables" (or "No Variables"? Need to clarify default). 
-  - *Refinement*: Existing backend logic: `if (whitelist && whitelist.length > 0)`. So empty/undefined = All Variables.
-  - UI will show "All Variables" if empty.
-
-#### [MODIFY] [tool-editor.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/tools/tool-editor.component.ts)
-- Add `endsTurn` checkbox.
-- Bind to `tool.endsTurn`.
-
-#### [MODIFY] [tool.service.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/core/services/tool.service.ts)
-- Update `Tool` interface and `CreateToolDto` to include `endsTurn`.
-
-#### [MODIFY] [plan.service.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/core/services/plan.service.ts)
-- Ensure Role interface matches backend (it usually does automatically via JSON, but good to check).
+#### [MODIFY] [environment-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/environment-tab.component.ts)
+- It seems the frontend ALREADY has support:
+  - Detects `array` and `object`.
+  - Has placeholder text.
+  - Has `parseValue` logic using `JSON.parse`.
+- **Action**: I will verify if any changes are actually needed. It looks like the component might already be "feature complete" but perhaps the *backend* was rejecting it due to missing validators.
+- I will rename "Object" to "Dictionary/Object" and "Array" to "List/Array" in the UI to match user terminology.
+- I will ensure validation logic in frontend uses the new terminology if necessary, or just keeps internal types 'array'/'object'.
 
 ## Verification Plan
 
 ### Automated Tests
-Create a new test file `backend/src/services/experiment-orchestrator.tool-execution.test.js` to specifically test the interaction loop.
-
-1. **Test Role Environment Isolation**:
-   - Mock a Plan with Role having `variableWhitelist: ['A']`.
-   - Run `processRole`.
-   - Verify the `messages` passed to `EventTypes.MODEL_PROMPT` contain only variable 'A'.
-
-2. **Test Tool Turn Ending**:
-   - Mock Tool A with `endsTurn: true`.
-   - Mock Tool B with `endsTurn: false`.
-   - **Case 1**: Role calls Tool A. Verify loop terminates after 1 iteration.
-   - **Case 2**: Role calls Tool B. Verify loop continues (mock provider returning text response in next iteration).
-
-3. **Test Hook Context**:
-   - Register a `BEFORE_TOOL_CALL` hook.
-   - Run a step that calls a tool.
-   - Verify the hook handler receives `event.toolName`.
-   - Verify a Python hook script can access `event.toolName`.
+- Create a test ensuring complex types can be saved and retrieved from the backend.
+- Create a test verifying the validators work.
 
 ### Manual Verification
-1. **Frontend**:
-   - Create a new Tool "Turn Ender" (endsTurn=true).
-   - Create a new Tool "Turn Continuer" (endsTurn=false, e.g. a 'Calculator').
-   - Create a Plan with a Role that sees only specific Env Vars.
-   - Edit the Plan, verify persistence of `variableWhitelist`.
-2. **Execution**:
-   - Run the plan.
-   - Check Logs: "Step X. Current Environment: ..." -> Verify only whitelisted vars are shown.
-   - Check Behavior:
-     - When "Turn Continuer" is called, verify the model immediately outputs "I have calculated..." (Turn continued).
-     - When "Turn Ender" is called, verify the step ends immediately.
+- Create a Plan with an Array `["a", "b"]` and Object `{"x": 1}`.
+- Save it.
+- Run it.
+- Verify in Python tool that `env['my_array']` is a list and `env['my_dict']` is a dict.

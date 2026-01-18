@@ -1,4 +1,4 @@
-# Experiment Roles and Tools Configuration
+# Experiment Roles, Tools, and Environment Configuration
 
 All requested features have been implemented and verified.
 
@@ -17,10 +17,15 @@ All requested features have been implemented and verified.
 ### 3. Hook Context
 - **Orchestrator**: Verified that `BEFORE_TOOL_CALL` and `AFTER_TOOL_CALL` events include the `toolName`, allowing hooks to react specifically to the tool being used.
 
+### 4. Environment Data Types
+- **Backend**: Added strict usage of `array` and `object` validators in `environment.schema.js`.
+- **Frontend**: Updated the Environment Tab to explicitly denote "List (Array)" and "Dictionary (Object)" to clarify usage for Python-oriented users. Input for these types parses JSON.
+
 ## Verification Results
 
 ### Automated Tests
-A new test suite `experiment-orchestrator.tool-execution.test.js` was created to verify the core logic.
+A new test suite `experiment-orchestrator.tool-execution.test.js` was created to verify tool/role logic.
+A new test suite `environment.schema.test.js` was created to verify data type validation.
 
 | Test Case | Result |
 |-----------|--------|
@@ -29,7 +34,9 @@ A new test suite `experiment-orchestrator.tool-execution.test.js` was created to
 | Default behavior (undefined `endsTurn`) | ✅ Passed |
 | Environment Variable Whitelist filtering | ✅ Passed |
 | Hook Context (`toolName` payload) | ✅ Passed |
+| Environment Schema Validators (Array/Object) | ✅ Passed |
 
 ### Usage Guide
-1. **Configure Tool Turn Ending**: Go to Tools -> Edit Tool -> Check/Uncheck "Ends Turn". Check it for terminal actions (e.g. "Final Answer"), uncheck it for intermediate steps (e.g. "Calculator").
-2. **Restrict Role Knowledge**: Go to Plans -> Edit Plan -> Roles -> Edit Role. Enter comma-separated variable names in "Environment Variable Allowlist". Leave empty to allow the role to see all variables.
+1. **Configure Tool Turn Ending**: Go to Tools -> Edit Tool -> Check/Uncheck "Ends Turn".
+2. **Restrict Role Knowledge**: Go to Plans -> Edit Plan -> Roles -> Edit Role -> "Environment Variable Allowlist".
+3. **Use Complex Env Types**: Go to Plans -> Edit Plan -> Environment -> Add Variable -> Select "List (Array)" or "Dictionary (Object)". Enter value as JSON (e.g. `["a", "b"]` or `{"x": 1}`).

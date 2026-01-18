@@ -48,8 +48,8 @@ interface EnvVariable {
                 <option value="string">String</option>
                 <option value="number">Number</option>
                 <option value="boolean">Boolean</option>
-                <option value="array">Array</option>
-                <option value="object">Object</option>
+                <option value="array">List (Array)</option>
+                <option value="object">Dictionary (Object)</option>
               </select>
             </td>
             <td class="py-2 pr-4">
@@ -94,8 +94,8 @@ interface EnvVariable {
                 <option value="string">String</option>
                 <option value="number">Number</option>
                 <option value="boolean">Boolean</option>
-                <option value="array">Array</option>
-                <option value="object">Object</option>
+                <option value="array">List (Array)</option>
+                <option value="object">Dictionary (Object)</option>
               </select>
             </td>
             <td class="py-2 pr-4">
