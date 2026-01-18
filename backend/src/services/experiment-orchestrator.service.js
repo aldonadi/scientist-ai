@@ -52,6 +52,7 @@ class ExperimentOrchestrator {
                 // Mongoose handles basic object assignment well.
                 // We will set it, but we need to save to persist.
                 this.experiment.currentEnvironment = this.plan.initialEnvironment;
+                this.experiment.markModified('currentEnvironment');
                 await this.experiment.save();
             }
         }
@@ -85,7 +86,7 @@ class ExperimentOrchestrator {
         }
         await this.experiment.save();
 
-        this.eventBus.emit(EventTypes.EXPERIMENT_START, {
+        await this.eventBus.emitAsync(EventTypes.EXPERIMENT_START, {
             experimentId: this.experiment._id,
             planName: this.plan.name
         });
@@ -143,7 +144,7 @@ class ExperimentOrchestrator {
                     const duration = this.experiment.endTime - this.experiment.startTime;
 
                     await this.experiment.save();
-                    this.eventBus.emit(EventTypes.EXPERIMENT_END, {
+                    await this.eventBus.emitAsync(EventTypes.EXPERIMENT_END, {
                         experimentId: this.experiment._id,
                         result: goalMet,
                         duration: duration
@@ -160,7 +161,7 @@ class ExperimentOrchestrator {
                     const duration = this.experiment.endTime - this.experiment.startTime;
 
                     await this.experiment.save();
-                    this.eventBus.emit(EventTypes.EXPERIMENT_END, {
+                    await this.eventBus.emitAsync(EventTypes.EXPERIMENT_END, {
                         experimentId: this.experiment._id,
                         result: 'Max Steps Exceeded',
                         duration: duration
@@ -185,7 +186,7 @@ class ExperimentOrchestrator {
 
                 await this.experiment.save();
 
-                this.eventBus.emit(EventTypes.EXPERIMENT_END, {
+                await this.eventBus.emitAsync(EventTypes.EXPERIMENT_END, {
                     experimentId: this.experiment._id,
                     result: 'Failed',
                     duration: duration,
@@ -202,7 +203,7 @@ class ExperimentOrchestrator {
     async processStep() {
         const step = this.experiment.currentStep;
 
-        this.eventBus.emit(EventTypes.STEP_START, {
+        await this.eventBus.emitAsync(EventTypes.STEP_START, {
             experimentId: this.experiment._id,
             stepNumber: step
         });
@@ -212,7 +213,7 @@ class ExperimentOrchestrator {
             await this.processRole(role);
         }
 
-        this.eventBus.emit(EventTypes.STEP_END, {
+        await this.eventBus.emitAsync(EventTypes.STEP_END, {
             experimentId: this.experiment._id,
             stepNumber: step,
             environmentSnapshot: this.experiment.currentEnvironment
@@ -224,7 +225,7 @@ class ExperimentOrchestrator {
      * Constructs the prompt, resolves tools, and emits the MODEL_PROMPT event.
      */
     async processRole(role) {
-        this.eventBus.emit(EventTypes.ROLE_START, {
+        await this.eventBus.emitAsync(EventTypes.ROLE_START, {
             experimentId: this.experiment._id,
             roleName: role.name
         });
@@ -296,7 +297,7 @@ class ExperimentOrchestrator {
 
         // 4. Emit MODEL_PROMPT
         // Hooks can listen to this and modify 'messages' if needed.
-        this.eventBus.emit(EventTypes.MODEL_PROMPT, {
+        await this.eventBus.emitAsync(EventTypes.MODEL_PROMPT, {
             experimentId: this.experiment._id,
             roleName: role.name,
             messages: messages,
@@ -418,13 +419,13 @@ class ExperimentOrchestrator {
 
                     for (const call of toolCalls) {
                         // Emit BEFORE_TOOL_CALL for hooks
-                        this.eventBus.emit(EventTypes.BEFORE_TOOL_CALL, {
+                        await this.eventBus.emitAsync(EventTypes.BEFORE_TOOL_CALL, {
                             experimentId: this.experiment._id,
                             toolName: call.toolName,
                             args: call.args
                         });
 
-                        this.eventBus.emit(EventTypes.TOOL_CALL, {
+                        await this.eventBus.emitAsync(EventTypes.TOOL_CALL, {
                             experimentId: this.experiment._id,
                             toolName: call.toolName,
                             args: call.args
@@ -455,6 +456,7 @@ class ExperimentOrchestrator {
                                 const jsonOutput = JSON.parse(execResult.stdout);
                                 // Merge into environment
                                 Object.assign(this.experiment.currentEnvironment.variables, jsonOutput);
+                                this.experiment.markModified('currentEnvironment');
                                 // Also update our local filtered copy for the next loop iteration visibility?
                                 Object.assign(filteredEnv.variables, jsonOutput);
                                 result = jsonOutput;
@@ -472,7 +474,7 @@ class ExperimentOrchestrator {
                             await container.destroy(); // One-shot
                         }
 
-                        this.eventBus.emit(EventTypes.TOOL_RESULT, {
+                        await this.eventBus.emitAsync(EventTypes.TOOL_RESULT, {
                             experimentId: this.experiment._id,
                             toolName: call.toolName,
                             result: error ? { error } : result,
@@ -487,7 +489,7 @@ class ExperimentOrchestrator {
                         });
 
                         // Emit AFTER_TOOL_CALL for hooks
-                        this.eventBus.emit(EventTypes.AFTER_TOOL_CALL, {
+                        await this.eventBus.emitAsync(EventTypes.AFTER_TOOL_CALL, {
                             experimentId: this.experiment._id,
                             toolName: call.toolName,
                             result: error ? { error } : result
@@ -498,7 +500,7 @@ class ExperimentOrchestrator {
                     loopCount++;
                 } else {
                     // No tool calls, just normal completion
-                    this.eventBus.emit(EventTypes.MODEL_RESPONSE_COMPLETE, {
+                    await this.eventBus.emitAsync(EventTypes.MODEL_RESPONSE_COMPLETE, {
                         experimentId: this.experiment._id,
                         roleName: role.name,
                         fullResponse: accumulatedResponse
@@ -670,22 +672,56 @@ import os
 import json
 import sys
 
-try:
+    # Helper for dot notation access
+    class DotDict(dict):
+        def __getattr__(self, key):
+            if key not in self:
+                raise AttributeError(key)
+            val = self[key]
+            if isinstance(val, dict):
+                return DotDict(val)
+            return val
+        
+        def __setattr__(self, key, value):
+            self[key] = value
+
+    # Interactive context for top-level code
+    # We also wrap it in DotDict so user code like "context.environment['x'] = 1" works if they use it at top level
+    # But usually top level just uses 'env' variable provided below.
+    
     context_str = os.environ.get('HOOK_CONTEXT', '{}')
-    context = json.loads(context_str)
+    context_dict = json.loads(context_str)
     
-    experiment = context.get('experiment', {})
-    env = context.get('environment', {}).get('variables', {})
-    event = context.get('event', {})
+    # Create a robust context object
+    context = DotDict(context_dict)
     
-    # User code has access to: experiment, env, event
-    # User code can modify 'env' dict
+    # For backward compatibility with top-level scripts that expect 'experiment', 'env', 'event' locals
+    experiment = context_dict.get('experiment', {})
+    env = context_dict.get('environment', {}).get('variables', {})
+    event = context_dict.get('event', {})
+    
     user_code = os.environ.get('HOOK_CODE', '')
+    
+    # Execute the user code in the current scope
     exec(user_code)
     
+    # Check if a 'run' function was defined and call it
+    if 'run' in locals() and callable(locals()['run']):
+        # If they used run(context), they might expect context to be modified
+        # specifically context.environment.variables
+        locals()['run'](context)
+        
+        # Sync changes back from context.environment.variables to our 'env' local
+        # which is what we return.
+        # Handle cases where they might have replaced the dict entirely
+        if hasattr(context, 'environment') and hasattr(context.environment, 'variables'):
+            env = context.environment.variables
+            
     # Output modified environment
     print(json.dumps({'success': True, 'environment': env}))
 except Exception as e:
+    import traceback
+    traceback.print_exc()
     print(json.dumps({'success': False, 'error': str(e)}))
 `;
 
@@ -726,6 +762,7 @@ except Exception as e:
             // Merge environment changes back
             if (output.environment) {
                 Object.assign(this.experiment.currentEnvironment.variables, output.environment);
+                this.experiment.markModified('currentEnvironment');
             }
 
         } catch (e) {

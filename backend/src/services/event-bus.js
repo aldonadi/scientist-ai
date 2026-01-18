@@ -37,6 +37,19 @@ class EventBus extends EventEmitter {
     emit(type, payload) {
         return super.emit(type, payload);
     }
+
+    /**
+     * Emits an event and waits for all listeners to complete.
+     * Useful for synchronous hooks that must block execution.
+     * @param {string} type - Event type
+     * @param {object} payload - Data
+     * @returns {Promise<void>}
+     */
+    async emitAsync(type, payload) {
+        const listeners = this.listeners(type);
+        const promises = listeners.map(listener => listener(payload));
+        await Promise.all(promises);
+    }
 }
 
 module.exports = {
