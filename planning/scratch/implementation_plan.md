@@ -1,189 +1,152 @@
-# Lemonade Stand Experiment Implementation Plan
+# Variable Visibility Per Role - Implementation Plan
 
-## Overview
-Create a full simulation of a young entrepreneur running a lemonade stand. An AI agent manages purchasing, inventory, pricing, and sales to reach $1000 net worth before 2000 steps.
+Allow users to configure which environment variables each Role can see "for free" in their system prompt, without requiring tool calls.
 
----
+## Proposed Changes
 
-## 1. Tools (Namespace: `lemonade_stand`)
+### Visibility Matrix Modal Component (New)
 
-| Tool Name | Arguments | Description |
-|-----------|-----------|-------------|
-| `purchase_lemons` | `qty: int` | Buy lemons at $0.25 each |
-| `purchase_cups` | `qty: int` | Buy drinking cups at $0.10 each |
-| `purchase_sugar` | `qty_cups: int` | Buy sugar at $0.50 per cup |
-| `purchase_ice` | `qty_servings: int` | Buy ice at $0.15 per serving |
-| `set_advertised_drink_price` | `new_price: float` | Set lemonade price |
-| `sell_lemonade` | (none) | Sell drinks to waiting customers |
-| `mix_lemonade` | (none) | Mix up to 10 drinks from ingredients |
-| `write_journal_entry` | `entry: str` | Add journal entry |
-| `take_loan` | `amount: float` | Borrow money (max $200 total) |
-| `repay_loan` | `amount: float` | Repay loan balance |
+#### [NEW] [visibility-matrix-modal.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/visibility-matrix-modal.component.ts)
+
+Create a standalone modal component with:
+- **Inputs:** `roles: Role[]`, `variableKeys: string[]`, `isOpen: boolean`
+- **Outputs:** `rolesChange: EventEmitter<Role[]>`, `closeModal: EventEmitter<void>`
+- **Features:**
+  - Grid layout: Variables as rows, Roles as columns
+  - Each cell: Clickable checkbox bound to role's `variableWhitelist`
+  - Row-level "All" / "None" buttons
+  - Column-level "All" / "None" buttons
+  - Close button for modal dismissal
 
 ---
 
-## 2. Environment Variables
+### Environment Tab Updates
 
-### Core State
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `cash_on_hand` | float | 50.00 | Current cash |
-| `loan_balance` | float | 0.00 | Outstanding loan |
-| `num_lemons` | int | 1 | Raw lemons |
-| `num_cups` | int | 0 | Drinking cups |
-| `cups_of_sugar` | int | 0 | Sugar cups |
-| `num_ice_servings` | int | 0 | Ice servings |
-| `num_lemonade_drinks` | int | 0 | Ready drinks |
-| `advertised_drink_price` | float | 1.50 | Price per drink |
-| `num_customers_this_turn` | int | 1 | Customers waiting |
-| `journal` | array | [] | Journal entries |
+#### [MODIFY] [environment-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/environment-tab.component.ts)
 
-### Statistics (Object)
-| Field | Default | Description |
-|-------|---------|-------------|
-| `num_transactions` | 0 | Lemonades sold |
-| `num_lemons_bought` | 0 | Total lemons purchased |
-| `num_sugar_bought` | 0 | Total sugar cups purchased |
-| `num_cups_bought` | 0 | Total cups purchased |
-| `num_ice_bought` | 0 | Total ice purchased |
-| `num_drinks_mixed` | 0 | Drinks mixed |
-| `num_customers_encountered` | 0 | Total customers |
-| `total_interest_accrued` | 0.00 | Interest paid |
-| `current_net_worth` | 50.00 | Cash - Loan |
-| `max_net_worth` | 50.00 | Highest net worth |
-| `min_net_worth` | 50.00 | Lowest net worth |
+1. **Add new inputs:**
+   ```typescript
+   @Input() roles: Role[] = [];
+   @Output() rolesChange = new EventEmitter<Role[]>();
+   ```
+
+2. **Add expand/collapse state:** Track which variable rows are expanded via `expandedRows: Set<number>`
+
+3. **Add table column:** "Visible" column showing "X Roles" or "All" summary
+
+4. **Add expandable row detail:** When expanded, show checkboxes for each role
+
+5. **Add "Open Matrix" button:** Opens the visibility matrix modal
+
+6. **Logic:** When role checkboxes are toggled, update the corresponding Role's `variableWhitelist` and emit `rolesChange`
 
 ---
 
-## 3. Goals
+### Role Editor Tab Updates
 
-1. **Success**: `env.stats.current_net_worth >= 1000`
-   - Description: "Reached $1000 net worth! Business Success!"
+#### [MODIFY] [roles-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/roles-tab.component.ts)
 
-2. **Failure**: `env.cash_on_hand <= 0 and env.loan_balance >= 200`
-   - Description: "Bankruptcy - No cash and max loan reached"
+1. **Add new input for environment keys:**
+   ```typescript
+   @Input() environmentKeys: string[] = [];
+   ```
 
----
+2. **Replace text input with chip-based picker:**
+   - Display selected variables as removable chips (similar to tools)
+   - Add a searchable dropdown for selecting variables
+   - Show variable type and initial value in dropdown options
 
-## 4. Role: Lemonade Stand Operator
+3. **Add "Open Matrix" button:** Opens the visibility matrix modal
 
-**System Prompt**:
-```
-You are an ambitious young entrepreneur running a lemonade stand. Your goal is to grow your business from $50 to $1000 net worth.
-
-**Your Resources:**
-- Cash, inventory (lemons, cups, sugar, ice), and ready-to-serve lemonade drinks
-- You can take out loans up to $200 but be careful - 1% interest accrues each turn!
-
-**Your Tools:**
-- Purchase raw materials (lemons $0.25, cups $0.10, sugar $0.50/cup, ice $0.15/serving)
-- Mix lemonade (uses 1 of each: lemon, cup, sugar, ice → 1 drink)
-- Set your drink price (affects customer demand)
-- Sell lemonade to waiting customers
-- Manage loans (take/repay)
-- Write journal entries about your strategy and feelings
-
-**Strategy Tips:**
-- Each drink costs ~$1.00 in materials
-- Lower prices attract more customers (3-6 typical at fair price)
-- Ice melts! 1 serving lost per turn
-- Balance inventory - don't overbuy perishables
-
-Think carefully, maximize profit, avoid bankruptcy, and document your journey!
-```
+4. **Logic:** Selected chips update `editingRole.variableWhitelist` array
 
 ---
 
-## 5. Scripts
+### Plan Editor Component Updates
 
-### STEP_START (Beginning of Turn)
-```python
-import random
+#### [MODIFY] [plan-editor.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/plan-editor.component.ts)
 
-# Ice melts
-if env.get('num_ice_servings', 0) > 0:
-    env['num_ice_servings'] = max(0, env['num_ice_servings'] - 1)
+1. **Import new modal component**
 
-# Calculate customers based on price (optimal ~$1.00-$2.00)
-price = env.get('advertised_drink_price', 1.50)
-base_customers = 5  # Sweet spot at $1.50
+2. **Pass roles to Environment tab:**
+   ```html
+   <app-environment-tab 
+     [(environment)]="plan.initialEnvironment"
+     [roles]="plan.roles"
+     (rolesChange)="plan.roles = $event">
+   </app-environment-tab>
+   ```
 
-if price <= 0.50:
-    base_customers = 12  # Very cheap = lots of customers
-elif price <= 1.00:
-    base_customers = 8
-elif price <= 1.50:
-    base_customers = 5
-elif price <= 2.00:
-    base_customers = 3
-elif price <= 3.00:
-    base_customers = 1
-else:
-    base_customers = 0  # Too expensive
+3. **Pass environment keys to Roles tab:**
+   ```html
+   <app-roles-tab 
+     [(roles)]="plan.roles"
+     [providers]="providers"
+     [environmentKeys]="getEnvironmentKeys()">
+   </app-roles-tab>
+   ```
 
-# Add random variation (-2 to +3)
-variation = random.randint(-2, 3)
-customers = max(0, min(15, base_customers + variation))
-env['num_customers_this_turn'] = customers
+4. **Add modal state and handlers**
 
-# Track total customers
-stats = env.get('stats', {})
-stats['num_customers_encountered'] = stats.get('num_customers_encountered', 0) + customers
+---
 
-# Accrue loan interest (1% per turn)
-loan = env.get('loan_balance', 0)
-if loan > 0:
-    interest = round(loan * 0.01, 2)
-    env['loan_balance'] = round(loan + interest, 2)
-    stats['total_interest_accrued'] = round(stats.get('total_interest_accrued', 0) + interest, 2)
+### Index Export
 
-env['stats'] = stats
-```
+#### [MODIFY] [index.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/index.ts)
 
-### STEP_END (End of Turn)
-```python
-# Update net worth statistics
-cash = env.get('cash_on_hand', 0)
-loan = env.get('loan_balance', 0)
-net_worth = round(cash - loan, 2)
+Export the new `VisibilityMatrixModalComponent`
 
-stats = env.get('stats', {})
-stats['current_net_worth'] = net_worth
-stats['max_net_worth'] = max(stats.get('max_net_worth', net_worth), net_worth)
-stats['min_net_worth'] = min(stats.get('min_net_worth', net_worth), net_worth)
-env['stats'] = stats
+---
+
+## Verification Plan
+
+### Manual Browser Testing
+
+Since this is a frontend UI feature with no backend changes, verification will be manual browser testing:
+
+1. **Start the app:**
+   ```bash
+   cd frontend && npm start
+   ```
+   Navigate to `http://localhost:4200/plans` in browser
+
+2. **Environment Tab - Expand/Collapse:**
+   - Create or edit a plan with 2+ roles and 3+ environment variables
+   - Verify each variable row has an expand chevron (▶)
+   - Click chevron → verify row expands showing role checkboxes
+   - Toggle checkboxes → verify changes persist
+   - Click chevron again → verify row collapses
+
+3. **Environment Tab - Summary Column:**
+   - Verify "Visible" column shows "X Roles" count
+   - When all roles checked → verify shows "All"
+
+4. **Role Editor - Variable Picker:**
+   - Edit a role
+   - Verify selected variables appear as removable chips
+   - Click search box → verify dropdown shows all env variables
+   - Select a variable → verify chip appears
+   - Click × on chip → verify chip is removed
+   - Verify whitelist updates in role data
+
+5. **Visibility Matrix Modal:**
+   - Click "Open Matrix" from Environment tab → verify modal opens
+   - Click "Open Matrix" from Role editor → verify modal opens
+   - Verify grid shows all variables × all roles
+   - Click a cell → verify checkbox toggles
+   - Click row "All" → verify all cells in row checked
+   - Click column "None" → verify all cells in column unchecked
+   - Close modal → verify changes reflected in both tabs
+
+6. **Data Persistence:**
+   - Save the plan
+   - Reload the page
+   - Verify visibility settings are preserved
+
+### Build Verification
+
+```bash
+cd frontend && npm run build
 ```
 
----
-
-## 6. Execution Order
-
-1. **Create Tools** (10 tools in `lemonade_stand` namespace)
-2. **Create Experiment Plan**:
-   - Set environment variables
-   - Add Role with all tools assigned
-   - Add Goals
-   - Add Scripts
-3. **Run Experiment** (max 2000 steps)
-4. **Monitor** progress via UI
-
----
-
-## 7. Browser Automation Steps
-
-### Phase 1: Create Tools
-Navigate to Tools page, create each tool with proper Python code.
-
-### Phase 2: Create Plan
-1. Navigate to Plans → New Plan
-2. Fill General tab (name, description, max steps = 2000)
-3. Fill Environment tab with all variables
-4. Fill Roles tab (one role with system prompt)
-5. Fill Goals tab (success and failure conditions)
-6. Fill Scripts tab (STEP_START and STEP_END hooks)
-7. Save Plan
-
-### Phase 3: Run Experiment
-1. Navigate to Plans list
-2. Click Run on Lemonade Stand plan
-3. Monitor execution
+Verify build completes without errors.
