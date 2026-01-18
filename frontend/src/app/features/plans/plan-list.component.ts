@@ -1,12 +1,15 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { PlanService, ExperimentPlan } from '../../core/services/plan.service';
+import { ConfirmService } from '../../core/services/confirm.service';
+import { ToastService } from '../../core/services/toast.service';
 
 @Component({
   selector: 'app-plan-list',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, FormsModule],
   template: `
     <div class="space-y-6">
       <!-- Header -->
@@ -81,12 +84,51 @@ import { PlanService, ExperimentPlan } from '../../core/services/plan.service';
         </div>
       </div>
     </div>
+    
+    <!-- Duplicate Name Input Modal -->
+    <div *ngIf="showDuplicateModal" 
+         class="fixed inset-0 z-[10000] flex items-center justify-center">
+      <div class="absolute inset-0 bg-black/50" (click)="cancelDuplicate()"></div>
+      <div class="relative bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100">
+          <h3 class="text-lg font-semibold text-gray-900">Duplicate Plan</h3>
+        </div>
+        <div class="px-6 py-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Name for the duplicate:</label>
+          <input type="text" 
+                 [(ngModel)]="duplicateName"
+                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                 (keydown.enter)="confirmDuplicate()"
+                 #duplicateInput>
+        </div>
+        <div class="px-6 py-4 bg-gray-50 flex justify-end space-x-3">
+          <button (click)="cancelDuplicate()"
+                  class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors font-medium">
+            Cancel
+          </button>
+          <button (click)="confirmDuplicate()"
+                  [disabled]="!duplicateName.trim()"
+                  class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+            Duplicate
+          </button>
+        </div>
+      </div>
+    </div>
   `
 })
 export class PlanListComponent implements OnInit {
   plans: ExperimentPlan[] = [];
 
-  constructor(private planService: PlanService) { }
+  // Duplicate modal state
+  showDuplicateModal = false;
+  duplicateName = '';
+  planToDuplicate: ExperimentPlan | null = null;
+
+  constructor(
+    private planService: PlanService,
+    private confirmService: ConfirmService,
+    private toastService: ToastService
+  ) { }
 
   ngOnInit(): void {
     this.loadPlans();
@@ -119,20 +161,60 @@ export class PlanListComponent implements OnInit {
   }
 
   duplicatePlan(plan: ExperimentPlan): void {
-    const newName = prompt('Name for duplicated plan:', `${plan.name} (Copy)`);
-    if (newName) {
-      this.planService.duplicatePlan(plan._id, newName).subscribe({
-        next: () => this.loadPlans(),
-        error: (err) => console.error('Failed to duplicate plan:', err)
-      });
-    }
+    this.planToDuplicate = plan;
+    this.duplicateName = `${plan.name} (Copy)`;
+    this.showDuplicateModal = true;
+
+    // Focus the input after a tick
+    setTimeout(() => {
+      const input = document.querySelector('input[type="text"]') as HTMLInputElement;
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    }, 100);
   }
 
-  deletePlan(plan: ExperimentPlan): void {
-    if (confirm(`Are you sure you want to delete "${plan.name}"? This action cannot be undone.`)) {
+  confirmDuplicate(): void {
+    if (!this.planToDuplicate || !this.duplicateName.trim()) return;
+
+    this.planService.duplicatePlan(this.planToDuplicate._id, this.duplicateName.trim()).subscribe({
+      next: () => {
+        this.toastService.success(`Plan duplicated as "${this.duplicateName.trim()}"`);
+        this.loadPlans();
+        this.cancelDuplicate();
+      },
+      error: (err) => {
+        console.error('Failed to duplicate plan:', err);
+        this.toastService.error('Failed to duplicate plan: ' + (err.error?.message || err.message));
+      }
+    });
+  }
+
+  cancelDuplicate(): void {
+    this.showDuplicateModal = false;
+    this.duplicateName = '';
+    this.planToDuplicate = null;
+  }
+
+  async deletePlan(plan: ExperimentPlan): Promise<void> {
+    const shouldDelete = await this.confirmService.confirm({
+      title: 'Delete Plan?',
+      message: `Are you sure you want to delete "${plan.name}"?\n\nThis action cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel'
+    });
+
+    if (shouldDelete) {
       this.planService.deletePlan(plan._id).subscribe({
-        next: () => this.loadPlans(),
-        error: (err) => console.error('Failed to delete plan:', err)
+        next: () => {
+          this.toastService.success(`Plan "${plan.name}" deleted`);
+          this.loadPlans();
+        },
+        error: (err) => {
+          console.error('Failed to delete plan:', err);
+          this.toastService.error('Failed to delete plan: ' + (err.error?.message || err.message));
+        }
       });
     }
   }
