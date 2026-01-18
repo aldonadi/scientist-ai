@@ -1,10 +1,7 @@
-# Experiment List Sorting and Filtering
+# Adding Toast Notifications to Save Operations
 
 ## Tasks
 
-- [x] Implement Experiment List Sorting and Filtering
-  - [x] Sort RUNNING experiments to top of list with green background
-  - [x] Add filter buttons for status filtering  
-  - [x] Support query param filtering (e.g. `?status=RUNNING`)
-  - [x] Update Dashboard "Active Experiments" card with link
-  - [x] Verify changes in browser
+- [x] Add toast notifications to save operations
+  - [x] Tool editor - added success/error toasts to save method
+  - [x] Plan editor - already has toasts (verified)

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { ToolService, Tool, CreateToolDto } from '../../core/services/tool.service';
+import { ToastService } from '../../core/services/toast.service';
 import { isValidPythonIdentifier, getPythonIdentifierError, validateJson, checkPythonSyntax } from '../../core/utils/validation.utils';
 
 const DEFAULT_TOOL_CODE = `def execute(env, args):
@@ -191,6 +192,7 @@ export class ToolEditorComponent implements OnInit {
 
   constructor(
     private toolService: ToolService,
+    private toastService: ToastService,
     private router: Router,
     private route: ActivatedRoute
   ) { }
@@ -312,8 +314,14 @@ export class ToolEditorComponent implements OnInit {
       : this.toolService.updateTool(this.id!, this.tool);
 
     action.subscribe({
-      next: () => this.router.navigate(['/tools']),
-      error: (err) => console.error('Failed to save tool:', err)
+      next: () => {
+        this.toastService.success('Tool Saved Successfully');
+        this.router.navigate(['/tools']);
+      },
+      error: (err) => {
+        console.error('Failed to save tool:', err);
+        this.toastService.error('Failed to save tool: ' + (err.error?.message || err.message));
+      }
     });
   }
 
