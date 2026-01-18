@@ -98,11 +98,37 @@ const DEFAULT_TOOL_CODE = `def execute(env, args):
             <div>
               <div class="flex items-center justify-between mb-1">
                 <label class="block text-sm font-medium text-gray-700">Parameters (JSON Schema)</label>
-                <button (click)="generateSchema()" 
-                        class="text-xs text-blue-600 hover:text-blue-800">
-                  Auto-generate from code
-                </button>
+                <div class="flex items-center space-x-1">
+                  <button (click)="generateSchema()" 
+                          class="text-xs text-blue-600 hover:text-blue-800">
+                    Auto-generate from code
+                  </button>
+                  <button (click)="showSchemaHelp = !showSchemaHelp"
+                          class="w-4 h-4 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-600 text-xs flex items-center justify-center"
+                          title="Click for help">
+                    ?
+                  </button>
+                </div>
               </div>
+              
+              <!-- Help Tooltip -->
+              <div *ngIf="showSchemaHelp" 
+                   class="mb-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-gray-700">
+                <p class="font-medium text-blue-800 mb-2">Auto-generate parses your docstring's Args section:</p>
+                <pre class="bg-white p-2 rounded border text-xs overflow-x-auto">def execute(env, args):
+    """
+    Args:
+        symbol (str): Stock ticker symbol
+        limit (int): Max results
+    """</pre>
+                <p class="mt-2 text-gray-600">
+                  Format: <code class="bg-gray-100 px-1 rounded">param_name (type): description</code><br>
+                  Supported types: <code class="bg-gray-100 px-1 rounded">str</code>, 
+                  <code class="bg-gray-100 px-1 rounded">int</code>, 
+                  <code class="bg-gray-100 px-1 rounded">bool</code>
+                </p>
+              </div>
+              
               <textarea [(ngModel)]="parametersJson"
                         (ngModelChange)="validateParameters()"
                         rows="8"
@@ -150,6 +176,7 @@ export class ToolEditorComponent implements OnInit {
   };
 
   parametersJson = '{}';
+  showSchemaHelp = false;
 
   // Validation errors
   namespaceError = '';
