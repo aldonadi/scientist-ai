@@ -295,6 +295,34 @@ class ExperimentOrchestrator {
             }
         ];
 
+        // Debug logging: Show exact prompt being sent to LLM
+        const debugInfo = {
+            fullPrompt: messages.map(m => `[${m.role.toUpperCase()}] ${m.content}`).join('\n\n'),
+            variableWhitelist: whitelist || '(none - showing all)',
+            filteredVariables: Object.keys(filteredEnv.variables),
+            allVariables: Object.keys(fullEnv.variables),
+            toolCount: toolsForProvider.length
+        };
+
+        console.log('\n' + '='.repeat(80));
+        console.log(`[DEBUG] PROMPT FOR ROLE: ${role.name}`);
+        console.log('='.repeat(80));
+        console.log(`Whitelist: ${JSON.stringify(whitelist || 'ALL')}`);
+        console.log(`Filtered vars: ${debugInfo.filteredVariables.join(', ') || '(none)'}`);
+        console.log(`All available vars: ${debugInfo.allVariables.join(', ')}`);
+        console.log('-'.repeat(80));
+        console.log(debugInfo.fullPrompt);
+        console.log('='.repeat(80) + '\n');
+
+        this.eventBus.emit(EventTypes.LOG, {
+            experimentId: this.experiment._id,
+            stepNumber: this.experiment.currentStep,
+            source: 'SYSTEM',
+            message: `[DEBUG] Sending prompt to ${role.name}`,
+            data: debugInfo
+        });
+
+
         // 4. Emit MODEL_PROMPT
         // Hooks can listen to this and modify 'messages' if needed.
         await this.eventBus.emitAsync(EventTypes.MODEL_PROMPT, {
@@ -304,11 +332,13 @@ class ExperimentOrchestrator {
             tools: toolsForProvider
         });
 
+
         // 5. Inference & Tool Execution Loop
         const ProviderService = require('./provider/provider.service');
         // ContainerPoolManager imported at top-level
 
-        let shouldContinue = true;
+        // Track if we should continue the turn based on tool configurations
+        let shouldContinue = false;
         let accumulatedResponse = '';
         let currentMessages = [...messages];
         let toolCalls = [];
@@ -317,8 +347,15 @@ class ExperimentOrchestrator {
         let loopCount = 0;
         const MAX_TOOL_LOOPS = 5;
 
+        // Default to stop unless tool call forces continuance
+        // We start with shouldContinue = true to enter the loop, but reset it inside?
+        // Actually, the loop condition is checked at start.
+        // We need to enter the loop at least once. 
+        // Let's use a do-while or set shouldContinue = true initially.
+        shouldContinue = true;
+
         while (shouldContinue && loopCount < MAX_TOOL_LOOPS) {
-            shouldContinue = false; // Default to stop unless tool call forces continuance
+            shouldContinue = false; // Default to stop after this iteration unless a tool says "continue"
             accumulatedResponse = '';
             toolCalls = [];
 
@@ -573,9 +610,44 @@ except Exception as e:
                             toolName: call.toolName,
                             result: error ? { error } : result
                         });
+
+                        // Check if this tool forces the turn to end
+                        // Default behavior: endsTurn = true (or undefined)
+                        if (toolDoc.endsTurn !== false) {
+                            // If ANY tool ends the turn, we stop.
+                            // But wait, the variable 'shouldContinue' controls the NEXT iteration.
+                            // If we want to continue, we need ALL tools to be non-ending?
+                            // Or if ANY tool allows continuation?
+                            // Logic: "give the Role the opportunity to continue calling more tools UNTIL it calls a tool that ends the turn."
+                            // So if a tool ends the turn, we stop. 
+                            // If we have previously set shouldContinue = true (from a previous tool in this batch?), 
+                            // a subsequent tool that ends the turn should flip it back to false.
+                            // So we need to track if we *can* continue.
+                        }
                     }
 
-                    shouldContinue = true; // Continue the conversation loop
+                    // Determine if we should continue
+                    // We continue ONLY if ALL tools executing in this batch allow continuation
+                    // (i.e. endsTurn === false). If ANY tool has endsTurn === true, we stop.
+                    // However, we need to be careful: if we have mixed tools, safeguard says stop.
+
+                    // We need to re-iterate or track it during execution.
+                    // Let's assume we tracked it.
+                    let allToolsAllowContinue = true;
+                    for (const call of toolCalls) {
+                        const toolDoc = await Tool.findOne({ name: call.toolName });
+                        if (toolDoc && toolDoc.endsTurn !== false) {
+                            allToolsAllowContinue = false;
+                            break;
+                        }
+                    }
+
+                    if (allToolsAllowContinue) {
+                        shouldContinue = true;
+                    } else {
+                        shouldContinue = false;
+                    }
+
                     loopCount++;
                 } else {
                     // No tool calls, just normal completion

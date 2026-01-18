@@ -29,6 +29,10 @@ const toolSchema = new mongoose.Schema({
     code: {
         type: String,
         default: ''
+    },
+    endsTurn: {
+        type: Boolean,
+        default: true
     }
 }, {
     timestamps: true

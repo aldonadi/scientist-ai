@@ -3,6 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { ToolService, Tool, CreateToolDto } from '../../core/services/tool.service';
+import { ToastService } from '../../core/services/toast.service';
+import { ConfirmService } from '../../core/services/confirm.service';
+import { CanComponentDeactivate } from '../../core/guards/unsaved-changes.guard';
 import { isValidPythonIdentifier, getPythonIdentifierError, validateJson, checkPythonSyntax } from '../../core/utils/validation.utils';
 
 const DEFAULT_TOOL_CODE = `def execute(env, args):
@@ -40,8 +43,11 @@ const DEFAULT_TOOL_CODE = `def execute(env, args):
             ← Back
           </button>
           <h1 class="text-2xl font-bold text-gray-900">
-            {{ isNew ? 'Create Tool' : 'Edit Tool' }}
+            {{ isNew ? 'Create Tool' : 'Edit Tool: ' + tool.name }}
           </h1>
+          <span *ngIf="isDirty()" class="ml-3 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full border border-amber-200">
+             ● Unsaved Changes
+          </span>
         </div>
         <div class="flex items-center space-x-3">
           <button (click)="goBack()" 
@@ -94,15 +100,57 @@ const DEFAULT_TOOL_CODE = `def execute(env, args):
                         placeholder="What does this tool do?"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
             </div>
+
+            <div class="flex items-center pt-2">
+                <input type="checkbox" 
+                       id="endsTurn"
+                       [(ngModel)]="tool.endsTurn"
+                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                <label for="endsTurn" class="ml-2 block text-sm text-gray-900">
+                    Ends Turn
+                    <p class="text-gray-500 text-xs font-normal">If checked, the agent's turn usually ends after calling this tool. Uncheck to allow chaining.</p>
+                </label>
+            </div>
             
             <div>
               <div class="flex items-center justify-between mb-1">
                 <label class="block text-sm font-medium text-gray-700">Parameters (JSON Schema)</label>
-                <button (click)="generateSchema()" 
-                        class="text-xs text-blue-600 hover:text-blue-800">
-                  Auto-generate from code
-                </button>
+                <div class="flex items-center space-x-1">
+                  <button (click)="generateSchema()" 
+                          class="text-xs text-blue-600 hover:text-blue-800">
+                    Auto-generate from code
+                  </button>
+                  <button (click)="showSchemaHelp = !showSchemaHelp"
+                          class="w-4 h-4 rounded-full text-xs flex items-center justify-center transition-colors"
+                          [class.bg-blue-500]="showSchemaHelp"
+                          [class.text-white]="showSchemaHelp"
+                          [class.bg-gray-200]="!showSchemaHelp"
+                          [class.text-gray-600]="!showSchemaHelp"
+                          [class.hover:bg-gray-300]="!showSchemaHelp"
+                          title="Click for help">
+                    ?
+                  </button>
+                </div>
               </div>
+              
+              <!-- Help Tooltip -->
+              <div *ngIf="showSchemaHelp" 
+                   class="mb-2 p-3 bg-blue-100 border border-blue-300 rounded-lg text-xs text-blue-900 shadow-sm">
+                <p class="font-medium mb-2">Auto-generate parses your docstring's Args section:</p>
+                <pre class="bg-white p-2 rounded border border-blue-200 text-xs overflow-x-auto text-gray-800">def execute(env, args):
+    """
+    Args:
+        symbol (str): Stock ticker symbol
+        limit (int): Max results
+    """</pre>
+                <p class="mt-2">
+                  Format: <code class="bg-blue-200 px-1 rounded">param_name (type): description</code><br>
+                  Supported types: <code class="bg-blue-200 px-1 rounded">str</code>, 
+                  <code class="bg-blue-200 px-1 rounded">int</code>, 
+                  <code class="bg-blue-200 px-1 rounded">bool</code>
+                </p>
+              </div>
+              
               <textarea [(ngModel)]="parametersJson"
                         (ngModelChange)="validateParameters()"
                         rows="8"
@@ -137,7 +185,7 @@ const DEFAULT_TOOL_CODE = `def execute(env, args):
     </div>
   `
 })
-export class ToolEditorComponent implements OnInit {
+export class ToolEditorComponent implements OnInit, CanComponentDeactivate {
   @Input() id?: string;
 
   isNew = true;
@@ -146,10 +194,12 @@ export class ToolEditorComponent implements OnInit {
     name: '',
     description: '',
     parameters: {},
-    code: ''
+    code: '',
+    endsTurn: true
   };
 
   parametersJson = '{}';
+  showSchemaHelp = false;
 
   // Validation errors
   namespaceError = '';
@@ -157,8 +207,14 @@ export class ToolEditorComponent implements OnInit {
   parametersError = '';
   codeError = '';
 
+  // Dirty checking
+  private initialToolState: string = '';
+  private bypassGuard = false;
+
   constructor(
     private toolService: ToolService,
+    private toastService: ToastService,
+    private confirmService: ConfirmService,
     private router: Router,
     private route: ActivatedRoute
   ) { }
@@ -173,6 +229,7 @@ export class ToolEditorComponent implements OnInit {
     } else {
       // New tool: pre-populate code
       this.tool.code = DEFAULT_TOOL_CODE;
+      this.saveInitialState();
     }
   }
 
@@ -186,15 +243,70 @@ export class ToolEditorComponent implements OnInit {
           name: tool.name,
           description: tool.description,
           parameters: tool.parameters,
-          code: tool.code
+          code: tool.code,
+          endsTurn: tool.endsTurn !== undefined ? tool.endsTurn : true
         };
         this.parametersJson = JSON.stringify(tool.parameters, null, 2);
+        this.saveInitialState();
       },
       error: (err) => {
         console.error('Failed to load tool:', err);
         this.router.navigate(['/tools']);
       }
     });
+  }
+
+  saveInitialState(): void {
+    this.initialToolState = JSON.stringify(this.getCleanToolObject());
+  }
+
+  getCleanToolObject(): any {
+    return {
+      namespace: this.tool.namespace,
+      name: this.tool.name,
+      description: this.tool.description,
+      parameters: this.tool.parameters,
+      code: this.tool.code,
+      endsTurn: this.tool.endsTurn,
+      parametersJson: this.parametersJson
+    };
+  }
+
+  isDirty(): boolean {
+    const currentState = JSON.stringify(this.getCleanToolObject());
+    return this.initialToolState !== currentState;
+  }
+
+  canDeactivate(): boolean | Promise<boolean> {
+    if (this.bypassGuard) {
+      return true;
+    }
+    if (this.isDirty()) {
+      return this.confirmService.confirm({
+        title: 'Unsaved Changes',
+        message: `You have unsaved changes to "${this.tool.name || 'this tool'}".\n\nDo you want to leave without saving?`,
+        confirmText: 'Leave',
+        cancelText: 'Stay'
+      });
+    }
+    return true;
+  }
+
+  async goBack(): Promise<void> {
+    if (this.isDirty()) {
+      const shouldDiscard = await this.confirmService.confirm({
+        title: 'Discard Changes?',
+        message: `You have unsaved changes to "${this.tool.name || 'this tool'}".\n\nDo you want to discard these changes?`,
+        confirmText: 'Discard',
+        cancelText: 'Keep Editing'
+      });
+      if (shouldDiscard) {
+        this.bypassGuard = true;
+        this.router.navigate(['/tools']);
+      }
+    } else {
+      this.router.navigate(['/tools']);
+    }
   }
 
   validateNamespace(): void {
@@ -280,12 +392,16 @@ export class ToolEditorComponent implements OnInit {
       : this.toolService.updateTool(this.id!, this.tool);
 
     action.subscribe({
-      next: () => this.router.navigate(['/tools']),
-      error: (err) => console.error('Failed to save tool:', err)
+      next: () => {
+        this.toastService.success('Tool Saved Successfully');
+        this.saveInitialState(); // Update initial state after save
+        this.bypassGuard = true;
+        this.router.navigate(['/tools']);
+      },
+      error: (err) => {
+        console.error('Failed to save tool:', err);
+        this.toastService.error('Failed to save tool: ' + (err.error?.message || err.message));
+      }
     });
-  }
-
-  goBack(): void {
-    this.router.navigate(['/tools']);
   }
 }

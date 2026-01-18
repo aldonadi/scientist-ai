@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router, ActivatedRoute } from '@angular/router';
 import { PlanService, ExperimentPlan, CreatePlanDto, Role, Goal, Script } from '../../../core/services/plan.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { ConfirmService } from '../../../core/services/confirm.service';
 import { CanComponentDeactivate } from '../../../core/guards/unsaved-changes.guard';
 import { GeneralTabComponent } from './general-tab.component';
 import { EnvironmentTabComponent } from './environment-tab.component';
@@ -77,20 +78,24 @@ import { ScriptsTabComponent } from './scripts-tab.component';
           [class.hidden]="activeTab !== 'general'"
           [(name)]="plan.name"
           [(description)]="plan.description"
-          [(maxSteps)]="plan.maxSteps">
+          [(maxSteps)]="plan.maxSteps"
+          [(maxStepRetries)]="plan.maxStepRetries">
         </app-general-tab>
         
         <app-environment-tab 
           class="h-full block"
           [class.hidden]="activeTab !== 'environment'"
-          [(environment)]="plan.initialEnvironment">
+          [(environment)]="plan.initialEnvironment"
+          [roles]="plan.roles"
+          (rolesChange)="plan.roles = $event">
         </app-environment-tab>
         
         <app-roles-tab 
           class="h-full block"
           [class.hidden]="activeTab !== 'roles'"
           [(roles)]="plan.roles"
-          [providers]="providers">
+          [providers]="providers"
+          [environmentVars]="getEnvironmentVars()">
         </app-roles-tab>
         
         <app-goals-tab 
@@ -135,6 +140,7 @@ export class PlanEditorComponent implements OnInit, CanComponentDeactivate {
     goals: Goal[];
     scripts: Script[];
     maxSteps: number;
+    maxStepRetries: number;
   } = {
       name: '',
       description: '',
@@ -142,15 +148,19 @@ export class PlanEditorComponent implements OnInit, CanComponentDeactivate {
       roles: [],
       goals: [],
       scripts: [],
-      maxSteps: 20
+      maxSteps: 20,
+      maxStepRetries: 3
     };
 
   // Snapshot of initial state for dirty check
   private initialPlanState: string = '';
+  // Flag to bypass guard when user already confirmed via Cancel button
+  private bypassGuard = false;
 
   constructor(
     private planService: PlanService,
     private toastService: ToastService,
+    private confirmService: ConfirmService,
     private router: Router,
     private route: ActivatedRoute,
     private http: HttpClient
@@ -185,7 +195,8 @@ export class PlanEditorComponent implements OnInit, CanComponentDeactivate {
           roles: plan.roles || [],
           goals: plan.goals || [],
           scripts: plan.scripts || [],
-          maxSteps: plan.maxSteps || 20
+          maxSteps: plan.maxSteps || 20,
+          maxStepRetries: plan.maxStepRetries !== undefined ? plan.maxStepRetries : 3
         };
         this.saveInitialState();
       },
@@ -228,6 +239,7 @@ export class PlanEditorComponent implements OnInit, CanComponentDeactivate {
       name: this.plan.name,
       description: this.plan.description,
       maxSteps: this.plan.maxSteps,
+      maxStepRetries: this.plan.maxStepRetries,
       initialEnvironment: {
         variables: variables,
         variableTypes: variableTypes
@@ -279,6 +291,7 @@ export class PlanEditorComponent implements OnInit, CanComponentDeactivate {
       name: this.plan.name,
       description: this.plan.description,
       maxSteps: this.plan.maxSteps,
+      maxStepRetries: this.plan.maxStepRetries,
       initialEnvironment: this.plan.initialEnvironment,
       roles: this.plan.roles,
       goals: this.plan.goals,
@@ -291,14 +304,95 @@ export class PlanEditorComponent implements OnInit, CanComponentDeactivate {
     return this.initialPlanState !== currentState;
   }
 
-  canDeactivate(): boolean {
+  canDeactivate(): boolean | Promise<boolean> {
+    // If we've already confirmed via goBack(), skip the guard
+    if (this.bypassGuard) {
+      return true;
+    }
     if (this.isDirty()) {
-      return confirm(`Are you sure you want to leave without saving changes to the '${this.plan.name}' Experiment Plan?`);
+      return this.confirmService.confirm({
+        title: 'Unsaved Changes',
+        message: `You have unsaved changes to "${this.plan.name}".\n\nDo you want to leave without saving?`,
+        confirmText: 'Leave',
+        cancelText: 'Stay'
+      });
     }
     return true;
   }
 
-  goBack(): void {
-    this.router.navigate(['/plans']);
+  async goBack(): Promise<void> {
+    if (this.isDirty()) {
+      const shouldDiscard = await this.confirmService.confirm({
+        title: 'Discard Changes?',
+        message: `You have unsaved changes to "${this.plan.name}".\n\nDo you want to discard these changes?`,
+        confirmText: 'Discard',
+        cancelText: 'Keep Editing'
+      });
+      if (shouldDiscard) {
+        // Set flag to bypass guard since user already confirmed
+        this.bypassGuard = true;
+        this.router.navigate(['/plans']);
+      }
+    } else {
+      this.router.navigate(['/plans']);
+    }
+  }
+
+  async revertChanges(): Promise<void> {
+    if (this.isDirty()) {
+      const shouldRevert = await this.confirmService.confirm({
+        title: 'Revert Changes?',
+        message: `Do you want to revert all unsaved changes to "${this.plan.name}"?`,
+        confirmText: 'Revert',
+        cancelText: 'Cancel'
+      });
+      if (shouldRevert) {
+        if (this.isNew) {
+          this.plan = {
+            name: '',
+            description: '',
+            initialEnvironment: {},
+            roles: [],
+            goals: [],
+            scripts: [],
+            maxSteps: 20,
+            maxStepRetries: 3
+          };
+          this.saveInitialState();
+        } else {
+          this.loadPlan();
+        }
+      }
+    }
+  }
+
+  /**
+   * Get environment variables as an array with key, type, and value info
+   * for the Roles tab variable picker.
+   */
+  getEnvironmentVars(): { key: string; type: string; value: any }[] {
+    if (this.envTab && this.envTab.variables) {
+      return this.envTab.variables
+        .filter(v => v.key && !v.keyError)
+        .map(v => ({
+          key: v.key,
+          type: v.type,
+          value: this.envTab.parseValue(v)
+        }));
+    }
+    // Fallback: derive from the plan's initialEnvironment
+    return Object.entries(this.plan.initialEnvironment || {}).map(([key, value]) => ({
+      key,
+      type: this.detectType(value),
+      value
+    }));
+  }
+
+  private detectType(value: any): string {
+    if (Array.isArray(value)) return 'array';
+    if (typeof value === 'object' && value !== null) return 'object';
+    if (typeof value === 'number') return 'number';
+    if (typeof value === 'boolean') return 'boolean';
+    return 'string';
   }
 }

@@ -9,6 +9,7 @@ export interface Tool {
     description: string;
     parameters: any;
     code: string;
+    endsTurn: boolean;
     createdAt: string;
     updatedAt: string;
 }
@@ -19,6 +20,7 @@ export interface CreateToolDto {
     description: string;
     parameters?: any;
     code: string;
+    endsTurn?: boolean;
 }
 
 @Injectable({
