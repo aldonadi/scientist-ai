@@ -1,7 +1,8 @@
 import { Component, OnInit, OnDestroy, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ExperimentService, Experiment } from '../../core/services/experiment.service';
+import { PlanService } from '../../core/services/plan.service';
 import { LogFeedComponent, LogEntry } from './log-feed.component';
 import { JsonTreeComponent } from './json-tree.component';
 import { interval, Subscription } from 'rxjs';
@@ -17,7 +18,7 @@ interface RoleActivity {
 @Component({
   selector: 'app-experiment-monitor',
   standalone: true,
-  imports: [CommonModule, LogFeedComponent, JsonTreeComponent],
+  imports: [CommonModule, RouterLink, LogFeedComponent, JsonTreeComponent],
   template: `
     <div class="h-full flex flex-col">
       <!-- Header -->
@@ -28,7 +29,15 @@ interface RoleActivity {
           </button>
           <div>
             <h1 class="text-2xl font-bold text-gray-900">Experiment Monitor</h1>
-            <p class="text-sm text-gray-500">{{ id }}</p>
+            <div class="flex items-center gap-2 text-sm text-gray-500">
+              <span>{{ id }}</span>
+              <span *ngIf="planName" class="text-gray-300">|</span>
+              <a *ngIf="planName" 
+                 [routerLink]="['/plans', experiment?.planId]" 
+                 class="text-blue-600 hover:text-blue-800 hover:underline transition-colors cursor-pointer">
+                {{ planName }}
+              </a>
+            </div>
           </div>
         </div>
         
@@ -173,6 +182,7 @@ export class ExperimentMonitorComponent implements OnInit, OnDestroy {
   @Input() id?: string;
 
   experiment: Experiment | null = null;
+  planName?: string;
   logs: LogEntry[] = [];
   roleActivities: RoleActivity[] = [];
   isControlling = false;
@@ -183,7 +193,8 @@ export class ExperimentMonitorComponent implements OnInit, OnDestroy {
   constructor(
     private router: Router,
     private route: ActivatedRoute,
-    private experimentService: ExperimentService
+    private experimentService: ExperimentService,
+    private planService: PlanService
   ) { }
 
   ngOnInit(): void {
@@ -206,9 +217,23 @@ export class ExperimentMonitorComponent implements OnInit, OnDestroy {
     this.experimentService.getExperiment(this.id).subscribe({
       next: (exp) => {
         this.experiment = exp;
+        if (!this.planName && exp.planId) {
+          this.loadPlan(exp.planId);
+        }
       },
       error: (err) => {
         console.error('Failed to load experiment:', err);
+      }
+    });
+  }
+
+  loadPlan(planId: string): void {
+    this.planService.getPlan(planId).subscribe({
+      next: (plan) => {
+        this.planName = plan.name;
+      },
+      error: (err) => {
+        console.error('Failed to load plan:', err);
       }
     });
   }
