@@ -42,8 +42,9 @@ The implementation ensures that as the experiment progresses, the `User` prompt 
 Added a **Chat History** tab to the Experiment Monitor page:
 - **Role Selection Sidebar**: Choose which Role's perspective to view.
 - **Message Stream**:
-  - **System Prompts**: Displayed discretely.
-  - **Step Prompts (User)**: Blue bubbles showing the constructed prompt for the step.
-  - **Assistant Responses**: White bubbles showing the model's text response.
-  - **Tool Calls**: Embedded within the assistant's response, showing the function and arguments.
-  - **Tool Results**: Distinct gray blocks showing the JSON output from the tool execution.
+  - **Step Separators**: Horizontal rule with Step Number separating interactions.
+  - **System Prompts**: Centered gray pill at the top.
+  - **User (Step) Prompts**: Right-aligned blue bubbles.
+  - **Assistant Responses**: Left-aligned white bubbles with role avatar.
+  - **Tool Calls**: Integrated cards within the assistant response.
+  - **Tool Results**: Indented gray code blocks for output visibility.

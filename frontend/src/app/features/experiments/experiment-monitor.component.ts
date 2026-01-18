@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { ExperimentService, Experiment } from '../../core/services/experiment.service';
+import { ExperimentService, Experiment, ChatMessage } from '../../core/services/experiment.service';
 import { PlanService, ExperimentPlan } from '../../core/services/plan.service';
 import { LogFeedComponent, LogEntry } from './log-feed.component';
 import { JsonTreeComponent } from './json-tree.component';
@@ -191,57 +191,84 @@ interface RoleActivity {
                       {{ selectedRole ? 'Chat History: ' + selectedRole : 'Select a Role' }}
                   </h2>
               </div>
-              <div class="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50">
+              <div class="flex-1 overflow-y-auto p-6 space-y-8 bg-slate-50">
                   <ng-container *ngIf="selectedRole && getSelectedHistory().length > 0; else noChat">
-                      <div *ngFor="let msg of getSelectedHistory()" class="flex flex-col">
+                      <div *ngFor="let msg of getSelectedHistory(); let i = index" class="flex flex-col w-full">
                           
+                          <!-- Step Separator (Before User Messages) -->
+                          <div *ngIf="msg.role === 'user'" class="w-full flex items-center gap-4 my-6">
+                              <div class="h-px bg-gray-300 flex-1"></div>
+                              <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                  {{ (msg.content.match('(Step [0-9]+)') || ['Next Step'])[0] }}
+                              </span>
+                              <div class="h-px bg-gray-300 flex-1"></div>
+                          </div>
+
                           <!-- System Message -->
-                          <div *ngIf="msg.role === 'system'" class="self-center bg-gray-200 text-gray-600 text-xs px-3 py-1 rounded-full mb-2">
-                              Output Format: {{ msg.content | slice:0:50 }}...
-                          </div>
-
-                          <!-- User Message (Experiment Step Prompt) -->
-                          <div *ngIf="msg.role === 'user'" class="self-end max-w-2xl">
-                              <div class="bg-blue-600 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm">
-                                  <div class="text-xs text-blue-200 mb-1 font-mono">STEP PROMPT</div>
-                                  <pre class="whitespace-pre-wrap font-sans text-sm">{{ msg.content }}</pre>
+                          <div *ngIf="msg.role === 'system'" class="flex flex-col items-center mb-4">
+                              <div class="bg-gray-200 text-gray-700 text-xs px-4 py-2 rounded-full shadow-sm max-w-3xl text-center">
+                                  <span class="font-bold block mb-1">SYSTEM PROMPT</span>
+                                  <span class="whitespace-pre-wrap">{{ msg.content }}</span>
                               </div>
-                              <div class="text-right text-xs text-gray-400 mt-1">{{ formatTime(msg.timestamp) }}</div>
                           </div>
 
-                          <!-- Assistant Message (Response) -->
-                          <div *ngIf="msg.role === 'assistant'" class="self-start max-w-2xl w-full">
-                              <div class="bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
-                                  <div class="text-xs text-gray-400 mb-1 font-bold">{{ selectedRole }}</div>
-                                  <div class="prose prose-sm max-w-none text-gray-800 whitespace-pre-wrap">{{ msg.content }}</div>
-                                  
-                                  <!-- Render Tool Calls inside Assistant msg if any -->
-                                  <div *ngIf="msg.tool_calls && msg.tool_calls.length > 0" class="mt-3 space-y-2">
-                                      <div *ngFor="let call of msg.tool_calls" class="bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs font-mono">
-                                          <div class="text-gray-500 font-semibold">🛠 Tool Call: {{ call.function.name }}</div>
-                                          <div class="truncate text-gray-400">{{ call.function.arguments | json }}</div>
+                          <!-- User Message (Right Aligned Bubble) -->
+                          <div *ngIf="msg.role === 'user'" class="flex justify-end mb-2">
+                              <div class="max-w-[80%]">
+                                  <div class="bg-blue-600 text-white rounded-2xl rounded-tr-sm px-5 py-3 shadow-md">
+                                      <div class="text-[10px] text-blue-200 mb-1 font-bold tracking-wide uppercase">Step Prompt</div>
+                                      <pre class="whitespace-pre-wrap font-sans text-sm leading-relaxed">{{ msg.content }}</pre>
+                                  </div>
+                                  <div class="text-right text-xs text-gray-400 mt-1 mr-2">{{ formatTime(msg.timestamp) }}</div>
+                              </div>
+                          </div>
+
+                          <!-- Assistant Message (Left Aligned Bubble) -->
+                          <div *ngIf="msg.role === 'assistant'" class="flex justify-start mb-2">
+                              <div class="max-w-[80%] w-full">
+                                  <div class="bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-5 py-4 shadow-md">
+                                      <div class="flex items-center gap-2 mb-2">
+                                          <div class="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center text-xs">🤖</div>
+                                          <span class="text-xs text-purple-600 font-bold">{{ selectedRole }}</span>
+                                      </div>
+                                      <div class="prose prose-sm max-w-none text-gray-800 whitespace-pre-wrap leading-relaxed">{{ msg.content }}</div>
+                                      
+                                      <!-- Embedded Tool Calls -->
+                                      <div *ngIf="msg.tool_calls && msg.tool_calls.length > 0" class="mt-4 space-y-3">
+                                          <div *ngFor="let call of msg.tool_calls" class="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
+                                              <div class="bg-gray-100 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
+                                                  <span class="text-xs">🛠</span>
+                                                  <span class="text-xs font-mono font-bold text-gray-700">{{ call.function.name }}</span>
+                                              </div>
+                                              <div class="p-3 bg-slate-50 font-mono text-xs text-gray-600 break-all">
+                                                  {{ call.function.arguments | json }}
+                                              </div>
+                                          </div>
                                       </div>
                                   </div>
+                                  <div class="text-left text-xs text-gray-400 mt-1 ml-2">{{ formatTime(msg.timestamp) }}</div>
                               </div>
-                              <div class="text-left text-xs text-gray-400 mt-1">{{ formatTime(msg.timestamp) }}</div>
                           </div>
 
-                          <!-- Tool Result Message -->
-                          <div *ngIf="msg.role === 'tool'" class="self-start max-w-2xl w-full pl-8 opacity-75">
-                              <div class="bg-gray-100 border border-gray-200 rounded-xl px-4 py-2 text-sm font-mono text-gray-600">
-                                  <div class="flex items-center gap-2 mb-1">
-                                      <span>⚙️ Tool Result</span>
-                                      <!-- <span class="font-bold">{{ msg.name }}</span> -->
+                          <!-- Tool Result Message (Left Indented Block) -->
+                          <div *ngIf="msg.role === 'tool'" class="flex justify-start pl-8 mb-2 opacity-80">
+                              <div class="max-w-[75%] w-full">
+                                  <div class="bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-sm font-mono text-gray-600 shadow-inner">
+                                      <div class="flex items-center gap-2 mb-1 text-xs text-gray-500 uppercase font-bold tracking-wide">
+                                          <span>⚙️ Tool Output</span>
+                                      </div>
+                                      <div class="whitespace-pre-wrap break-all max-h-60 overflow-y-auto custom-scrollbar">{{ msg.content }}</div>
                                   </div>
-                                  <div class="whitespace-pre-wrap break-all">{{ msg.content }}</div>
+                                  <div class="text-left text-xs text-gray-400 mt-1 ml-1">{{ formatTime(msg.timestamp) }}</div>
                               </div>
                           </div>
 
                       </div>
                   </ng-container>
                   <ng-template #noChat>
-                      <div class="h-full flex items-center justify-center text-gray-400">
-                          {{ selectedRole ? 'No history for this role yet.' : 'Please select a role from the sidebar.' }}
+                      <div class="h-full flex flex-col items-center justify-center text-gray-400">
+                          <div class="text-4xl mb-2">💬</div>
+                          <p>{{ selectedRole ? 'Starting chat history...' : 'Select a role to view history' }}</p>
                       </div>
                   </ng-template>
               </div>
@@ -361,10 +388,31 @@ export class ExperimentMonitorComponent implements OnInit, OnDestroy {
     return [];
   }
 
-  getSelectedHistory() {
-    if (!this.experiment?.roleHistory || !this.selectedRole) return [];
-    // roleHistory is a plain object from JSON, not a Map here
-    return this.experiment.roleHistory[this.selectedRole] || [];
+  getSelectedHistory(): ChatMessage[] {
+    if (!this.selectedRole) return [];
+
+    const history: ChatMessage[] = [];
+
+    // 1. Add System Prompt from Plan if available
+    if (this.plan) {
+      const roleDef = this.plan.roles.find(r => r.name === this.selectedRole);
+      if (roleDef) {
+        history.push({
+          role: 'system',
+          content: roleDef.systemPrompt,
+          timestamp: this.experiment?.startTime || new Date().toISOString()
+        });
+      }
+    }
+
+    // 2. Add Persistent History from Experiment if available
+    if (this.experiment?.roleHistory && this.experiment.roleHistory[this.selectedRole]) {
+      history.push(...this.experiment.roleHistory[this.selectedRole]);
+    } else {
+      // Fallback: If no history exists yet but we have a plan, we still show the system prompt.
+    }
+
+    return history;
   }
 
   loadLogs(): void {
