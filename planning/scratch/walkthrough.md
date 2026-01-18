@@ -1,84 +1,38 @@
-# Walkthrough - Add Plan Link to Experiment Monitor
+# Chat History Implementation Walkthrough
+
+I have implemented per-role chat history persistence to enable context-aware interactions with the Ollama provider.
 
 ## Changes
 
-### Experiment Monitor Component
-
-I updated `ExperimentMonitorComponent` to display the name of the associated `ExperimentPlan` in the header.
-
-#### `experiment-monitor.component.ts`
-
--   **Dependencies**: Injected `PlanService` to fetch plan details.
--   **Logic**: Added `loadPlan` method which is called during `loadExperiment` if the experiment has a `planId`.
--   **Template**: Added a specific section in the header to show the plan name with a `routerLink` to the plan editor.
-
-```typescript
-// experiment-monitor.component.ts
-
-// ... imports
-import { PlanService } from '../../core/services/plan.service';
-
-// ... component decorator
-@Component({
-  // ...
-  imports: [CommonModule, RouterLink, LogFeedComponent, JsonTreeComponent], // Added RouterLink
-  template: \`
-    <!-- ... -->
-            <div class="flex items-center gap-2 text-sm text-gray-500">
-              <span>{{ id }}</span>
-              <span *ngIf="planName" class="text-gray-300">|</span>
-              <a *ngIf="planName" 
-                 [routerLink]="['/plans', experiment?.planId]" 
-                 class="text-blue-600 hover:text-blue-800 hover:underline transition-colors cursor-pointer">
-                {{ planName }}
-              </a>
-            </div>
-    <!-- ... -->
-  \`
-})
-export class ExperimentMonitorComponent implements OnInit, OnDestroy {
-  // ...
-  planName?: string;
-
-  constructor(
-    // ...
-    private planService: PlanService
-  ) { }
-
-  // ...
-
-  loadExperiment(): void {
-    // ...
-    this.experimentService.getExperiment(this.id).subscribe({
-      next: (exp) => {
-        this.experiment = exp;
-        if (!this.planName && exp.planId) {
-          this.loadPlan(exp.planId);
+### 1. Database Schema
+Modified `Experiment` model to include `roleHistory`:
+```javascript
+roleHistory: {
+    type: Map,
+    of: [
+        {
+            role: { type: String, enum: ['system', 'user', 'assistant', 'tool'] },
+            content: String,
+            tool_calls: Schema.Types.Mixed,
+            timestamp: { type: Date, default: Date.now }
         }
-      },
-      // ...
-    });
-  }
-
-  loadPlan(planId: string): void {
-    this.planService.getPlan(planId).subscribe({
-      next: (plan) => {
-        this.planName = plan.name;
-      },
-      // ...
-    });
-  }
+    ]
 }
 ```
+
+### 2. Orchestrator Logic
+Updated `ExperimentOrchestrator.processRole()` to:
+- **Load History**: Prepend existing `roleHistory` (excluding System prompt) to the current prompt.
+- **Pass Copy**: Send a shallow copy of messages to `ProviderService` to avoid mutation side-effects.
+- **Persist History**: After each turn, append the new interactions (User -> Assistant -> Tool -> Assistant) to the `roleHistory` and save to MongoDB.
 
 ## Verification Results
 
 ### Automated Tests
--   Ran `npm run build` in `frontend` directory.
--   **Result**: Build completed successfully!
+Created `backend/tests/services/experiment-orchestrator.history.test.js`.
+- **Pass**: `should initialize history and send correct prompt on first turn`
+- **Pass**: `should include previous history in prompt for subsequent steps` (Verifies context retention)
+- **Pass**: `should persist tool calls correctly in history` (Verifies complex tool interaction persistence)
 
 ### Manual Verification
--   **Action**: Navigate to an Experiment Monitor page.
--   **Expectation**: See the Plan Name (e.g., "My Experiment Plan") next to the Experiment ID in the header.
--   **Action**: Click the Plan Name.
--   **Expectation**: Navigate to the Plan Editor for that plan.
+The implementation ensures that as the experiment progresses, the `User` prompt for Step N includes the full conversation history from Step 1 to N-1, allowing the model to reference past actions.

@@ -1,13 +1,10 @@
-# Variable Visibility Per Role - Story 063
+# Task: Persist Chat History Per Role
 
-## Progress
-- [x] Create user story 063 with acceptance criteria
-- [x] Register story in backlog
-- [x] Research existing component structure
-- [x] Create implementation plan
-- [x] Get user approval on plan
-- [x] Implement Environment Tab expand/collapse (Option B)
-- [x] Implement Role Editor variable picker (Option F)
-- [x] Create Visibility Matrix modal component (Option J)
-- [x] Wire modal to both Environment and Role tabs
-- [x] Verify functionality
+- [x] Investigate Ollama API / `ollama-js` capabilities for chat history <!-- id: 0 -->
+- [x] Analyze `Experiment` model schema for storage options <!-- id: 1 -->
+- [x] Develop implementation plan for storing and retrieving role-based history <!-- id: 2 -->
+- [x] Modify `Experiment` schema to add `roleHistory` <!-- id: 4 -->
+- [x] Update `ExperimentOrchestrator` to load and append to history <!-- id: 5 -->
+- [x] Implement history persistence in `ExperimentOrchestrator` <!-- id: 6 -->
+- [x] Add automated tests for history interactions <!-- id: 7 -->
+- [x] Verify functionality with manual test <!-- id: 3 -->

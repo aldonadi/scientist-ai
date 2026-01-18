@@ -283,16 +283,38 @@ class ExperimentOrchestrator {
         }
 
         // 3. Prompt Construction
+        // 3. Prompt Construction & History Retrieval
+        // Ensure roleHistory map exists
+        if (!this.experiment.roleHistory) {
+            this.experiment.roleHistory = new Map();
+        }
+
+        // Get or initialize history for this role
+        // Note: We use .get() usually, but with Mongoose Maps sometimes direct access or .get() works.
+        // We'll use .get() ensuring we handle the potentially undefined return.
+        let roleHistory = this.experiment.roleHistory.get(role.name);
+        if (!roleHistory) {
+            roleHistory = [];
+            this.experiment.roleHistory.set(role.name, roleHistory);
+        }
+
         const step = this.experiment.currentStep;
+
+        // The new User input for this step
+        const newUserMessage = {
+            role: 'user',
+            content: `Step ${step}. Current Environment: ${JSON.stringify(filteredEnv.variables)}`
+        };
+
+        // Construct full message history: System Prompt + Past History + New User Message
+        // We do NOT include the System Prompt in the stored history, as we prepend it fresh each time.
         const messages = [
             {
                 role: 'system',
                 content: role.systemPrompt
             },
-            {
-                role: 'user',
-                content: `Step ${step}. Current Environment: ${JSON.stringify(filteredEnv.variables)}`
-            }
+            ...roleHistory,
+            newUserMessage
         ];
 
         // Debug logging: Show exact prompt being sent to LLM
@@ -386,7 +408,7 @@ class ExperimentOrchestrator {
                     stream = await ProviderService.chat(
                         providerConfig,
                         modelName,
-                        currentMessages,
+                        [...currentMessages],
                         toolsForProvider,
                         { temperature: role.modelConfig?.temperature || 0.7 }
                     );
@@ -656,6 +678,12 @@ except Exception as e:
                         roleName: role.name,
                         fullResponse: accumulatedResponse
                     });
+
+                    // Add final response to history
+                    currentMessages.push({
+                        role: 'assistant',
+                        content: accumulatedResponse
+                    });
                 }
 
             } catch (err) {
@@ -668,6 +696,20 @@ except Exception as e:
                 });
                 shouldContinue = false;
             }
+        }
+
+        // 6. Persist History
+        // We append the new interactions from this turn to the persistent history.
+        // currentMessages = [System, ...OldHistory, NewUser, ...NewResponses]
+        // We want to capture [NewUser, ...NewResponses]
+        // The number of pre-existing items is 1 (System) + roleHistory.length (OldHistory)
+        const newHistoryItems = currentMessages.slice(1 + roleHistory.length);
+
+        if (newHistoryItems.length > 0) {
+            roleHistory.push(...newHistoryItems);
+            // Mark modified to ensure Mongoose saves the Map change
+            this.experiment.markModified('roleHistory');
+            await this.experiment.save();
         }
     }
 

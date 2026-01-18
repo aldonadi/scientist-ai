@@ -1,152 +1,67 @@
-# Variable Visibility Per Role - Implementation Plan
+# Implementation Plan - Per-Role Chat History
 
-Allow users to configure which environment variables each Role can see "for free" in their system prompt, without requiring tool calls.
+This plan outlines the changes required to persist chat history for each Role in an experiment and leverage it for context-aware interactions with the Ollama provider.
+
+## Goal Description
+Currently, the Experiment Orchestrator constructs a fresh prompt for each step, isolating the context. Code investigation reveals that the Ollama API is stateless and requires the full `messages` array to be sent with each request to maintain context.
+To enable "memory" for Roles across steps (or even just robust debugging), we must persist the chat history (User <-> Assistant <-> Tool) for each Role and resend it during inference.
+
+## User Review Required
+> [!IMPORTANT]
+> **Context Window Limits**: Validating "entire history" indefinitely will eventually exceed the context window of local models (e.g., 4k or 8k tokens).
+> **Recommendation**: We should implement a basic sliding window or "max messages" limit in the future. For this initial implementation, we will append history indefinitely until a failure occurs, or add a simple cap (e.g., last 50 messages).
 
 ## Proposed Changes
 
-### Visibility Matrix Modal Component (New)
+### Backend
 
-#### [NEW] [visibility-matrix-modal.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/visibility-matrix-modal.component.ts)
+#### [MODIFY] [experiment.model.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/models/experiment.model.js)
+- Update `ExperimentSchema` to include a `roleHistory` field.
+- **Structure**:
+  ```javascript
+  roleHistory: {
+      type: Map,
+      of: [
+          {
+              role: { type: String, enum: ['system', 'user', 'assistant', 'tool'] },
+              content: String,
+              tool_calls: Schema.Types.Mixed, // Optional
+              images: [String], // Optional
+              timestamp: { type: Date, default: Date.now }
+          }
+      ],
+      default: {}
+  }
+  ```
 
-Create a standalone modal component with:
-- **Inputs:** `roles: Role[]`, `variableKeys: string[]`, `isOpen: boolean`
-- **Outputs:** `rolesChange: EventEmitter<Role[]>`, `closeModal: EventEmitter<void>`
-- **Features:**
-  - Grid layout: Variables as rows, Roles as columns
-  - Each cell: Clickable checkbox bound to role's `variableWhitelist`
-  - Row-level "All" / "None" buttons
-  - Column-level "All" / "None" buttons
-  - Close button for modal dismissal
-
----
-
-### Environment Tab Updates
-
-#### [MODIFY] [environment-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/environment-tab.component.ts)
-
-1. **Add new inputs:**
-   ```typescript
-   @Input() roles: Role[] = [];
-   @Output() rolesChange = new EventEmitter<Role[]>();
-   ```
-
-2. **Add expand/collapse state:** Track which variable rows are expanded via `expandedRows: Set<number>`
-
-3. **Add table column:** "Visible" column showing "X Roles" or "All" summary
-
-4. **Add expandable row detail:** When expanded, show checkboxes for each role
-
-5. **Add "Open Matrix" button:** Opens the visibility matrix modal
-
-6. **Logic:** When role checkboxes are toggled, update the corresponding Role's `variableWhitelist` and emit `rolesChange`
-
----
-
-### Role Editor Tab Updates
-
-#### [MODIFY] [roles-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/roles-tab.component.ts)
-
-1. **Add new input for environment keys:**
-   ```typescript
-   @Input() environmentKeys: string[] = [];
-   ```
-
-2. **Replace text input with chip-based picker:**
-   - Display selected variables as removable chips (similar to tools)
-   - Add a searchable dropdown for selecting variables
-   - Show variable type and initial value in dropdown options
-
-3. **Add "Open Matrix" button:** Opens the visibility matrix modal
-
-4. **Logic:** Selected chips update `editingRole.variableWhitelist` array
-
----
-
-### Plan Editor Component Updates
-
-#### [MODIFY] [plan-editor.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/plan-editor.component.ts)
-
-1. **Import new modal component**
-
-2. **Pass roles to Environment tab:**
-   ```html
-   <app-environment-tab 
-     [(environment)]="plan.initialEnvironment"
-     [roles]="plan.roles"
-     (rolesChange)="plan.roles = $event">
-   </app-environment-tab>
-   ```
-
-3. **Pass environment keys to Roles tab:**
-   ```html
-   <app-roles-tab 
-     [(roles)]="plan.roles"
-     [providers]="providers"
-     [environmentKeys]="getEnvironmentKeys()">
-   </app-roles-tab>
-   ```
-
-4. **Add modal state and handlers**
-
----
-
-### Index Export
-
-#### [MODIFY] [index.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/index.ts)
-
-Export the new `VisibilityMatrixModalComponent`
-
----
+#### [MODIFY] [experiment-orchestrator.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/experiment-orchestrator.service.js)
+- **Method `initializing()`**:
+    - Allow pre-seeding history if needed (optional).
+- **Method `processRole()`**:
+    - **Load**: Retrieve `this.experiment.roleHistory.get(role.name)` or initialize `[]`.
+    - **Prompt Construction**:
+        - Instead of resetting `messages` to just `[System, User]`, append the new `User` message (with environment state) to the *existing* history.
+        - *Note*: usage of `systemPrompt` should probably be "sticky" (always first) or reiterated. Ollama often handles system prompts as a specific field or the first message.
+        - **Strategy**: Keep `System` prompt as index 0. Append previous history (excluding old system prompts if any). Append new `User` message.
+    - **Inference**: Pass the full accumulated history to `ProviderService.chat`.
+    - **Save**:
+        - Append the `User` prompt to `roleHistory`.
+        - Append the `Assistant` response (and tool calls) to `roleHistory`.
+        - Append `Tool` results to `roleHistory`.
+        - Persist changes to DB: `this.experiment.markModified('roleHistory'); await this.experiment.save();`.
 
 ## Verification Plan
 
-### Manual Browser Testing
+### Automated Tests
+- **New Test**: `backend/tests/services/experiment-orchestrator.history.test.js`
+    - **Scenario**: Run a mock experiment with 2 steps.
+    - **Verify**:
+        - Step 1 history is saved.
+        - Step 2 prompt includes Step 1's history.
+        - Database contains the full conversation structure in `roleHistory`.
 
-Since this is a frontend UI feature with no backend changes, verification will be manual browser testing:
-
-1. **Start the app:**
-   ```bash
-   cd frontend && npm start
-   ```
-   Navigate to `http://localhost:4200/plans` in browser
-
-2. **Environment Tab - Expand/Collapse:**
-   - Create or edit a plan with 2+ roles and 3+ environment variables
-   - Verify each variable row has an expand chevron (▶)
-   - Click chevron → verify row expands showing role checkboxes
-   - Toggle checkboxes → verify changes persist
-   - Click chevron again → verify row collapses
-
-3. **Environment Tab - Summary Column:**
-   - Verify "Visible" column shows "X Roles" count
-   - When all roles checked → verify shows "All"
-
-4. **Role Editor - Variable Picker:**
-   - Edit a role
-   - Verify selected variables appear as removable chips
-   - Click search box → verify dropdown shows all env variables
-   - Select a variable → verify chip appears
-   - Click × on chip → verify chip is removed
-   - Verify whitelist updates in role data
-
-5. **Visibility Matrix Modal:**
-   - Click "Open Matrix" from Environment tab → verify modal opens
-   - Click "Open Matrix" from Role editor → verify modal opens
-   - Verify grid shows all variables × all roles
-   - Click a cell → verify checkbox toggles
-   - Click row "All" → verify all cells in row checked
-   - Click column "None" → verify all cells in column unchecked
-   - Close modal → verify changes reflected in both tabs
-
-6. **Data Persistence:**
-   - Save the plan
-   - Reload the page
-   - Verify visibility settings are preserved
-
-### Build Verification
-
-```bash
-cd frontend && npm run build
-```
-
-Verify build completes without errors.
+### Manual Verification
+- **Inspection**:
+    1. Run a simple experiment (e.g., "Hello World" or a math sequence).
+    2. Check MongoDB directly or add a temporary log to print the `messages` array sent to Ollama.
+    3. Verify that the second step's prompt allows the model to "remember" the first step's output (e.g., "What number did I just say?").
