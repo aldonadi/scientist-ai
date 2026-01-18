@@ -660,7 +660,7 @@ except Exception as e:
                     status: this.experiment.status,
                     currentStep: this.experiment.currentStep
                 },
-                environment: deepCopy(this.experiment.currentEnvironment),
+                environment: JSON.parse(JSON.stringify(this.experiment.currentEnvironment.variables)),
                 event: eventPayload
             };
 
@@ -671,24 +671,25 @@ except Exception as e:
 import os
 import json
 import sys
+import traceback
 
-    # Helper for dot notation access
+try:
+    # Helper for dot notation access - IMPORTANT: converts nested dicts IN-PLACE
     class DotDict(dict):
         def __getattr__(self, key):
             if key not in self:
                 raise AttributeError(key)
             val = self[key]
-            if isinstance(val, dict):
-                return DotDict(val)
+            # Convert nested dict IN-PLACE to DotDict so mutations are reflected
+            if isinstance(val, dict) and not isinstance(val, DotDict):
+                val = DotDict(val)
+                self[key] = val  # Store the converted version back!
             return val
         
         def __setattr__(self, key, value):
             self[key] = value
 
     # Interactive context for top-level code
-    # We also wrap it in DotDict so user code like "context.environment['x'] = 1" works if they use it at top level
-    # But usually top level just uses 'env' variable provided below.
-    
     context_str = os.environ.get('HOOK_CONTEXT', '{}')
     context_dict = json.loads(context_str)
     
@@ -697,30 +698,38 @@ import sys
     
     # For backward compatibility with top-level scripts that expect 'experiment', 'env', 'event' locals
     experiment = context_dict.get('experiment', {})
-    env = context_dict.get('environment', {}).get('variables', {})
+    env = context_dict.get('environment', {}) # IT IS NOW JUST VARIABLES
     event = context_dict.get('event', {})
     
     user_code = os.environ.get('HOOK_CODE', '')
     
-    # Execute the user code in the current scope
-    exec(user_code)
+    # Create a namespace for exec - this is CRITICAL for capturing user-defined functions
+    exec_namespace = {
+        'context': context,
+        'experiment': experiment,
+        'env': env,
+        'event': event,
+        'os': os,
+        'json': json,
+        'sys': sys
+    }
     
-    # Check if a 'run' function was defined and call it
-    if 'run' in locals() and callable(locals()['run']):
-        # If they used run(context), they might expect context to be modified
-        # specifically context.environment.variables
-        locals()['run'](context)
+    # Execute the user code in the shared namespace
+    exec(user_code, exec_namespace)
+    
+    # Check if a 'run' function was defined in the exec namespace and call it
+    if 'run' in exec_namespace and callable(exec_namespace['run']):
+        exec_namespace['run'](context)
         
-        # Sync changes back from context.environment.variables to our 'env' local
-        # which is what we return.
-        # Handle cases where they might have replaced the dict entirely
-        if hasattr(context, 'environment') and hasattr(context.environment, 'variables'):
-            env = context.environment.variables
+        # Sync changes back from context['environment'] to our 'env' local
+        if 'environment' in context:
+            env = context['environment']
+            if isinstance(env, DotDict):
+                env = dict(env)  # Convert back to regular dict for JSON serialization
             
     # Output modified environment
     print(json.dumps({'success': True, 'environment': env}))
 except Exception as e:
-    import traceback
     traceback.print_exc()
     print(json.dumps({'success': False, 'error': str(e)}))
 `;
@@ -734,7 +743,7 @@ except Exception as e:
                 []
             );
 
-            // Log script output (Simplified)
+            // Log script output
             this.eventBus.emit(EventTypes.LOG, {
                 experimentId: this.experiment._id,
                 stepNumber: this.experiment.currentStep,
