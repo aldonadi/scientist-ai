@@ -100,6 +100,17 @@ const DEFAULT_TOOL_CODE = `def execute(env, args):
                         placeholder="What does this tool do?"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
             </div>
+
+            <div class="flex items-center pt-2">
+                <input type="checkbox" 
+                       id="endsTurn"
+                       [(ngModel)]="tool.endsTurn"
+                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                <label for="endsTurn" class="ml-2 block text-sm text-gray-900">
+                    Ends Turn
+                    <p class="text-gray-500 text-xs font-normal">If checked, the agent's turn usually ends after calling this tool. Uncheck to allow chaining.</p>
+                </label>
+            </div>
             
             <div>
               <div class="flex items-center justify-between mb-1">
@@ -183,7 +194,8 @@ export class ToolEditorComponent implements OnInit, CanComponentDeactivate {
     name: '',
     description: '',
     parameters: {},
-    code: ''
+    code: '',
+    endsTurn: true
   };
 
   parametersJson = '{}';
@@ -231,7 +243,8 @@ export class ToolEditorComponent implements OnInit, CanComponentDeactivate {
           name: tool.name,
           description: tool.description,
           parameters: tool.parameters,
-          code: tool.code
+          code: tool.code,
+          endsTurn: tool.endsTurn !== undefined ? tool.endsTurn : true
         };
         this.parametersJson = JSON.stringify(tool.parameters, null, 2);
         this.saveInitialState();
@@ -254,6 +267,7 @@ export class ToolEditorComponent implements OnInit, CanComponentDeactivate {
       description: this.tool.description,
       parameters: this.tool.parameters,
       code: this.tool.code,
+      endsTurn: this.tool.endsTurn,
       parametersJson: this.parametersJson
     };
   }

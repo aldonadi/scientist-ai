@@ -1,31 +1,35 @@
-# Experiment List UI Enhancements
+# Experiment Roles and Tools Configuration
 
-Implementation of three UI improvements for better experiment visibility and filtering.
+All requested features have been implemented and verified.
 
-## Changes Made
+## Changes
 
-### [experiment-list.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/experiments/experiment-list.component.ts)
+### 1. Tool Turn Control
+- **Backend**: Added `endsTurn` (boolean) to the Tool schema. Default is `true`.
+- **Orchestrator**: Updated execution logic. If a tool with `endsTurn=true` is called, the Role's turn ends after the tool execution. If `endsTurn=false`, the Role continues its thought process/actions.
+- **Frontend**: Added "Ends Turn" checkbox to the Tool Editor.
 
-- **Status filter buttons**: Added buttons for All, RUNNING, COMPLETED, FAILED, PAUSED, STOPPED
-- **RUNNING prioritization**: Experiments sorted with RUNNING at top, then by startTime descending
-- **Green background**: RUNNING rows have `bg-green-50` tint for visibility
-- **Query param support**: Filter pre-selects from `?status=X` URL param
+### 2. Role Environment Variable Isolation
+- **Backend**: Verified existing `variableWhitelist` logic in Role schema.
+- **Orchestrator**: Ensures strict filtering of environment variables based on the whitelist before sending the prompt to the model.
+- **Frontend**: Added "Environment Variable Allowlist" input to the Roles configuration tab.
 
-### [dashboard.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/dashboard/dashboard.component.ts)
+### 3. Hook Context
+- **Orchestrator**: Verified that `BEFORE_TOOL_CALL` and `AFTER_TOOL_CALL` events include the `toolName`, allowing hooks to react specifically to the tool being used.
 
-- **Clickable card**: "Active Experiments" card links to `/experiments?status=RUNNING` when count > 0
-- **Visual cue**: Shows "Click to view →" text when there are active experiments
+## Verification Results
 
-## Screenshots
+### Automated Tests
+A new test suite `experiment-orchestrator.tool-execution.test.js` was created to verify the core logic.
 
-### Experiments List with Filter Buttons
+| Test Case | Result |
+|-----------|--------|
+| Ends Turn behavior (`endsTurn=true`) | ✅ Passed |
+| Continue Turn behavior (`endsTurn=false`) | ✅ Passed |
+| Default behavior (undefined `endsTurn`) | ✅ Passed |
+| Environment Variable Whitelist filtering | ✅ Passed |
+| Hook Context (`toolName` payload) | ✅ Passed |
 
-![Experiments list showing filter buttons and status badges](/home/andrew/.gemini/antigravity/brain/c292b042-8b11-430d-82b5-ec4546b7b0bd/experiments_list_all_1768701537857.png)
-
-### Dashboard with Clickable Active Experiments Card
-
-![Dashboard showing Active Experiments card with "Click to view" text](/home/andrew/.gemini/antigravity/brain/c292b042-8b11-430d-82b5-ec4546b7b0bd/.system_generated/click_feedback/click_feedback_1768701578395.png)
-
-## Demo Recording
-
-![Browser demo of filter functionality](/home/andrew/.gemini/antigravity/brain/c292b042-8b11-430d-82b5-ec4546b7b0bd/experiments_filter_demo_1768701530254.webp)
+### Usage Guide
+1. **Configure Tool Turn Ending**: Go to Tools -> Edit Tool -> Check/Uncheck "Ends Turn". Check it for terminal actions (e.g. "Final Answer"), uncheck it for intermediate steps (e.g. "Calculator").
+2. **Restrict Role Knowledge**: Go to Plans -> Edit Plan -> Roles -> Edit Role. Enter comma-separated variable names in "Environment Variable Allowlist". Leave empty to allow the role to see all variables.

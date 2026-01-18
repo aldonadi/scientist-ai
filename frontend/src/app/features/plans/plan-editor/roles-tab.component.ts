@@ -95,6 +95,17 @@ import { ProviderService } from '../../../core/services/provider.service';
                       placeholder="You are an expert stock picker..."
                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
           </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Environment Variable Allowlist</label>
+            <input type="text" 
+                   [(ngModel)]="variableWhitelistStr"
+                   (ngModelChange)="onWhitelistChange()"
+                   placeholder="e.g. USER_ID, API_KEY (Leave empty to allow all)"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <p class="mt-1 text-xs text-gray-500">Comma-separated list of environment variables this role is allowed to see. If empty, all variables are visible.</p>
+          </div>
+          
           
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Provider</label>
@@ -217,6 +228,8 @@ export class RolesTabComponent implements OnChanges {
   loadingModels = false;
   connectionStatus: { success?: boolean; message?: string } | null = null;
 
+  variableWhitelistStr = '';
+
   private draggedIndex: number | null = null;
 
   constructor(
@@ -262,12 +275,14 @@ export class RolesTabComponent implements OnChanges {
     this.roles.push(newRole);
     this.editingIndex = this.roles.length - 1;
     this.editingRole = newRole;
+    this.variableWhitelistStr = '';
     this.emitChange();
   }
 
   editRole(index: number): void {
     this.editingIndex = index;
     this.editingRole = JSON.parse(JSON.stringify(this.roles[index])); // Deep copy
+    this.variableWhitelistStr = this.editingRole.variableWhitelist ? this.editingRole.variableWhitelist.join(', ') : '';
   }
 
   closeEditor(): void {
@@ -302,6 +317,18 @@ export class RolesTabComponent implements OnChanges {
     } else {
       this.availableModels = [];
     }
+  }
+
+  onWhitelistChange(): void {
+    if (this.variableWhitelistStr.trim()) {
+      this.editingRole.variableWhitelist = this.variableWhitelistStr
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+    } else {
+      this.editingRole.variableWhitelist = [];
+    }
+    this.onRoleChange();
   }
 
   fetchModels(): void {
