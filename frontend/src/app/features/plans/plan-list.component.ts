@@ -21,9 +21,23 @@ import { ToastService } from '../../core/services/toast.service';
         </a>
       </div>
       
+      <!-- Search Bar -->
+      <div class="relative">
+        <input type="text" 
+               [(ngModel)]="searchQuery"
+               placeholder="Search plans by name..."
+               class="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+        <button *ngIf="searchQuery" 
+                (click)="searchQuery = ''"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+          ✕
+        </button>
+      </div>
+      
       <!-- Plan Cards -->
       <div class="space-y-4">
-        <div *ngFor="let plan of plans" 
+        <div *ngFor="let plan of filteredPlans" 
              class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
           <div class="flex items-start justify-between">
             <div class="flex-1">
@@ -118,11 +132,22 @@ import { ToastService } from '../../core/services/toast.service';
 })
 export class PlanListComponent implements OnInit {
   plans: ExperimentPlan[] = [];
+  searchQuery = '';
 
   // Duplicate modal state
   showDuplicateModal = false;
   duplicateName = '';
   planToDuplicate: ExperimentPlan | null = null;
+
+  get filteredPlans(): ExperimentPlan[] {
+    if (!this.searchQuery.trim()) {
+      return this.plans;
+    }
+    const query = this.searchQuery.toLowerCase();
+    return this.plans.filter(plan =>
+      plan.name.toLowerCase().includes(query)
+    );
+  }
 
   constructor(
     private planService: PlanService,
@@ -136,7 +161,10 @@ export class PlanListComponent implements OnInit {
 
   loadPlans(): void {
     this.planService.getPlans().subscribe({
-      next: (plans) => this.plans = plans,
+      next: (plans) => {
+        // Sort alphabetically by name
+        this.plans = plans.sort((a, b) => a.name.localeCompare(b.name));
+      },
       error: (err) => console.error('Failed to load plans:', err)
     });
   }
