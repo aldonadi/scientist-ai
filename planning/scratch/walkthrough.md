@@ -35,6 +35,7 @@ A new test suite `environment.schema.test.js` was created to verify data type va
 | Environment Variable Whitelist filtering | ✅ Passed |
 | Hook Context (`toolName` payload) | ✅ Passed |
 | Environment Schema Validators (Array/Object) | ✅ Passed |
+| End-to-End Environment Data Flow (Int, String, List, Dict) | ✅ Passed |
 
 ### Usage Guide
 1. **Configure Tool Turn Ending**: Go to Tools -> Edit Tool -> Check/Uncheck "Ends Turn".

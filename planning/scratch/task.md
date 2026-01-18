@@ -31,3 +31,4 @@
 - [x] Verification <!-- id: 26 -->
     - [x] Verify saving/loading Plans with complex env vars <!-- id: 27 -->
     - [x] Verify Python tools receive correct JSON structures <!-- id: 28 -->
+    - [x] Run End-to-End Experiment Test with all types (Int, String, List, Dict) <!-- id: 29 -->
