@@ -104,7 +104,12 @@ const DEFAULT_TOOL_CODE = `def execute(env, args):
                     Auto-generate from code
                   </button>
                   <button (click)="showSchemaHelp = !showSchemaHelp"
-                          class="w-4 h-4 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-600 text-xs flex items-center justify-center"
+                          class="w-4 h-4 rounded-full text-xs flex items-center justify-center transition-colors"
+                          [class.bg-blue-500]="showSchemaHelp"
+                          [class.text-white]="showSchemaHelp"
+                          [class.bg-gray-200]="!showSchemaHelp"
+                          [class.text-gray-600]="!showSchemaHelp"
+                          [class.hover:bg-gray-300]="!showSchemaHelp"
                           title="Click for help">
                     ?
                   </button>
@@ -113,19 +118,19 @@ const DEFAULT_TOOL_CODE = `def execute(env, args):
               
               <!-- Help Tooltip -->
               <div *ngIf="showSchemaHelp" 
-                   class="mb-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-gray-700">
-                <p class="font-medium text-blue-800 mb-2">Auto-generate parses your docstring's Args section:</p>
-                <pre class="bg-white p-2 rounded border text-xs overflow-x-auto">def execute(env, args):
+                   class="mb-2 p-3 bg-blue-100 border border-blue-300 rounded-lg text-xs text-blue-900 shadow-sm">
+                <p class="font-medium mb-2">Auto-generate parses your docstring's Args section:</p>
+                <pre class="bg-white p-2 rounded border border-blue-200 text-xs overflow-x-auto text-gray-800">def execute(env, args):
     """
     Args:
         symbol (str): Stock ticker symbol
         limit (int): Max results
     """</pre>
-                <p class="mt-2 text-gray-600">
-                  Format: <code class="bg-gray-100 px-1 rounded">param_name (type): description</code><br>
-                  Supported types: <code class="bg-gray-100 px-1 rounded">str</code>, 
-                  <code class="bg-gray-100 px-1 rounded">int</code>, 
-                  <code class="bg-gray-100 px-1 rounded">bool</code>
+                <p class="mt-2">
+                  Format: <code class="bg-blue-200 px-1 rounded">param_name (type): description</code><br>
+                  Supported types: <code class="bg-blue-200 px-1 rounded">str</code>, 
+                  <code class="bg-blue-200 px-1 rounded">int</code>, 
+                  <code class="bg-blue-200 px-1 rounded">bool</code>
                 </p>
               </div>
               
