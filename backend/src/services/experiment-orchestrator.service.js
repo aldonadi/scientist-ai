@@ -296,19 +296,32 @@ class ExperimentOrchestrator {
         ];
 
         // Debug logging: Show exact prompt being sent to LLM
+        const debugInfo = {
+            fullPrompt: messages.map(m => `[${m.role.toUpperCase()}] ${m.content}`).join('\n\n'),
+            variableWhitelist: whitelist || '(none - showing all)',
+            filteredVariables: Object.keys(filteredEnv.variables),
+            allVariables: Object.keys(fullEnv.variables),
+            toolCount: toolsForProvider.length
+        };
+
+        console.log('\n' + '='.repeat(80));
+        console.log(`[DEBUG] PROMPT FOR ROLE: ${role.name}`);
+        console.log('='.repeat(80));
+        console.log(`Whitelist: ${JSON.stringify(whitelist || 'ALL')}`);
+        console.log(`Filtered vars: ${debugInfo.filteredVariables.join(', ') || '(none)'}`);
+        console.log(`All available vars: ${debugInfo.allVariables.join(', ')}`);
+        console.log('-'.repeat(80));
+        console.log(debugInfo.fullPrompt);
+        console.log('='.repeat(80) + '\n');
+
         this.eventBus.emit(EventTypes.LOG, {
             experimentId: this.experiment._id,
             stepNumber: this.experiment.currentStep,
             source: 'SYSTEM',
             message: `[DEBUG] Sending prompt to ${role.name}`,
-            data: {
-                fullPrompt: messages.map(m => `[${m.role.toUpperCase()}] ${m.content}`).join('\n\n'),
-                variableWhitelist: whitelist || '(none - showing all)',
-                filteredVariables: Object.keys(filteredEnv.variables),
-                allVariables: Object.keys(fullEnv.variables),
-                toolCount: toolsForProvider.length
-            }
+            data: debugInfo
         });
+
 
         // 4. Emit MODEL_PROMPT
         // Hooks can listen to this and modify 'messages' if needed.
