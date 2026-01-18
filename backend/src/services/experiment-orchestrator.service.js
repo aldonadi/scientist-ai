@@ -431,6 +431,15 @@ class ExperimentOrchestrator {
                             args: call.args
                         });
 
+                        // Log tool call for UI visibility
+                        this.eventBus.emit(EventTypes.LOG, {
+                            experimentId: this.experiment._id,
+                            stepNumber: this.experiment.currentStep,
+                            source: 'TOOL',
+                            message: `Calling tool: ${call.toolName}`,
+                            data: { arguments: call.args }
+                        });
+
                         // 1. Acquire Container
                         const container = await ContainerPoolManager.getInstance().acquire();
 
