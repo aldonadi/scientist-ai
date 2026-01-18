@@ -293,12 +293,44 @@ export class PlanEditorComponent implements OnInit, CanComponentDeactivate {
 
   canDeactivate(): boolean {
     if (this.isDirty()) {
-      return confirm(`Are you sure you want to leave without saving changes to the '${this.plan.name}' Experiment Plan?`);
+      return confirm(`You have unsaved changes to "${this.plan.name}".\n\nDo you want to leave without saving?`);
     }
     return true;
   }
 
   goBack(): void {
-    this.router.navigate(['/plans']);
+    if (this.isDirty()) {
+      const shouldRevert = confirm(`You have unsaved changes to "${this.plan.name}".\n\nDo you want to discard these changes?`);
+      if (shouldRevert) {
+        this.router.navigate(['/plans']);
+      }
+      // If user clicks "Cancel" on the confirm, stay on the page
+    } else {
+      this.router.navigate(['/plans']);
+    }
+  }
+
+  revertChanges(): void {
+    if (this.isDirty()) {
+      const shouldRevert = confirm(`Do you want to revert all unsaved changes to "${this.plan.name}"?`);
+      if (shouldRevert) {
+        if (this.isNew) {
+          // For new plans, reset to defaults
+          this.plan = {
+            name: '',
+            description: '',
+            initialEnvironment: {},
+            roles: [],
+            goals: [],
+            scripts: [],
+            maxSteps: 20
+          };
+          this.saveInitialState();
+        } else {
+          // For existing plans, reload from server
+          this.loadPlan();
+        }
+      }
+    }
   }
 }
