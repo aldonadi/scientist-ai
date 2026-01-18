@@ -25,6 +25,6 @@ This story helps us establish and verify our markdown-based agile workflow. We n
 2. **Backlog Check**: Confirm this story appears in `planning/agile/backlog.md`.
 3. **Process Check**: Move this story to `DONE` once the structure is approved.
 
-## Review
+## Review Log
 - *2025-01-03*: Initial draft created.
 - *2025-01-03*: Accepted by Product Owner.

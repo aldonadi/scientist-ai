@@ -1,42 +1,37 @@
-# Implementation Plan: Architectural Separation of Concerns
+# Experiment List UI Enhancements
 
-## Goal
-Decouple the "Experiment" domain (State, Plans, Roles) from the "Backend" infrastructure (Docker, Node.js Process, Event Bus emissions). The `Experiment` object should be a passive state holder, and a separate `ExperimentRunner` service should drive the execution using interfaces.
-
-## User Review Required
-> [!IMPORTANT]
-> **Major Refactor**: The `Experiment` class will lose its `start()` and `step()` methods. These will move to a new `ExperimentRunner` service. The `Experiment` entity will effectively become a data structure (Model) rather than an active object.
+Implement three related improvements to the experiment list and dashboard: sort RUNNING experiments to top with green background, add status filter buttons, and link dashboard's "Active Experiments" card to the filtered list.
 
 ## Proposed Changes
 
-### [SPEC.md](file:///home/andrew/Projects/Code/web/scientist-ai/SPEC.md)
+### Experiment List Component
 
-#### [NEW] Interfaces
-- **IExecutionEnvironment**: Interface for the isolation layer.
-  - `runCommand(image, script, env, args) -> Result`
-  - Implementation: `DockerExecutionEnvironment` (wraps ContainerPool).
-- **IScriptRunner**: Interface for running specific script types.
-  - `runTool(tool, env) -> Result`
-  - `runHook(hook, context) -> void`
+#### [MODIFY] [experiment-list.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/experiments/experiment-list.component.ts)
 
-#### [MODIFY] Domain Objects
-- **Experiment**:
-    - [DELETE] `start()`, `step()`, `pause()`, `stop()`, `events`.
-    - [NEW] `status`, `data`, `plan` (Pure state).
-    - *Rationale*: The Experiment entity shouldn't know *how* to run itself, only *what* its current state is.
+1. **Import `ActivatedRoute`** to read query parameters
+2. **Add status filter state**: `statusFilter: string | null = null`
+3. **Add filter buttons UI** above the table with buttons for: All, RUNNING, COMPLETED, FAILED, PAUSED, STOPPED
+4. **Sort experiments**: RUNNING experiments sorted to top, then by chronological order
+5. **Add green background tint** to RUNNING experiment rows using `bg-green-50` class
+6. **Read `?status=X` query param on init** to pre-filter the list
+7. **Add `filteredExperiments` getter** that filters by status when set
 
-#### [NEW] Services (The "Backend" Layer)
-- **ExperimentOrchestrator** (The "Engine"):
-    - Owns the `EventBus`.
-    - Accepts an `Experiment` (state) and `ExperimentPlan`.
-    - Implements the `Step Loop`.
-    - Uses `IExecutionEnvironment` to run tools.
-    - Updates the `Experiment` state object.
-    
-#### [MODIFY] Class Diagram
-- Show `ExperimentOrchestrator` depending on `IExecutionEnvironment`.
-- Show `Experiment` as a data object used by `Orchestrator`.
+---
+
+### Dashboard Component
+
+#### [MODIFY] [dashboard.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/dashboard/dashboard.component.ts)
+
+1. **Make the "Active Experiments" card clickable** when count > 0
+2. **Link to `/experiments?status=RUNNING`** using `routerLink` with `queryParams`
+3. **Add hover styles** to indicate clickability
 
 ## Verification Plan
-- **Logical Check**: Ensure `Experiment` object has ZERO dependencies on Docker, EventBus, or Node.js runtime specifics.
-- **Diagram Check**: The dependency arrow should go `Orchestrator -> Experiment`, not `Experiment -> Infrastructure`.
+
+### Manual Verification
+
+1. Navigate to `http://localhost:4200/experiments`
+2. Verify RUNNING experiments appear at top with green-tinted rows
+3. Click each filter button and verify only matching experiments show
+4. Navigate to `http://localhost:4200/experiments?status=RUNNING` directly and verify only RUNNING experiments show
+5. Go to Dashboard, verify "Active Experiments" card links to `/experiments?status=RUNNING` when count > 0
