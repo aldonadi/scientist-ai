@@ -22,11 +22,13 @@ export const routes: Routes = [
             },
             {
                 path: 'tools/new',
-                loadComponent: () => import('./features/tools/tool-editor.component').then(m => m.ToolEditorComponent)
+                loadComponent: () => import('./features/tools/tool-editor.component').then(m => m.ToolEditorComponent),
+                canDeactivate: [unsavedChangesGuard]
             },
             {
                 path: 'tools/:id',
-                loadComponent: () => import('./features/tools/tool-editor.component').then(m => m.ToolEditorComponent)
+                loadComponent: () => import('./features/tools/tool-editor.component').then(m => m.ToolEditorComponent),
+                canDeactivate: [unsavedChangesGuard]
             },
             {
                 path: 'plans',

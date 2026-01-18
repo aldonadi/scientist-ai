@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { ToolService, Tool, CreateToolDto } from '../../core/services/tool.service';
 import { ToastService } from '../../core/services/toast.service';
+import { ConfirmService } from '../../core/services/confirm.service';
+import { CanComponentDeactivate } from '../../core/guards/unsaved-changes.guard';
 import { isValidPythonIdentifier, getPythonIdentifierError, validateJson, checkPythonSyntax } from '../../core/utils/validation.utils';
 
 const DEFAULT_TOOL_CODE = `def execute(env, args):
@@ -41,8 +43,11 @@ const DEFAULT_TOOL_CODE = `def execute(env, args):
             ← Back
           </button>
           <h1 class="text-2xl font-bold text-gray-900">
-            {{ isNew ? 'Create Tool' : 'Edit Tool' }}
+            {{ isNew ? 'Create Tool' : 'Edit Tool: ' + tool.name }}
           </h1>
+          <span *ngIf="isDirty()" class="ml-3 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full border border-amber-200">
+             ● Unsaved Changes
+          </span>
         </div>
         <div class="flex items-center space-x-3">
           <button (click)="goBack()" 
@@ -169,7 +174,7 @@ const DEFAULT_TOOL_CODE = `def execute(env, args):
     </div>
   `
 })
-export class ToolEditorComponent implements OnInit {
+export class ToolEditorComponent implements OnInit, CanComponentDeactivate {
   @Input() id?: string;
 
   isNew = true;
@@ -190,9 +195,14 @@ export class ToolEditorComponent implements OnInit {
   parametersError = '';
   codeError = '';
 
+  // Dirty checking
+  private initialToolState: string = '';
+  private bypassGuard = false;
+
   constructor(
     private toolService: ToolService,
     private toastService: ToastService,
+    private confirmService: ConfirmService,
     private router: Router,
     private route: ActivatedRoute
   ) { }
@@ -207,6 +217,7 @@ export class ToolEditorComponent implements OnInit {
     } else {
       // New tool: pre-populate code
       this.tool.code = DEFAULT_TOOL_CODE;
+      this.saveInitialState();
     }
   }
 
@@ -223,12 +234,65 @@ export class ToolEditorComponent implements OnInit {
           code: tool.code
         };
         this.parametersJson = JSON.stringify(tool.parameters, null, 2);
+        this.saveInitialState();
       },
       error: (err) => {
         console.error('Failed to load tool:', err);
         this.router.navigate(['/tools']);
       }
     });
+  }
+
+  saveInitialState(): void {
+    this.initialToolState = JSON.stringify(this.getCleanToolObject());
+  }
+
+  getCleanToolObject(): any {
+    return {
+      namespace: this.tool.namespace,
+      name: this.tool.name,
+      description: this.tool.description,
+      parameters: this.tool.parameters,
+      code: this.tool.code,
+      parametersJson: this.parametersJson
+    };
+  }
+
+  isDirty(): boolean {
+    const currentState = JSON.stringify(this.getCleanToolObject());
+    return this.initialToolState !== currentState;
+  }
+
+  canDeactivate(): boolean | Promise<boolean> {
+    if (this.bypassGuard) {
+      return true;
+    }
+    if (this.isDirty()) {
+      return this.confirmService.confirm({
+        title: 'Unsaved Changes',
+        message: `You have unsaved changes to "${this.tool.name || 'this tool'}".\n\nDo you want to leave without saving?`,
+        confirmText: 'Leave',
+        cancelText: 'Stay'
+      });
+    }
+    return true;
+  }
+
+  async goBack(): Promise<void> {
+    if (this.isDirty()) {
+      const shouldDiscard = await this.confirmService.confirm({
+        title: 'Discard Changes?',
+        message: `You have unsaved changes to "${this.tool.name || 'this tool'}".\n\nDo you want to discard these changes?`,
+        confirmText: 'Discard',
+        cancelText: 'Keep Editing'
+      });
+      if (shouldDiscard) {
+        this.bypassGuard = true;
+        this.router.navigate(['/tools']);
+      }
+    } else {
+      this.router.navigate(['/tools']);
+    }
   }
 
   validateNamespace(): void {
@@ -316,6 +380,8 @@ export class ToolEditorComponent implements OnInit {
     action.subscribe({
       next: () => {
         this.toastService.success('Tool Saved Successfully');
+        this.saveInitialState(); // Update initial state after save
+        this.bypassGuard = true;
         this.router.navigate(['/tools']);
       },
       error: (err) => {
@@ -323,9 +389,5 @@ export class ToolEditorComponent implements OnInit {
         this.toastService.error('Failed to save tool: ' + (err.error?.message || err.message));
       }
     });
-  }
-
-  goBack(): void {
-    this.router.navigate(['/tools']);
   }
 }

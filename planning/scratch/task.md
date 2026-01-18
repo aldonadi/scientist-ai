@@ -12,7 +12,13 @@
   - [x] Cancel button shows "Discard Changes?" modal
   - [x] Navigation guard shows "Unsaved Changes" modal  
   - [x] Fixed double modal issue with bypassGuard flag
-  - [x] Verified both Cancel and sidebar navigation work correctly
+
+- [x] Add unsaved changes workflow to Tool Editor
+  - [x] Added dirty checking (saveInitialState, isDirty)
+  - [x] Added "● Unsaved Changes" badge in header
+  - [x] Cancel button shows "Discard Changes?" modal
+  - [x] Navigation guard shows "Unsaved Changes" modal
+  - [x] Added canDeactivate guard to routes
 
 ## Pending
 
