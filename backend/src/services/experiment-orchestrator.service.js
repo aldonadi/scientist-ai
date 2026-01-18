@@ -452,24 +452,94 @@ class ExperimentOrchestrator {
                         let result = '';
                         let error = null;
 
+                        // Create Python wrapper that calls the tool's execute() function
+                        // and outputs the modified environment as JSON
+                        const toolWrapper = `
+import os
+import json
+import sys
+import traceback
+
+try:
+    # Load environment and arguments from env vars
+    env_str = os.environ.get('TOOL_ENV', '{}')
+    args_str = os.environ.get('TOOL_ARGS', '{}')
+    
+    env = json.loads(env_str)
+    args = json.loads(args_str) if args_str else {}
+    
+    # User tool code - defines execute(env, args)
+    user_code = os.environ.get('TOOL_CODE', '')
+    
+    # Create namespace for exec
+    exec_namespace = {
+        'os': os,
+        'json': json,
+        'sys': sys
+    }
+    
+    # Execute tool code to define execute() function
+    exec(user_code, exec_namespace)
+    
+    # Call the execute function
+    result = None
+    if 'execute' in exec_namespace and callable(exec_namespace['execute']):
+        result = exec_namespace['execute'](env, args)
+    else:
+        raise Exception("Tool code must define an execute(env, args) function")
+    
+    # Output modified environment and result as JSON
+    print(json.dumps({
+        'success': True,
+        'environment': env,
+        'result': result if result is not None else ''
+    }))
+except Exception as e:
+    traceback.print_exc()
+    print(json.dumps({'success': False, 'error': str(e)}))
+`;
+
                         try {
-                            // 3. Execute
+                            // 3. Execute with wrapper
                             const execResult = await container.execute(
-                                toolDoc.code,
-                                filteredEnv.variables, // Pass the environment
-                                call.args
+                                toolWrapper,
+                                {
+                                    TOOL_ENV: JSON.stringify(this.experiment.currentEnvironment.variables),
+                                    TOOL_ARGS: JSON.stringify(call.args || {}),
+                                    TOOL_CODE: toolDoc.code
+                                },
+                                []
                             );
 
                             // 4. Handle Result
                             try {
                                 const jsonOutput = JSON.parse(execResult.stdout);
-                                // Merge into environment
-                                Object.assign(this.experiment.currentEnvironment.variables, jsonOutput);
-                                this.experiment.markModified('currentEnvironment');
-                                // Also update our local filtered copy for the next loop iteration visibility?
-                                Object.assign(filteredEnv.variables, jsonOutput);
-                                result = jsonOutput;
+
+                                if (!jsonOutput.success) {
+                                    throw new Error(jsonOutput.error || 'Tool execution failed');
+                                }
+
+                                // Merge environment changes from tool
+                                if (jsonOutput.environment) {
+                                    Object.assign(this.experiment.currentEnvironment.variables, jsonOutput.environment);
+                                    this.experiment.markModified('currentEnvironment');
+                                    // Also update our local filtered copy
+                                    Object.assign(filteredEnv.variables, jsonOutput.environment);
+                                }
+                                result = jsonOutput.result || jsonOutput.environment;
                             } catch (parseErr) {
+                                // Log that tool didn't return valid JSON
+                                this.eventBus.emit(EventTypes.LOG, {
+                                    experimentId: this.experiment._id,
+                                    stepNumber: this.experiment.currentStep,
+                                    source: 'TOOL',
+                                    message: `Tool ${call.toolName} did not return valid JSON - environment not updated`,
+                                    data: {
+                                        rawOutput: execResult.stdout,
+                                        stderr: execResult.stderr,
+                                        parseError: parseErr.message
+                                    }
+                                });
                                 result = execResult.stdout;
                             }
 

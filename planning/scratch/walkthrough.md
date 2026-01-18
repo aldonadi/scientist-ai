@@ -1,39 +1,45 @@
 # Walkthrough - Debugging BlackJack Experiment
 
-I have successfully diagnosed and fixed the BlackJack experiment issue where the model appeared to "do nothing" while the step counter incremented aimlessly.
+Successfully diagnosed and fixed all issues preventing the BlackJack experiment from functioning correctly.
 
-## Issues Found
+## Issues Fixed
 
 ### 1. Backend Crash (Docker Permissions)
-The backend process crashed when Docker containers failed to connect (`EACCES /var/run/docker.sock`). This was caused by:
-- **Root Cause**: Hook event handlers were executed asynchronously without proper error handling
-- **Fix**: Added `emitAsync()` to `EventBus` and updated `ExperimentOrchestrator` to `await` lifecycle events
+Hook event handlers executed asynchronously without error handling.
+- **Fix**: Added `emitAsync()` to `EventBus` and `await` lifecycle events in orchestrator
 
 ### 2. Hook Environment Not Updating
-The `BEFORE_TOOL_CALL` hook was executing but `num_tool_calls` stayed at 0:
+The `BEFORE_TOOL_CALL` hook was running but `num_tool_calls` stayed at 0.
 
-**Bug A: `exec()` Namespace**
-- Python's `exec(user_code)` doesn't populate `locals()` with defined functions
-- **Fix**: Pass explicit namespace dict to `exec(user_code, exec_namespace)` and check that dict for `run`
+**Bug A: `exec()` Namespace** - Python's `exec(user_code)` doesn't populate `locals()` with defined functions
+- **Fix**: Pass explicit namespace dict to `exec()` and check that dict for `run`
 
-**Bug B: `DotDict` Returning Copies**  
-- `DotDict.__getattr__` returned `DotDict(val)` for nested dicts (a new copy)
-- Mutations via `context.environment['key'] = value` modified the copy, not the original
-- **Fix**: Convert nested dicts in-place: `self[key] = DotDict(val)` before returning
+**Bug B: `DotDict` Returning Copies** - Nested dicts returned as new copies, not in-place
+- **Fix**: Convert nested dicts in-place with `self[key] = DotDict(val)`
 
-**Bug C: Incorrect `deepCopy` Usage**
-- `deepCopy()` from `environment.schema.js` expects full Environment objects, not just variables
-- **Fix**: Use `JSON.parse(JSON.stringify(...))` for simple variable dict cloning
+### 3. Tool Environment Not Updating
+The `increment` tool defined `execute(env, args)` but was never called.
+
+**Bug A: No Execution Wrapper** - Tool code was run as raw script without calling `execute()`
+- **Fix**: Added Python wrapper that `exec()`s the tool code, calls `execute(env, args)`, and outputs modified env as JSON
+
+**Bug B: Stale Environment** - Tool received `filteredEnv` (copied before hooks ran) instead of current state
+- **Fix**: Pass `this.experiment.currentEnvironment.variables` to tool wrapper
+
+**Bug C: No Error Logging** - JSON parse failures were silent
+- **Fix**: Added `[TOOL]` log entry when tool output isn't valid JSON
 
 ## Files Modified
 
 - [event-bus.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/event-bus.js) - Added `emitAsync()`
-- [experiment-orchestrator.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/experiment-orchestrator.service.js) - Multiple fixes for hook execution
+- [experiment-orchestrator.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/experiment-orchestrator.service.js) - Hook/tool execution wrappers, logging
 
 ## Verification
 
-The experiment now correctly updates environment variables:
+Both environment variables now update correctly:
 
-![BlackJack Success](file:///home/andrew/.gemini/antigravity/brain/47568ae7-5e58-4de6-bc65-4cac66f1cd25/blackjack_experiment_success_1768699088848.png)
+![BlackJack Success](file:///home/andrew/.gemini/antigravity/brain/47568ae7-5e58-4de6-bc65-4cac66f1cd25/blackjack_verification_final_1768700722483.png)
 
-`num_tool_calls` incremented from 0 → 5 over 15 seconds, confirming the `BEFORE_TOOL_CALL` hook correctly modifies the environment.
+- `num_tool_calls: 7` ✅ (hook working)
+- `current_sum: 20` ✅ (tool working)
+- Role Activity shows tool calls ("Calling tool: increment", etc.)
