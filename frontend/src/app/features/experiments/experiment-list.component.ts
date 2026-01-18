@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { ExperimentService, Experiment } from '../../core/services/experiment.service';
@@ -13,6 +13,7 @@ type ExperimentStatus = 'INITIALIZING' | 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'F
     <div class="space-y-6">
       <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold text-gray-900">Experiments</h1>
+        <span class="text-xs text-gray-400">Auto-refreshes every 30s</span>
       </div>
 
       <!-- Status Filter Buttons -->
@@ -92,10 +93,13 @@ type ExperimentStatus = 'INITIALIZING' | 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'F
     </div>
   `
 })
-export class ExperimentListComponent implements OnInit {
+export class ExperimentListComponent implements OnInit, OnDestroy {
   experiments: Experiment[] = [];
   statusFilter: ExperimentStatus | null = null;
   availableStatuses: ExperimentStatus[] = ['RUNNING', 'COMPLETED', 'FAILED', 'PAUSED', 'STOPPED'];
+
+  private refreshInterval: any;
+  private readonly REFRESH_INTERVAL_MS = 30000; // 30 seconds
 
   constructor(
     private experimentService: ExperimentService,
@@ -111,6 +115,23 @@ export class ExperimentListComponent implements OnInit {
       }
     });
     this.loadExperiments();
+    this.startAutoRefresh();
+  }
+
+  ngOnDestroy(): void {
+    this.stopAutoRefresh();
+  }
+
+  private startAutoRefresh(): void {
+    this.refreshInterval = setInterval(() => {
+      this.loadExperiments();
+    }, this.REFRESH_INTERVAL_MS);
+  }
+
+  private stopAutoRefresh(): void {
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+    }
   }
 
   loadExperiments(): void {

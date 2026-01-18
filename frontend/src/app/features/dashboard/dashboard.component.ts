@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
@@ -73,8 +73,9 @@ interface RecentExperiment {
       
       <!-- Recent Activity -->
       <div class="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div class="p-6 border-b border-gray-100">
+        <div class="p-6 border-b border-gray-100 flex items-center justify-between">
           <h2 class="text-lg font-semibold text-gray-900">Recent Activity</h2>
+          <span class="text-xs text-gray-400">Auto-refreshes every 30s</span>
         </div>
         <div class="divide-y divide-gray-100">
           <div *ngFor="let exp of recentExperiments" 
@@ -119,14 +120,34 @@ interface RecentExperiment {
     </div>
   `
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   activeExperiments = 0;
   systemHealth = '-- %';
   queuedCount = 0;
   recentExperiments: RecentExperiment[] = [];
 
+  private refreshInterval: any;
+  private readonly REFRESH_INTERVAL_MS = 30000; // 30 seconds
+
   ngOnInit(): void {
     this.loadDashboardData();
+    this.startAutoRefresh();
+  }
+
+  ngOnDestroy(): void {
+    this.stopAutoRefresh();
+  }
+
+  private startAutoRefresh(): void {
+    this.refreshInterval = setInterval(() => {
+      this.loadDashboardData();
+    }, this.REFRESH_INTERVAL_MS);
+  }
+
+  private stopAutoRefresh(): void {
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+    }
   }
 
   getStatusIcon(status: string): string {
