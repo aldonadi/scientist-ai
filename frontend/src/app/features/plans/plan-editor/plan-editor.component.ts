@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router, ActivatedRoute } from '@angular/router';
 import { PlanService, ExperimentPlan, CreatePlanDto, Role, Goal, Script } from '../../../core/services/plan.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { ConfirmService } from '../../../core/services/confirm.service';
 import { CanComponentDeactivate } from '../../../core/guards/unsaved-changes.guard';
 import { GeneralTabComponent } from './general-tab.component';
 import { EnvironmentTabComponent } from './environment-tab.component';
@@ -147,10 +148,13 @@ export class PlanEditorComponent implements OnInit, CanComponentDeactivate {
 
   // Snapshot of initial state for dirty check
   private initialPlanState: string = '';
+  // Flag to bypass guard when user already confirmed via Cancel button
+  private bypassGuard = false;
 
   constructor(
     private planService: PlanService,
     private toastService: ToastService,
+    private confirmService: ConfirmService,
     private router: Router,
     private route: ActivatedRoute,
     private http: HttpClient
@@ -291,31 +295,50 @@ export class PlanEditorComponent implements OnInit, CanComponentDeactivate {
     return this.initialPlanState !== currentState;
   }
 
-  canDeactivate(): boolean {
+  canDeactivate(): boolean | Promise<boolean> {
+    // If we've already confirmed via goBack(), skip the guard
+    if (this.bypassGuard) {
+      return true;
+    }
     if (this.isDirty()) {
-      return confirm(`You have unsaved changes to "${this.plan.name}".\n\nDo you want to leave without saving?`);
+      return this.confirmService.confirm({
+        title: 'Unsaved Changes',
+        message: `You have unsaved changes to "${this.plan.name}".\n\nDo you want to leave without saving?`,
+        confirmText: 'Leave',
+        cancelText: 'Stay'
+      });
     }
     return true;
   }
 
-  goBack(): void {
+  async goBack(): Promise<void> {
     if (this.isDirty()) {
-      const shouldRevert = confirm(`You have unsaved changes to "${this.plan.name}".\n\nDo you want to discard these changes?`);
-      if (shouldRevert) {
+      const shouldDiscard = await this.confirmService.confirm({
+        title: 'Discard Changes?',
+        message: `You have unsaved changes to "${this.plan.name}".\n\nDo you want to discard these changes?`,
+        confirmText: 'Discard',
+        cancelText: 'Keep Editing'
+      });
+      if (shouldDiscard) {
+        // Set flag to bypass guard since user already confirmed
+        this.bypassGuard = true;
         this.router.navigate(['/plans']);
       }
-      // If user clicks "Cancel" on the confirm, stay on the page
     } else {
       this.router.navigate(['/plans']);
     }
   }
 
-  revertChanges(): void {
+  async revertChanges(): Promise<void> {
     if (this.isDirty()) {
-      const shouldRevert = confirm(`Do you want to revert all unsaved changes to "${this.plan.name}"?`);
+      const shouldRevert = await this.confirmService.confirm({
+        title: 'Revert Changes?',
+        message: `Do you want to revert all unsaved changes to "${this.plan.name}"?`,
+        confirmText: 'Revert',
+        cancelText: 'Cancel'
+      });
       if (shouldRevert) {
         if (this.isNew) {
-          // For new plans, reset to defaults
           this.plan = {
             name: '',
             description: '',
@@ -327,7 +350,6 @@ export class PlanEditorComponent implements OnInit, CanComponentDeactivate {
           };
           this.saveInitialState();
         } else {
-          // For existing plans, reload from server
           this.loadPlan();
         }
       }

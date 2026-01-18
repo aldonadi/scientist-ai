@@ -7,10 +7,12 @@
   - [x] Plan editor - already has toasts
 
 - [x] Fix unsaved changes workflow in Plan Editor
-  - [x] Cancel button now prompts user before discarding changes
-  - [x] Navigation guard shows improved prompt message
-  - [x] Added revertChanges() method for future use
-  - [x] Verified both Cancel button and sidebar navigation work correctly
+  - [x] Created ConfirmService for custom modal dialogs
+  - [x] Created ConfirmDialogComponent with styled modal UI
+  - [x] Cancel button shows "Discard Changes?" modal
+  - [x] Navigation guard shows "Unsaved Changes" modal  
+  - [x] Fixed double modal issue with bypassGuard flag
+  - [x] Verified both Cancel and sidebar navigation work correctly
 
 ## Pending
 
