@@ -1089,32 +1089,22 @@ try:
     
     user_code = os.environ.get('HOOK_CODE', '')
     
-    # Create a namespace for exec - this is CRITICAL for capturing user-defined functions
-    exec_namespace = {
-        'context': context,
-        'experiment': experiment,
-        'env': env,
-        'event': event,
-        'hook': hook,
-        'actions': actions,
-        'Actions': Actions,
-        'os': os,
-        'json': json,
-        'sys': sys
-    }
+    # Execute the user code in the CURRENT scope
+    # This avoids complex scoping issues with exec(code, globals, locals)
+    # Since we are in an isolated container, we don't need artificial namespace isolation
+    exec(user_code)
     
-    # Execute the user code in the shared namespace
-    exec(user_code, exec_namespace)
-    
-    # Check if a 'run' function was defined in the exec namespace and call it
-    if 'run' in exec_namespace and callable(exec_namespace['run']):
-        exec_namespace['run'](context)
+    # Check if a 'run' function was defined in the local scope and call it
+    if 'run' in locals() and callable(locals()['run']):
+        locals()['run'](context)
         
         # Sync changes back from context['environment'] to our 'env' local
         if 'environment' in context:
             env = context['environment']
             if isinstance(env, DotDict):
                 env = dict(env)  # Convert back to regular dict for JSON serialization
+        
+
             
     # Output modified environment AND pending actions
     print(json.dumps({
