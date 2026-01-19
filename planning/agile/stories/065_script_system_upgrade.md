@@ -40,17 +40,21 @@ Significantly enhance the Script system to enable richer experiment behaviors. T
 - [ ] `actions.end_step(immediate=False)` - Ends current step (immediate or after hooks complete)
 - [ ] `actions.skip_role()` - Skips current role, moves to next
 - [ ] `actions.query_llm(prompt, system_prompt=None, model=None)` - Hidden LLM call, returns response
+- [ ] `actions.pause_experiment()` - Pauses experiment (can be resumed via control API)
+- [ ] `actions.set_variable(key, value)` - Syntactic sugar for env modification
+- [ ] `actions.inject_message(role_name, content)` - Inject message into role's history
 - [ ] Action results are captured in script output and processed by orchestrator
 - [ ] Experiment correctly handles stop/end/skip signals during execution
+- [ ] Calling `end_step()` in `STEP_END` hook logs warning and is ignored (prevent infinite loop)
 
 ## Technical Design
 
 ### Hook Context Structure
 ```python
-# Available in scripts as `hook_context` dict
-hook_context = {
-    "hook_type": "BEFORE_TOOL_CALL",  # Always present
-    "tool_name": "calculate_sum",     # Hook-specific fields
+# Available in scripts as context['hook'] dict
+context['hook'] = {
+    "type": "BEFORE_TOOL_CALL",        # Always present
+    "tool_name": "calculate_sum",      # Hook-specific fields
     "args": {"a": 1, "b": 2}
 }
 ```

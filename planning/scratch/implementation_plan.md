@@ -4,22 +4,12 @@ This plan implements a significant enhancement to the Script system, enabling sc
 
 ## User Review Required
 
-> [!IMPORTANT]
-> **Design Decisions Requiring User Input:**
+> [!NOTE]
+> **Approved Design Decisions:**
 > 
-> 1. **Hook Context Design**: Should we expose context via `hook_context` dict or merge it into the existing `context` object? 
->    - Option A: `hook_context.tool_name` (separate namespace, explicit)
->    - Option B: `context.tool_name` or `event.tool_name` (unified, already exists as `event`)
->    - **Recommendation**: Use `hook` as a cleaner alias: `hook.tool_name`, `hook.step_number`
-> 
-> 2. **LLM Query Provider**: For `actions.query_llm()`, should it:
->    - Use the experiment's configured provider (consistent but ties to experiment config)
->    - Use a dedicated "utility" provider (independent, but more config)
->    - **Recommendation**: Use experiment's provider with option to override model name
->
-> 3. **Immediate Step End**: For `actions.end_step(immediate=True)`:
->    - Should remaining scripts in current hook be skipped?
->    - **Recommendation**: Yes, skip remaining scripts (matches "immediate" semantics)
+> 1. **Hook Context**: Use `context['hook']` to hold hook-specific data (`tool_name`, `tool_response`, `model_prompt`, etc.)
+> 2. **LLM Query Provider**: Use experiment's provider with option to override model name
+> 3. **Immediate Step End**: Yes, skip remaining scripts. If `end_step()` called in `STEP_END` hook, log warning and ignore
 
 ## Proposed Changes
 
@@ -36,6 +26,7 @@ This plan implements a significant enhancement to the Script system, enabling sc
 **New helper method `_processScriptActions()`:**
 - Interpret action objects and apply effects to experiment state
 - Handle `STOP_EXPERIMENT`, `LOG`, `END_STEP`, `SKIP_ROLE`, `QUERY_LLM`
+- Additional actions: `PAUSE_EXPERIMENT`, `INJECT_MESSAGE`, `SET_VARIABLE`
 - Return control signals to caller (e.g., shouldSkipRole, shouldEndStep)
 
 **Python wrapper changes:**
@@ -85,12 +76,15 @@ No schema changes required. Existing schema supports new behavior.
 
 **Changes to `processRole()` method:**
 - Check for `skipRole` flag after hook execution
-- If set, return early from role processing
+- If set, log "Role [name] skipped due to script action" and return early
 
 **Changes to `processStep()` method:**
 - Check for `endStep` flag after each role
-- If `immediate`, exit step loop immediately
+- If `immediate`, log "Step ending immediately due to script action" and exit step loop
 - Otherwise, complete current hook batch then exit
+
+**Edge case handling:**
+- If `end_step()` called during `STEP_END` hook, log warning and ignore (prevent infinite loop)
 
 **Changes to `runLoop()` method:**
 - Check for `stopExperiment` flag after each step
