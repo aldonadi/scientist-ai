@@ -20,6 +20,9 @@ router.get('/:id/logs', experimentController.getExperimentLogs);
 // GET /api/experiments/:id/stream - Stream events
 router.get('/:id/stream', experimentController.streamExperimentEvents);
 
+// GET /api/experiments/:id/history - Get state history
+router.get('/:id/history', experimentController.getExperimentHistory);
+
 // DELETE /api/experiments/:id - Delete an ended experiment
 router.delete('/:id', experimentController.deleteExperiment);
 

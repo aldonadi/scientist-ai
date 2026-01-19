@@ -5,6 +5,7 @@ import { ExperimentService, Experiment, ChatMessage } from '../../core/services/
 import { PlanService, ExperimentPlan } from '../../core/services/plan.service';
 import { LogFeedComponent, LogEntry } from './log-feed.component';
 import { JsonTreeComponent } from './json-tree.component';
+import { StateHistoryComponent } from './state-history.component';
 import { interval, Subscription } from 'rxjs';
 
 interface RoleActivity {
@@ -18,7 +19,7 @@ interface RoleActivity {
 @Component({
   selector: 'app-experiment-monitor',
   standalone: true,
-  imports: [CommonModule, RouterLink, LogFeedComponent, JsonTreeComponent],
+  imports: [CommonModule, RouterLink, LogFeedComponent, JsonTreeComponent, StateHistoryComponent],
   template: `
     <div class="h-full flex flex-col">
       <!-- Header -->
@@ -94,6 +95,12 @@ interface RoleActivity {
             class="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
             [ngClass]="activeTab === 'chat' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'">
             Chat History
+          </button>
+          <button 
+            (click)="activeTab = 'history'"
+            class="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
+            [ngClass]="activeTab === 'history' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'">
+            State History
           </button>
       </div>
       
@@ -298,6 +305,16 @@ interface RoleActivity {
           </div>
       </div>
       
+
+      
+      <!-- State History View -->
+      <div *ngIf="activeTab === 'history'" class="flex-1 min-h-0 p-4">
+        <app-state-history 
+            [experimentId]="id" 
+            [isRunning]="experiment?.status === 'RUNNING'">
+        </app-state-history>
+      </div>
+
       <!-- Result Banner (when complete) -->
       <div 
         *ngIf="experiment?.status === 'COMPLETED' || experiment?.status === 'FAILED' || experiment?.status === 'STOPPED'"
@@ -341,7 +358,7 @@ export class ExperimentMonitorComponent implements OnInit, OnDestroy {
   logs: LogEntry[] = [];
   roleActivities: RoleActivity[] = [];
   isControlling = false;
-  activeTab: 'monitor' | 'chat' = 'monitor';
+  activeTab: 'monitor' | 'chat' | 'history' = 'monitor';
   selectedRole: string | null = null;
   expandedSystemPrompts: Set<number> = new Set();
 

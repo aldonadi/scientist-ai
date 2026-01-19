@@ -54,3 +54,28 @@ actions.query_llm(prompt, system, model)  # LLM query (TODO)
 - ✅ Backend tests pass (`npm test`)
 - ✅ Frontend builds successfully (`npm run build`)
 - ⏳ Manual testing recommended for action behaviors
+
+# State History Tab - Walkthrough
+
+## Summary
+Implemented a new **State History** tab in the Experiment Monitor that allows users to track the evolution of environment variables across each step of an experiment.
+
+## Changes Made
+- **Backend**:
+  - Created `ExperimentStateHistory` model to store snapshots.
+  - Updated `ExperimentOrchestrator` to save state at the end of every step.
+  - Added `GET /api/experiments/:id/history` endpoint.
+- **Frontend**:
+  - Created `StateHistoryComponent` with:
+    - Dynamic column management (add/remove/reset).
+    - Polling for live updates (5s interval).
+    - Client-side sorting and CSV Export.
+  - Integrated tab into `ExperimentMonitorComponent`.
+
+## Verification
+Verified end-to-end using browser automation with a live "BlackJack" experiment.
+- Confirmed step snapshots are created.
+- Confirmed table updates in real-time.
+- Confirmed Export to CSV works.
+
+![Verification Recording](/home/andrew/.gemini/antigravity/brain/2fd790e2-53e3-4146-8f13-7b3f5f79a974/verify_state_history_1768794920365.webp)
