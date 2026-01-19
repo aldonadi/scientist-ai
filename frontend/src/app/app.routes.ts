@@ -51,6 +51,10 @@ export const routes: Routes = [
             {
                 path: 'experiments/:id',
                 loadComponent: () => import('./features/experiments/experiment-monitor.component').then(m => m.ExperimentMonitorComponent)
+            },
+            {
+                path: 'settings',
+                loadComponent: () => import('./features/settings/settings-page.component').then(m => m.SettingsPageComponent)
             }
         ]
     }
