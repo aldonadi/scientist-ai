@@ -83,3 +83,4 @@ Status can be:
 | 061_fix_plan_save_and_dirty_check                  | 3      | DONE        |
 | 062_fix_controls_and_logging                       | 3      | IN-PROGRESS |
 | 063_variable_visibility_per_role                   | 8      | REVIEW      |
+| 065_script_system_upgrade                          | 13     | READY       |
