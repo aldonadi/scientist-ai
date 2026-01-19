@@ -624,6 +624,15 @@ class ExperimentOrchestrator {
                             args: call.args
                         });
 
+                        // Resolve Tool Code early to ensure scope availability and endsTurn check
+                        const toolDoc = await Tool.findOne({ name: call.toolName });
+                        if (!toolDoc) {
+                            throw new Error(`Tool detected but not found in DB: ${call.toolName}`);
+                        }
+
+                        let result = '';
+                        let error = null;
+
                         if (this._controlFlow.skipToolCall) {
                             result = this._controlFlow.skipToolCall.result;
                             this.eventBus.emit(EventTypes.LOG, {
@@ -652,15 +661,6 @@ class ExperimentOrchestrator {
 
                             // 1. Acquire Container
                             const container = await ContainerPoolManager.getInstance().acquire();
-
-                            // 2. Resolve Tool Code
-                            const toolDoc = await Tool.findOne({ name: call.toolName });
-                            if (!toolDoc) {
-                                throw new Error(`Tool detected but not found in DB: ${call.toolName}`);
-                            }
-
-                            let result = '';
-                            let error = null;
 
                             // Create Python wrapper that calls the tool's execute() function
                             // and outputs the modified environment as JSON
