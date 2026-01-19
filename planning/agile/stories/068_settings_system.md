@@ -19,45 +19,62 @@ Implement a comprehensive, extensible Settings system that enables users to conf
 
 ---
 
+## Design Decisions (Resolved)
+
+| Question | Decision |
+|----------|----------|
+| UI Layout | Workshop multiple ASCII mockups, pick best fit |
+| Essential Data Types | String, Integer, Float, Boolean, Enum, JSON |
+| Save Behavior | Auto-save on change (with debounce) |
+| Import/Export | Available to all users, not admin-only |
+| Storage Backend | MongoDB only for v1 (with interface for future) |
+| Validation Approach | Zod-based (see elaboration below) |
+| Advanced Settings | Flag settings as `advanced: true`, hidden by default |
+| Schema Versioning | Required for v1, enables import compatibility |
+
+---
+
 ## Design Goals & Requirements
 
 ### 1. Simple to Specify (Developer Experience)
-- **Single-source-of-truth**: Settings should be defined in ONE place (a registry/schema file) with all metadata (name, description, type, default, validation rules, tags, groups).
-- **Minimal boilerplate**: Adding a new setting should require editing only the registry file.
-- **Declarative syntax**: Use a clean JSON or JS object syntax for definitions.
+- **Single-source-of-truth**: Settings defined in ONE place (registry file) with all metadata.
+- **Minimal boilerplate**: Adding a new setting requires editing only the registry file.
+- **Declarative syntax**: Clean JS object syntax for definitions.
 
 ### 2. Hierarchical & Taggable
-- **Nested groups**: Settings organized into a tree structure (e.g., `General > Appearance`, `Experiments > Execution > Limits`).
-- **Tags**: Each setting can have optional tags for cross-cutting concerns (e.g., `#performance`, `#security`, `#experimental`).
+- **Nested groups**: Tree structure (e.g., `Providers > Ollama`, `Experiments > Limits`).
+- **Tags**: Optional tags for cross-cutting concerns (e.g., `#performance`, `#experimental`).
+- **Advanced flag**: Settings can be marked `advanced: true` and hidden by default.
 
 ### 3. Searchable
-- **Full-text search**: Filter settings by name, description, tags, or group path.
-- **Instant filtering**: As-you-type filtering in the UI, no page reload.
+- **Full-text search**: Filter by name, description, tags, or group path.
+- **Instant filtering**: As-you-type filtering in the UI.
 
 ### 4. Usable & Expressive
-- **Type-safe values**: Strongly-typed accessors (e.g., `getSetting<number>('maxRetries')`).
-- **Rich type support**: String, Integer, Float, Boolean, Enum (single-select), MultiEnum (multi-select), Freeform Text (textarea), Path, URL, JSON (for dict/array), potentially Color picker.
-- **Read-only access**: Settings are read via a simple API; writes only through the Settings UI or programmatic import.
+- **Type support for v1**: String, Integer, Float, Boolean, Enum, JSON.
+- **Deferred types**: MultiEnum, Path, URL, Textarea, Color picker.
+- **Read-only access**: Simple getter API; writes via Settings UI or import.
 
-### 5. Validatable
-- **Built-in validators**: `required`, `min`, `max`, `minLength`, `maxLength`, `pattern` (regex), `custom` (function).
-- **Declarative validation**: Validation rules defined alongside the setting.
-- **Error messages**: Clear, user-facing validation error text.
+### 5. Validatable (Zod-Based)
+- **Leverage existing Zod patterns** already used in the codebase for API validation.
+- **Declarative rules**: Each setting defines a Zod schema fragment (e.g., `z.number().min(2048).max(131072)`).
+- **Error messages**: Zod's built-in error formatting for user-facing messages.
 
 ### 6. Auto-Generated UI
-- **No manual UI code per setting**: The settings page is dynamically rendered from the registry.
-- **Component mapping**: Each type maps to appropriate UI component (toggle, input, dropdown, textarea, etc.).
-- **Inline validation**: Real-time validation feedback in the UI.
-- **Group navigation**: Collapsible sections or sidebar tree for navigating setting groups.
+- **Dynamic rendering**: Settings page generated from registry definitions.
+- **Component mapping**: Type → UI component (toggle, input, dropdown, JSON editor).
+- **Inline validation**: Real-time feedback using Zod validation.
+- **Group navigation**: Multiple layout options to be workshopped via ASCII mockups.
 
 ### 7. Future User Account Compatibility
-- **User scope ready**: Design with a `scope: 'user' | 'global'` field (unused initially, but structurally present).
-- **Namespace isolation**: Settings keyed by namespace, allowing easy per-user override later.
+- **User scope ready**: `scope: 'user' | 'global'` field (unused initially, structurally present).
+- **Namespace isolation**: Settings keyed for easy per-user override later.
 
 ### 8. Serializable & Storage Agnostic
-- **Abstract storage interface**: Similar pattern to `ISecretStore` (see story 044).
-- **Default implementation**: MongoDB storage for consistency with existing data.
-- **Portability**: Settings exportable/importable as JSON.
+- **Interface pattern**: `ISettingsStore` (similar to `ISecretStore`).
+- **v1 implementation**: MongoDB only.
+- **Schema versioning**: Export includes version number for migration compatibility.
+- **User-accessible export/import**: Available in Settings UI.
 
 ---
 
@@ -65,35 +82,57 @@ Implement a comprehensive, extensible Settings system that enables users to conf
 
 ### Core Components
 
-#### 1. Setting Definition Schema
+#### 1. Setting Definition Schema (Zod-Based Validation)
 ```javascript
 // backend/src/settings/settings.registry.js
+const { z } = require('zod');
+
+// Schema version for export/import compatibility
+export const SETTINGS_SCHEMA_VERSION = 1;
+
 export const settingsRegistry = [
+  // === PROVIDERS > OLLAMA ===
   {
-    key: 'general.appearance.theme',
-    name: 'Theme',
-    description: 'Application color theme',
-    type: 'enum',
-    options: ['light', 'dark', 'system'],
-    default: 'system',
-    tags: ['appearance'],
-    group: ['General', 'Appearance'],
-    scope: 'user',  // or 'global'
-    validation: { required: true },
-    helpText: 'Choose a color scheme for the UI.',
-  },
-  {
-    key: 'experiments.execution.maxConcurrent',
-    name: 'Max Concurrent Experiments',
-    description: 'Maximum experiments running simultaneously',
-    type: 'integer',
-    default: 3,
-    tags: ['performance', 'limits'],
-    group: ['Experiments', 'Execution'],
+    key: 'providers.ollama.apiBaseUrl',
+    name: 'API Base URL',
+    description: 'Base URL for the Ollama API server',
+    type: 'string',
+    default: 'http://localhost:11434',
+    tags: ['ollama', 'connection'],
+    group: ['Providers', 'Ollama'],
     scope: 'global',
-    validation: { required: true, min: 1, max: 10 },
+    advanced: false,
+    validator: z.string().url('Must be a valid URL'),
   },
-  // ... more settings
+  {
+    key: 'providers.ollama.contextLength',
+    name: 'Context Length',
+    description: 'Maximum context window size for model prompts',
+    type: 'integer',
+    default: 4096,
+    tags: ['ollama', 'performance'],
+    group: ['Providers', 'Ollama'],
+    scope: 'global',
+    advanced: false,
+    validator: z.number().int().min(2048).max(131072),
+  },
+  {
+    key: 'providers.ollama.modelOptions',
+    name: 'Model Options',
+    description: 'Additional JSON config options sent with model prompts (e.g., temperature, reasoning effort)',
+    type: 'json',
+    default: { temperature: 0.7 },
+    tags: ['ollama', 'advanced'],
+    group: ['Providers', 'Ollama'],
+    scope: 'global',
+    advanced: true,  // Hidden by default
+    validator: z.record(z.any()).refine(
+      (obj) => typeof obj === 'object' && obj !== null,
+      { message: 'Must be a valid JSON object' }
+    ),
+    helpText: 'JSON object with keys like: temperature, top_p, top_k, seed, etc.',
+  },
+  // ... more settings to be added as needed
 ];
 ```
 
@@ -234,29 +273,35 @@ JSON:       Code editor with syntax highlighting
 ## Acceptance Criteria
 
 ### Backend
-- [ ] `settingsRegistry` schema defined with at least 5 example settings
+- [ ] `settingsRegistry` with initial Ollama settings (apiBaseUrl, contextLength, modelOptions)
+- [ ] `SETTINGS_SCHEMA_VERSION` constant for export versioning
 - [ ] `ISettingsStore` interface defined
-- [ ] `MongoDBSettingsStore` implementation complete
-- [ ] `SettingsService` with `get`, `set`, `getAll`, `reset`, `validate`
+- [ ] `MongoDBSettingsStore` implementation (key, value, userId?, updatedAt)
+- [ ] `SettingsService` with `get`, `set`, `getAll`, `reset`, `validate`, `resetAll`
+- [ ] Zod validators run on `set` and return 400 with formatted errors on failure
 - [ ] REST endpoints: `GET/PUT/DELETE /api/settings/:key`
-- [ ] `GET /api/settings/definitions` returns full registry for frontend
-- [ ] Validation runs on `PUT` and returns 400 with errors on failure
-- [ ] Export/Import endpoints working
+- [ ] `GET /api/settings/definitions` returns registry metadata for frontend
+- [ ] `POST /api/settings/export` exports JSON with schema version
+- [ ] `POST /api/settings/import` imports JSON with migration support
+- [ ] `POST /api/settings/reset-all` resets all settings to defaults
 
 ### Frontend
-- [ ] Settings page accessible from main navigation
+- [ ] Settings page accessible from header navigation
 - [ ] Settings rendered dynamically from definitions API
-- [ ] Search filters settings by name, description, tags
-- [ ] Hierarchical navigation (sidebar or collapsible sections)
-- [ ] Each setting type renders appropriate editor component
+- [ ] Search bar filters settings by name, description, tags, group
+- [ ] Group navigation (layout TBD via ASCII mockup workshop)
+- [ ] "Show Advanced" toggle to reveal `advanced: true` settings
+- [ ] Each type renders appropriate editor (string, integer, float, boolean, enum, JSON)
+- [ ] Auto-save with debounce on change
 - [ ] Real-time validation with inline error display
-- [ ] Save button (or auto-save with debounce)
-- [ ] Reset to default per-setting
+- [ ] Per-setting reset icon (visible when value differs from default)
+- [ ] Factory reset button with confirmation modal (type "RESET" to confirm)
+- [ ] Export/Import buttons in UI
 
 ### Cross-Cutting
-- [ ] New setting can be added by editing only `settings.registry.js`
-- [ ] Settings persist across server restarts
-- [ ] Settings load on application startup
+- [ ] New setting added by editing only `settings.registry.js`
+- [ ] Settings persist in MongoDB across server restarts
+- [ ] Export includes `schemaVersion` for migration compatibility
 
 ---
 
@@ -290,52 +335,105 @@ JSON:       Code editor with syntax highlighting
 
 ---
 
-## Open Questions & Clarifications Needed
+## Technical Elaborations
 
-> [!IMPORTANT]
-> **The following questions should be resolved before implementation begins:**
+### Validation: Zod-Based Approach
 
-### 1. UI Layout Preference
-Which layout style do you prefer?
-- **Option A**: Sidebar tree navigation (like VS Code settings)
-- **Option B**: Flat filtered list with collapsible groups (like Chrome settings)
+Since the codebase already uses Zod for API validation (see `tool.schema.js`, `provider.schema.js`), we'll use the same pattern for settings:
 
-### 2. Data Types Priority
-Which types are must-haves for v1?
-- **Essential**: String, Integer, Boolean, Enum — probably yes
-- **Nice-to-have**: Float, Textarea, Path, URL, MultiEnum, JSON/Dict
-- **Defer?**: Color picker, File upload
+**How it works:**
+- Each setting has a `validator` property that is a Zod schema.
+- Validation runs on the backend before persisting any change.
+- Zod provides human-readable error messages out of the box.
+- The same validator can run on frontend (Zod works in browser) for instant feedback.
 
-### 3. Auto-save vs. Explicit Save
-Should settings:
-- **Auto-save** on change (with debounce, like most modern apps)?
-- **Require explicit Save button** (like traditional preferences dialogs)?
-- **Hybrid**: Auto-save simple types, explicit save for complex/dangerous ones?
+**Example validators:**
+```javascript
+z.string().min(1)                         // Non-empty string
+z.string().url()                          // Valid URL
+z.string().regex(/^[a-z]+$/)              // Regex pattern
+z.number().int().min(0).max(100)          // Bounded integer
+z.number().positive()                     // Positive float
+z.boolean()                               // Boolean
+z.enum(['light', 'dark', 'system'])       // Enum selection
+z.record(z.any())                         // Arbitrary JSON object
+```
 
-### 4. Import/Export Scope
-For export/import:
-- Should this be a user-facing feature in the UI?
-- Or a developer/admin tool (CLI or hidden endpoint)?
+**Frontend note:** For the UI, we'll serialize the validator "shape" (type, min, max, etc.) into metadata that Angular can use to render appropriate inputs and show validation errors without running Zod directly.
 
-### 5. Initial Settings Catalog
-What are the first 5-10 settings you'd like to see implemented? Examples:
-- Theme (light/dark/system)
-- Default LLM provider
-- Max concurrent experiments
-- Log retention period
-- Container timeout defaults
-- API rate limits
+---
 
-### 6. Storage Backend Priority
-You mentioned multiple storage backends (MongoDB, SQLite, flat files, Windows Registry). For v1:
-- Is MongoDB sufficient?
-- Should we implement the interface but only build MongoDB initially?
+### Migration Strategy
 
-### 7. Validation Complexity
-For custom validation functions:
-- Should validators be pure JavaScript functions in the registry?
-- Or string-based rules that map to predefined validators?
-- (Former is more flexible, latter is more portable/serializable)
+When settings keys, types, or validation rules change between versions:
+
+**Scenario 1: Adding a new setting**
+- No migration needed. New settings use their default value automatically.
+
+**Scenario 2: Renaming a setting key**
+- Migration function maps `old.key` → `new.key` on import.
+- Old key is deleted, new key is created with same value.
+
+**Scenario 3: Changing a setting's type**
+- Migration function converts the value (e.g., string `"3"` → integer `3`).
+- If conversion fails, use the new default.
+
+**Scenario 4: Removing a setting**
+- Orphaned settings are ignored on import (warning logged).
+- Cleanup task can remove orphaned settings from storage.
+
+**Implementation:**
+```javascript
+// backend/src/settings/migrations.js
+const migrations = {
+  1: (data) => data,  // v1: no changes (initial version)
+  2: (data) => {
+    // Example: rename 'ollama.baseUrl' → 'providers.ollama.apiBaseUrl'
+    if (data['ollama.baseUrl']) {
+      data['providers.ollama.apiBaseUrl'] = data['ollama.baseUrl'];
+      delete data['ollama.baseUrl'];
+    }
+    return data;
+  },
+};
+
+function migrateSettings(data, fromVersion, toVersion) {
+  let current = data;
+  for (let v = fromVersion + 1; v <= toVersion; v++) {
+    if (migrations[v]) current = migrations[v](current);
+  }
+  return current;
+}
+```
+
+---
+
+### Settings Reset UX
+
+**Per-Setting Reset:**
+- Each setting row has a small "↺" reset icon (only visible if value differs from default).
+- Clicking shows a confirmation: "Reset 'API Base URL' to default value?" with Cancel/Reset buttons.
+- Uses the existing modal dialog component.
+
+**Factory Reset (All Settings):**
+- Button at bottom of Settings page: "Reset All Settings to Defaults".
+- Confirmation modal with strong warning: "This will reset ALL settings to their default values. This cannot be undone."
+- Requires typing "RESET" or similar to confirm (prevents accidental activation).
+
+**ASCII Mockup:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ ⚠️ Reset All Settings                                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  This will reset ALL settings to their default values.         │
+│  This action cannot be undone.                                  │
+│                                                                 │
+│  Type RESET to confirm: [__________]                            │
+│                                                                 │
+│                                [Cancel]  [Reset All Settings]   │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
