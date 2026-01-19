@@ -41,6 +41,27 @@ import { ScriptsTabComponent } from './scripts-tab.component';
           </span>
         </div>
         <div class="flex items-center space-x-3">
+          <!-- Run / Batch / Delete (only for existing plans) -->
+          <ng-container *ngIf="!isNew">
+            <div class="flex mr-2">
+              <button (click)="runPlan()" 
+                      [disabled]="isDirty()"
+                      [title]="isDirty() ? 'Save changes before running' : 'Run experiment'"
+                      class="px-3 py-2 bg-green-600 text-white rounded-l-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                Run
+              </button>
+              <button (click)="openBatchModal()" 
+                      [disabled]="isDirty()"
+                      [title]="isDirty() ? 'Save changes before batch run' : 'Batch run'"
+                      class="px-3 py-2 bg-green-700 text-white rounded-r-lg text-sm font-medium hover:bg-green-800 transition-colors border-l border-green-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                Batch
+              </button>
+            </div>
+            <button (click)="deletePlan()" 
+                    class="px-4 py-2 border border-red-300 text-red-700 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors">
+              Delete
+            </button>
+          </ng-container>
           <button (click)="goBack()" 
                   class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
             Cancel
@@ -111,6 +132,48 @@ import { ScriptsTabComponent } from './scripts-tab.component';
         </app-scripts-tab>
       </div>
     </div>
+    
+    <!-- Batch Run Modal -->
+    <div *ngIf="showBatchModal" 
+         class="fixed inset-0 z-[10000] flex items-center justify-center">
+      <div class="absolute inset-0 bg-black/50" (click)="cancelBatch()"></div>
+      <div class="relative bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100">
+          <h3 class="text-lg font-semibold text-gray-900">Launch Batch Experiments</h3>
+          <p class="text-sm text-gray-500 mt-1">Plan: {{ plan.name }}</p>
+        </div>
+        <div class="px-6 py-4 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">How many experiments to launch?</label>
+            <div class="flex items-center space-x-2">
+              <button *ngFor="let n of [2, 5, 10, 20]"
+                      (click)="batchCount = n"
+                      [class]="batchCount === n 
+                        ? 'px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium' 
+                        : 'px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50'">
+                {{ n }}
+              </button>
+              <input type="number" 
+                     [(ngModel)]="batchCount"
+                     min="1"
+                     max="100"
+                     class="w-20 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+          </div>
+        </div>
+        <div class="px-6 py-4 bg-gray-50 flex justify-end space-x-3">
+          <button (click)="cancelBatch()"
+                  class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors font-medium">
+            Cancel
+          </button>
+          <button (click)="confirmBatch()"
+                  [disabled]="batchCount < 1"
+                  class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+            Launch {{ batchCount }} Experiments
+          </button>
+        </div>
+      </div>
+    </div>
   `
 })
 export class PlanEditorComponent implements OnInit, CanComponentDeactivate {
@@ -156,6 +219,10 @@ export class PlanEditorComponent implements OnInit, CanComponentDeactivate {
   private initialPlanState: string = '';
   // Flag to bypass guard when user already confirmed via Cancel button
   private bypassGuard = false;
+
+  // Batch modal state
+  showBatchModal = false;
+  batchCount = 5;
 
   constructor(
     private planService: PlanService,
@@ -402,4 +469,102 @@ export class PlanEditorComponent implements OnInit, CanComponentDeactivate {
     if (typeof value === 'boolean') return 'boolean';
     return 'string';
   }
+
+  // --- Run / Batch / Delete Methods ---
+
+  async runPlan(): Promise<void> {
+    if (!this.id || this.isDirty()) return;
+
+    try {
+      const response = await fetch('/api/experiments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId: this.id })
+      });
+      const exp = await response.json();
+
+      this.toastService.success(`Experiment launched for "${this.plan.name}"`);
+      this.router.navigate(['/experiments', exp._id]);
+    } catch (err) {
+      console.error('Failed to launch experiment:', err);
+      this.toastService.error('Failed to launch experiment');
+    }
+  }
+
+  openBatchModal(): void {
+    if (!this.id || this.isDirty()) return;
+    this.batchCount = 5;
+    this.showBatchModal = true;
+  }
+
+  cancelBatch(): void {
+    this.showBatchModal = false;
+  }
+
+  async confirmBatch(): Promise<void> {
+    if (!this.id || this.batchCount < 1) return;
+
+    this.showBatchModal = false;
+    this.toastService.info(`Launching ${this.batchCount} experiments for "${this.plan.name}"...`);
+
+    let firstExpId: string | null = null;
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < this.batchCount; i++) {
+      try {
+        const response = await fetch('/api/experiments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ planId: this.id })
+        });
+        const exp = await response.json();
+
+        if (i === 0) {
+          firstExpId = exp._id;
+        }
+        successCount++;
+      } catch (err) {
+        console.error(`Failed to launch experiment ${i + 1}:`, err);
+        failCount++;
+      }
+    }
+
+    if (successCount > 0) {
+      this.toastService.success(`Launched ${successCount} experiment${successCount > 1 ? 's' : ''}`);
+    }
+    if (failCount > 0) {
+      this.toastService.error(`Failed to launch ${failCount} experiment${failCount > 1 ? 's' : ''}`);
+    }
+
+    if (firstExpId) {
+      this.router.navigate(['/experiments', firstExpId]);
+    }
+  }
+
+  async deletePlan(): Promise<void> {
+    if (!this.id) return;
+
+    const shouldDelete = await this.confirmService.confirm({
+      title: 'Delete Plan?',
+      message: `Are you sure you want to delete "${this.plan.name}"?\n\nThis action cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel'
+    });
+
+    if (shouldDelete) {
+      this.planService.deletePlan(this.id).subscribe({
+        next: () => {
+          this.toastService.success(`Plan "${this.plan.name}" deleted`);
+          this.bypassGuard = true;
+          this.router.navigate(['/plans']);
+        },
+        error: (err) => {
+          console.error('Failed to delete plan:', err);
+          this.toastService.error('Failed to delete plan: ' + (err.error?.message || err.message));
+        }
+      });
+    }
+  }
 }
+
