@@ -19,6 +19,16 @@ class ExperimentOrchestrator {
         this.plan = null;
         this.isInitialized = false;
         this.registeredHooks = []; // Track registered hook handlers for cleanup
+
+        // Control flow state for script actions
+        this._controlFlow = {
+            stopExperiment: null,    // { success: bool, message: string } or null
+            pauseExperiment: false,
+            skipRole: false,
+            endStep: null,           // { immediate: bool } or null
+            pendingLogs: [],         // [{ message, data }]
+            pendingMessages: []      // [{ roleName, content }]
+        };
     }
 
     /**
@@ -135,6 +145,36 @@ class ExperimentOrchestrator {
 
                 await this.processStep();
 
+                // Check for script-triggered stop
+                if (this._controlFlow.stopExperiment) {
+                    const stopInfo = this._controlFlow.stopExperiment;
+                    this.experiment.status = stopInfo.success ? 'COMPLETED' : 'FAILED';
+                    this.experiment.result = stopInfo.message || (stopInfo.success ? 'Stopped by script (success)' : 'Stopped by script (failure)');
+                    this.experiment.endTime = new Date();
+                    const duration = this.experiment.endTime - this.experiment.startTime;
+
+                    await this.experiment.save();
+                    await this.eventBus.emitAsync(EventTypes.EXPERIMENT_END, {
+                        experimentId: this.experiment._id,
+                        result: this.experiment.result,
+                        duration: duration
+                    });
+                    return;
+                }
+
+                // Check for script-triggered pause
+                if (this._controlFlow.pauseExperiment) {
+                    this.experiment.status = 'PAUSED';
+                    await this.experiment.save();
+                    this.eventBus.emit(EventTypes.LOG, {
+                        experimentId: this.experiment._id,
+                        stepNumber: this.experiment.currentStep,
+                        source: 'SYSTEM',
+                        message: 'Experiment paused by script action'
+                    });
+                    return;
+                }
+
                 // Goal Evaluation
                 const goalMet = await this.evaluateGoals();
                 if (goalMet) {
@@ -199,18 +239,59 @@ class ExperimentOrchestrator {
 
     /**
      * Executes a single step.
+     * @returns {Promise<boolean>} True if step should continue to next, false if experiment flow interrupted
      */
     async processStep() {
         const step = this.experiment.currentStep;
+
+        // Reset per-step control flow state
+        this._controlFlow.endStep = null;
+        this._controlFlow.skipRole = false;
 
         await this.eventBus.emitAsync(EventTypes.STEP_START, {
             experimentId: this.experiment._id,
             stepNumber: step
         });
 
+        // Check if STEP_START hook requested stop or immediate end
+        if (this._controlFlow.stopExperiment || this._controlFlow.pauseExperiment) {
+            return false; // Let runLoop handle the stop/pause
+        }
+        if (this._controlFlow.endStep?.immediate) {
+            this.eventBus.emit(EventTypes.LOG, {
+                experimentId: this.experiment._id,
+                stepNumber: step,
+                source: 'SYSTEM',
+                message: 'Step ending immediately due to script action'
+            });
+            // Skip roles, go directly to STEP_END
+            await this.eventBus.emitAsync(EventTypes.STEP_END, {
+                experimentId: this.experiment._id,
+                stepNumber: step,
+                environmentSnapshot: this.experiment.currentEnvironment
+            });
+            return true;
+        }
+
         // Role Iteration
         for (const role of this.plan.roles) {
             await this.processRole(role);
+
+            // Check if we should end the step early (non-immediate mode waits for current role)
+            if (this._controlFlow.endStep) {
+                this.eventBus.emit(EventTypes.LOG, {
+                    experimentId: this.experiment._id,
+                    stepNumber: step,
+                    source: 'SYSTEM',
+                    message: 'Step ending early after current role due to script action'
+                });
+                break;
+            }
+
+            // Check if we should stop/pause the experiment
+            if (this._controlFlow.stopExperiment || this._controlFlow.pauseExperiment) {
+                break;
+            }
         }
 
         await this.eventBus.emitAsync(EventTypes.STEP_END, {
@@ -218,6 +299,8 @@ class ExperimentOrchestrator {
             stepNumber: step,
             environmentSnapshot: this.experiment.currentEnvironment
         });
+
+        return !this._controlFlow.stopExperiment && !this._controlFlow.pauseExperiment;
     }
 
     /**
@@ -225,10 +308,29 @@ class ExperimentOrchestrator {
      * Constructs the prompt, resolves tools, and emits the MODEL_PROMPT event.
      */
     async processRole(role) {
+        // Reset skipRole flag before emitting ROLE_START
+        this._controlFlow.skipRole = false;
+
         await this.eventBus.emitAsync(EventTypes.ROLE_START, {
             experimentId: this.experiment._id,
             roleName: role.name
         });
+
+        // Check if ROLE_START hook requested to skip this role
+        if (this._controlFlow.skipRole) {
+            this.eventBus.emit(EventTypes.LOG, {
+                experimentId: this.experiment._id,
+                stepNumber: this.experiment.currentStep,
+                source: 'SYSTEM',
+                message: `Role "${role.name}" skipped due to script action`
+            });
+            return;
+        }
+
+        // Check if we should stop/pause (higher priority than role processing)
+        if (this._controlFlow.stopExperiment || this._controlFlow.pauseExperiment) {
+            return;
+        }
 
         // 1. Environment Isolation
         // Create a deep copy to prevent mutation by the LLM (mental sandbox)
@@ -851,7 +953,10 @@ except Exception as e:
         try {
             container = await ContainerPoolManager.getInstance().acquire();
 
-            // Construct Context
+            // Build hook-specific context based on hook type
+            const hookContext = this._buildHookContext(script.hookType, eventPayload);
+
+            // Construct Context with new 'hook' field
             const context = {
                 experiment: {
                     id: this.experiment._id.toString(),
@@ -860,12 +965,13 @@ except Exception as e:
                     currentStep: this.experiment.currentStep
                 },
                 environment: JSON.parse(JSON.stringify(this.experiment.currentEnvironment.variables)),
-                event: eventPayload
+                event: eventPayload,
+                hook: hookContext
             };
 
             const contextJson = JSON.stringify(context);
 
-            // Python wrapper that loads context, executes user code, and outputs modified environment
+            // Python wrapper with Actions class and hook context support
             const pythonScript = `
 import os
 import json
@@ -888,17 +994,98 @@ try:
         def __setattr__(self, key, value):
             self[key] = value
 
+    # Actions API for scripts to control experiment flow
+    class Actions:
+        _pending = []
+        
+        @staticmethod
+        def stop_experiment(success=False, message=None):
+            """Stop the experiment as SUCCESS or FAILURE"""
+            Actions._pending.append({
+                'type': 'STOP_EXPERIMENT',
+                'success': success,
+                'message': message
+            })
+        
+        @staticmethod
+        def pause_experiment():
+            """Pause the experiment (can be resumed via control API)"""
+            Actions._pending.append({
+                'type': 'PAUSE_EXPERIMENT'
+            })
+        
+        @staticmethod
+        def log(message, data=None):
+            """Write an arbitrary log entry"""
+            Actions._pending.append({
+                'type': 'LOG',
+                'message': str(message),
+                'data': data
+            })
+        
+        @staticmethod
+        def end_step(immediate=False):
+            """End the current step early"""
+            Actions._pending.append({
+                'type': 'END_STEP',
+                'immediate': immediate
+            })
+        
+        @staticmethod
+        def skip_role():
+            """Skip the current role and move to the next"""
+            Actions._pending.append({
+                'type': 'SKIP_ROLE'
+            })
+        
+        @staticmethod
+        def set_variable(key, value):
+            """Set an environment variable (syntactic sugar)"""
+            Actions._pending.append({
+                'type': 'SET_VARIABLE',
+                'key': key,
+                'value': value
+            })
+        
+        @staticmethod
+        def inject_message(role_name, content):
+            """Inject a message into a role's conversation history"""
+            Actions._pending.append({
+                'type': 'INJECT_MESSAGE',
+                'role_name': role_name,
+                'content': content
+            })
+        
+        @staticmethod
+        def query_llm(prompt, system_prompt=None, model=None):
+            """
+            Query the LLM and get a response (blocking).
+            Note: This is handled specially and executes synchronously.
+            """
+            Actions._pending.append({
+                'type': 'QUERY_LLM',
+                'prompt': prompt,
+                'system_prompt': system_prompt,
+                'model': model
+            })
+            # Note: Actual LLM response is not available in this version
+            # The orchestrator will process this after script completes
+            return "[LLM query will be processed by orchestrator]"
+
+    actions = Actions()
+
     # Interactive context for top-level code
     context_str = os.environ.get('HOOK_CONTEXT', '{}')
     context_dict = json.loads(context_str)
     
-    # Create a robust context object
+    # Create a robust context object with dot notation
     context = DotDict(context_dict)
     
-    # For backward compatibility with top-level scripts that expect 'experiment', 'env', 'event' locals
+    # For backward compatibility with top-level scripts
     experiment = context_dict.get('experiment', {})
-    env = context_dict.get('environment', {}) # IT IS NOW JUST VARIABLES
+    env = context_dict.get('environment', {})
     event = context_dict.get('event', {})
+    hook = DotDict(context_dict.get('hook', {}))
     
     user_code = os.environ.get('HOOK_CODE', '')
     
@@ -908,6 +1095,9 @@ try:
         'experiment': experiment,
         'env': env,
         'event': event,
+        'hook': hook,
+        'actions': actions,
+        'Actions': Actions,
         'os': os,
         'json': json,
         'sys': sys
@@ -926,11 +1116,15 @@ try:
             if isinstance(env, DotDict):
                 env = dict(env)  # Convert back to regular dict for JSON serialization
             
-    # Output modified environment
-    print(json.dumps({'success': True, 'environment': env}))
+    # Output modified environment AND pending actions
+    print(json.dumps({
+        'success': True, 
+        'environment': env,
+        'actions': Actions._pending
+    }))
 except Exception as e:
     traceback.print_exc()
-    print(json.dumps({'success': False, 'error': str(e)}))
+    print(json.dumps({'success': False, 'error': str(e), 'actions': []}))
 `;
 
             const execResult = await container.execute(
@@ -942,14 +1136,16 @@ except Exception as e:
                 []
             );
 
-            // Log script output
-            this.eventBus.emit(EventTypes.LOG, {
-                experimentId: this.experiment._id,
-                stepNumber: this.experiment.currentStep,
-                source: 'HOOK',
-                message: `Hook ${script.hookType} executed`,
-                data: { stdout: execResult.stdout, stderr: execResult.stderr }
-            });
+            // Log script output (but not overly verbose)
+            if (execResult.stderr) {
+                this.eventBus.emit(EventTypes.LOG, {
+                    experimentId: this.experiment._id,
+                    stepNumber: this.experiment.currentStep,
+                    source: 'HOOK',
+                    message: `Hook ${script.hookType} stderr output`,
+                    data: { stderr: execResult.stderr }
+                });
+            }
 
             if (execResult.exitCode !== 0) {
                 throw new Error(execResult.stderr || `Hook process failed with exit code ${execResult.exitCode}`);
@@ -973,6 +1169,11 @@ except Exception as e:
                 this.experiment.markModified('currentEnvironment');
             }
 
+            // Process any actions from the script
+            if (output.actions && output.actions.length > 0) {
+                this._processScriptActions(output.actions, script.hookType);
+            }
+
         } catch (e) {
             this.eventBus.emit(EventTypes.LOG, {
                 experimentId: this.experiment._id,
@@ -991,6 +1192,206 @@ except Exception as e:
                 await container.destroy();
             }
         }
+    }
+
+    /**
+     * Builds hook-specific context based on the event type.
+     * @param {string} hookType - The type of hook
+     * @param {Object} eventPayload - The event payload
+     * @returns {Object} Hook-specific context
+     */
+    _buildHookContext(hookType, eventPayload) {
+        const baseContext = { type: hookType };
+
+        switch (hookType) {
+            case 'EXPERIMENT_START':
+                return {
+                    ...baseContext,
+                    experiment_id: eventPayload.experimentId?.toString(),
+                    plan_name: eventPayload.planName
+                };
+
+            case 'STEP_START':
+            case 'STEP_END':
+                return {
+                    ...baseContext,
+                    step_number: eventPayload.stepNumber,
+                    environment_snapshot: hookType === 'STEP_END' ? eventPayload.environmentSnapshot : undefined
+                };
+
+            case 'ROLE_START':
+                return {
+                    ...baseContext,
+                    role_name: eventPayload.roleName
+                };
+
+            case 'MODEL_PROMPT':
+                return {
+                    ...baseContext,
+                    role_name: eventPayload.roleName,
+                    messages: eventPayload.messages,
+                    tools: eventPayload.tools
+                };
+
+            case 'MODEL_RESPONSE_CHUNK':
+                return {
+                    ...baseContext,
+                    role_name: eventPayload.roleName,
+                    chunk: eventPayload.chunk
+                };
+
+            case 'MODEL_RESPONSE_COMPLETE':
+                return {
+                    ...baseContext,
+                    role_name: eventPayload.roleName,
+                    full_response: eventPayload.fullResponse
+                };
+
+            case 'BEFORE_TOOL_CALL':
+            case 'TOOL_CALL':
+                return {
+                    ...baseContext,
+                    tool_name: eventPayload.toolName,
+                    args: eventPayload.args
+                };
+
+            case 'TOOL_RESULT':
+            case 'AFTER_TOOL_CALL':
+                return {
+                    ...baseContext,
+                    tool_name: eventPayload.toolName,
+                    result: eventPayload.result,
+                    env_changes: eventPayload.envChanges
+                };
+
+            case 'EXPERIMENT_END':
+                return {
+                    ...baseContext,
+                    result: eventPayload.result,
+                    duration: eventPayload.duration
+                };
+
+            default:
+                return baseContext;
+        }
+    }
+
+    /**
+     * Processes actions returned by a script execution.
+     * Updates control flow state and handles immediate actions.
+     * @param {Array} actions - Array of action objects from script
+     * @param {string} hookType - The hook type that generated these actions
+     */
+    _processScriptActions(actions, hookType) {
+        for (const action of actions) {
+            switch (action.type) {
+                case 'STOP_EXPERIMENT':
+                    this._controlFlow.stopExperiment = {
+                        success: action.success || false,
+                        message: action.message || (action.success ? 'Stopped by script' : 'Failed by script')
+                    };
+                    this.eventBus.emit(EventTypes.LOG, {
+                        experimentId: this.experiment._id,
+                        stepNumber: this.experiment.currentStep,
+                        source: 'SCRIPT',
+                        message: `Script requested experiment ${action.success ? 'SUCCESS' : 'FAILURE'}: ${action.message || 'No message'}`
+                    });
+                    break;
+
+                case 'PAUSE_EXPERIMENT':
+                    this._controlFlow.pauseExperiment = true;
+                    this.eventBus.emit(EventTypes.LOG, {
+                        experimentId: this.experiment._id,
+                        stepNumber: this.experiment.currentStep,
+                        source: 'SCRIPT',
+                        message: 'Script requested experiment pause'
+                    });
+                    break;
+
+                case 'LOG':
+                    this.eventBus.emit(EventTypes.LOG, {
+                        experimentId: this.experiment._id,
+                        stepNumber: this.experiment.currentStep,
+                        source: 'SCRIPT',
+                        message: action.message,
+                        data: action.data
+                    });
+                    break;
+
+                case 'END_STEP':
+                    // Prevent infinite loop: don't process END_STEP during STEP_END hook
+                    if (hookType === 'STEP_END') {
+                        this.eventBus.emit(EventTypes.LOG, {
+                            experimentId: this.experiment._id,
+                            stepNumber: this.experiment.currentStep,
+                            source: 'SCRIPT',
+                            message: 'Warning: end_step() called in STEP_END hook - ignored to prevent infinite loop'
+                        });
+                        break;
+                    }
+                    this._controlFlow.endStep = { immediate: action.immediate || false };
+                    this.eventBus.emit(EventTypes.LOG, {
+                        experimentId: this.experiment._id,
+                        stepNumber: this.experiment.currentStep,
+                        source: 'SCRIPT',
+                        message: `Script requested end step${action.immediate ? ' (immediate)' : ''}`
+                    });
+                    break;
+
+                case 'SKIP_ROLE':
+                    this._controlFlow.skipRole = true;
+                    // Logging will happen in processRole when we check this flag
+                    break;
+
+                case 'SET_VARIABLE':
+                    if (action.key) {
+                        this.experiment.currentEnvironment.variables[action.key] = action.value;
+                        this.experiment.markModified('currentEnvironment');
+                    }
+                    break;
+
+                case 'INJECT_MESSAGE':
+                    this._controlFlow.pendingMessages.push({
+                        roleName: action.role_name,
+                        content: action.content
+                    });
+                    break;
+
+                case 'QUERY_LLM':
+                    // TODO: Implement blocking LLM query
+                    // For now, log that this feature is not yet fully implemented
+                    this.eventBus.emit(EventTypes.LOG, {
+                        experimentId: this.experiment._id,
+                        stepNumber: this.experiment.currentStep,
+                        source: 'SCRIPT',
+                        message: 'LLM query requested but synchronous response not yet implemented',
+                        data: { prompt: action.prompt, model: action.model }
+                    });
+                    break;
+
+                default:
+                    this.eventBus.emit(EventTypes.LOG, {
+                        experimentId: this.experiment._id,
+                        stepNumber: this.experiment.currentStep,
+                        source: 'SCRIPT',
+                        message: `Unknown action type: ${action.type}`
+                    });
+            }
+        }
+    }
+
+    /**
+     * Resets control flow state. Should be called at appropriate points in the lifecycle.
+     */
+    _resetControlFlow() {
+        this._controlFlow = {
+            stopExperiment: null,
+            pauseExperiment: false,
+            skipRole: false,
+            endStep: null,
+            pendingLogs: [],
+            pendingMessages: []
+        };
     }
 
     /**

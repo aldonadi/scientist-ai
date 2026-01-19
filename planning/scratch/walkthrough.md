@@ -1,62 +1,56 @@
-# Chat History Implementation Walkthrough
+# Script System Upgrade - Walkthrough
 
-I have implemented per-role chat history persistence to enable context-aware interactions with the Ollama provider.
+## Summary
+Implemented a significant upgrade to the Script system enabling richer experiment behaviors:
+1. **Hook Context Injection**: Scripts receive hook-specific data via `context['hook']`
+2. **Script Actions API**: 8 actions for controlling experiment flow
+3. **Quick Reference Panel**: Frontend UI showing available context and actions
 
-## Changes
+## Changes Made
 
-### 1. Database Schema
-Modified `Experiment` model to include `roleHistory`:
-```javascript
-roleHistory: {
-    type: Map,
-    of: [
-        {
-            role: { type: String, enum: ['system', 'user', 'assistant', 'tool'] },
-            content: String,
-            tool_calls: Schema.Types.Mixed,
-            timestamp: { type: Date, default: Date.now }
-        }
-    ]
-}
+### Backend ([experiment-orchestrator.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/experiment-orchestrator.service.js))
+
+render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/experiment-orchestrator.service.js)
+
+**Key additions:**
+- `_controlFlow` object for tracking stop/pause/skip/endStep signals
+- `_buildHookContext()` - constructs hook-specific context for 12 hook types
+- `_processScriptActions()` - handles 8 action types with proper logging
+- Updated `processStep()`, `processRole()`, `runLoop()` for control flow
+
+### Frontend ([scripts-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/scripts-tab.component.ts))
+
+render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/scripts-tab.component.ts)
+
+**Key additions:**
+- `HOOK_CONTEXT_FIELDS` - per-hook context field definitions
+- `ACTIONS_REFERENCE` - all available actions with descriptions
+- Collapsible Quick Reference panel showing context and actions
+
+## Hook Context Fields
+
+| Hook | Available Fields |
+|------|------------------|
+| `STEP_START` | `step_number` |
+| `BEFORE_TOOL_CALL` | `tool_name`, `args` |
+| `TOOL_RESULT` | `tool_name`, `result`, `env_changes` |
+| `EXPERIMENT_END` | `result`, `duration` |
+
+## Actions API
+
+```python
+actions.log(message, data=None)        # Write log entry
+actions.stop_experiment(success, msg)  # Stop as SUCCESS/FAILURE
+actions.pause_experiment()             # Pause experiment
+actions.end_step(immediate=False)      # End step early
+actions.skip_role()                    # Skip current role
+actions.set_variable(key, value)       # Set env variable
+actions.inject_message(role, content)  # Inject message
+actions.query_llm(prompt, system, model)  # LLM query (TODO)
 ```
 
-### 2. Orchestrator Logic
-Updated `ExperimentOrchestrator.processRole()` to:
-- **Load History**: Prepend existing `roleHistory` (excluding System prompt) to the current prompt.
-- **Pass Copy**: Send a shallow copy of messages to `ProviderService` to avoid mutation side-effects.
-- **Persist History**: After each turn, append the new interactions (User -> Assistant -> Tool -> Assistant) to the `roleHistory` and save to MongoDB.
+## Validation
 
-## Verification Results
-
-### Automated Tests
-Created `backend/tests/services/experiment-orchestrator.history.test.js`.
-- **Pass**: `should initialize history and send correct prompt on first turn`
-- **Pass**: `should include previous history in prompt for subsequent steps` (Verifies context retention)
-- **Pass**: `should persist tool calls correctly in history` (Verifies complex tool interaction persistence)
-
-### Manual Verification
-The implementation ensures that as the experiment progresses, the `User` prompt for Step N includes the full conversation history from Step 1 to N-1, allowing the model to reference past actions.
-
-## User Interface
-
-Added a **Chat History** tab to the Experiment Monitor page:
-- **Role Selection Sidebar**: Choose which Role's perspective to view.
-- **Message Stream**:
-  - **Step Separators**: Horizontal rule with Step Number separating interactions.
-  - **System Prompts**: Centered gray pill at the top (collapsible if long).
-  - **User (Step) Prompts**: Right-aligned blue bubbles.
-  - **Assistant Responses**: Left-aligned white bubbles with role avatar.
-    - **Thinking Process**: Collapsible section showing the model's internal reasoning (if available).
-  - **Tool Calls**: Integrated cards within the assistant response.
-  - **Tool Results**: Indented gray code blocks for output visibility.
-
-## Tool Library Improvements
-
-- **Safe Deletion**:
-  - Implemented usage checking before deletion.
-  - Warns users if a tool is used in any active ExperimentPlans, listing the specific plans and roles.
-  - Requires explicit confirmation via dialog.
-- **Tool Editor**:
-  - **Usage Display**: Added a "Used In" section showing links to Plans/Roles that utilize the tool.
-  - **Delete Button**: Added a delete button directly in the editor for convenience.
-  - **Persistence**: Fixed `endsTurn` property persistence.
+- ✅ Backend tests pass (`npm test`)
+- ✅ Frontend builds successfully (`npm run build`)
+- ⏳ Manual testing recommended for action behaviors
