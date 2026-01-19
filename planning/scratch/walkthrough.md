@@ -46,5 +46,6 @@ Added a **Chat History** tab to the Experiment Monitor page:
   - **System Prompts**: Centered gray pill at the top.
   - **User (Step) Prompts**: Right-aligned blue bubbles.
   - **Assistant Responses**: Left-aligned white bubbles with role avatar.
+    - **Thinking Process**: Collapsible section showing the model's internal reasoning (if available).
   - **Tool Calls**: Integrated cards within the assistant response.
   - **Tool Results**: Indented gray code blocks for output visibility.

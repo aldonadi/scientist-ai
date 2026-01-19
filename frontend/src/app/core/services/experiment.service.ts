@@ -7,6 +7,7 @@ export interface ChatMessage {
     role: 'system' | 'user' | 'assistant' | 'tool';
     content: string;
     tool_calls?: any[];
+    thinking?: string;
     timestamp: string;
 }
 

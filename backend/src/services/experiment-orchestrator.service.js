@@ -379,6 +379,7 @@ class ExperimentOrchestrator {
         while (shouldContinue && loopCount < MAX_TOOL_LOOPS) {
             shouldContinue = false; // Default to stop after this iteration unless a tool says "continue"
             accumulatedResponse = '';
+            let accumulatedThinking = '';
             toolCalls = [];
 
             // We need to resolve the Provider configuration from the DB
@@ -456,6 +457,9 @@ class ExperimentOrchestrator {
                             roleName: role.name,
                             chunk: event.content
                         });
+                    } else if (event.type === 'thinking') {
+                        accumulatedThinking += event.content;
+                        // Optional idea: Emit THINKING_CHUNK event if we want live updates of thoughts
                     } else if (event.type === 'tool_call') {
                         toolCalls.push(event);
                     }
@@ -467,6 +471,7 @@ class ExperimentOrchestrator {
                     currentMessages.push({
                         role: 'assistant',
                         content: accumulatedResponse,
+                        thinking: accumulatedThinking || undefined,
                         tool_calls: toolCalls.map(tc => ({
                             type: 'function',
                             function: {
@@ -682,7 +687,8 @@ except Exception as e:
                     // Add final response to history
                     currentMessages.push({
                         role: 'assistant',
-                        content: accumulatedResponse
+                        content: accumulatedResponse,
+                        thinking: accumulatedThinking || undefined
                     });
                 }
 

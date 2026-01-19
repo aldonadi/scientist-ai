@@ -231,6 +231,18 @@ interface RoleActivity {
                                           <div class="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center text-xs">🤖</div>
                                           <span class="text-xs text-purple-600 font-bold">{{ selectedRole }}</span>
                                       </div>
+                                      
+                                      <!-- Thinking Process -->
+                                      <details *ngIf="msg.thinking" class="mb-3 group">
+                                          <summary class="list-none cursor-pointer flex items-center gap-2 text-xs font-semibold text-gray-400 hover:text-gray-600 transition-colors">
+                                              <span class="transform group-open:rotate-90 transition-transform">▶</span>
+                                              Thinking Process
+                                          </summary>
+                                          <div class="mt-2 pl-4 border-l-2 border-gray-100 text-xs text-gray-500 italic whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto custom-scrollbar">
+                                              {{ msg.thinking }}
+                                          </div>
+                                      </details>
+
                                       <div class="prose prose-sm max-w-none text-gray-800 whitespace-pre-wrap leading-relaxed">{{ msg.content }}</div>
                                       
                                       <!-- Embedded Tool Calls -->

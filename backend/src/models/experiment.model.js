@@ -47,6 +47,7 @@ const ExperimentSchema = new Schema({
                 content: String,
                 tool_calls: Schema.Types.Mixed,
                 images: [String],
+                thinking: String,
                 timestamp: { type: Date, default: Date.now }
             }
         ],
