@@ -11,24 +11,15 @@ This plan describes the changes required to implement the "System Health" modal 
 
 ### Backend
 
+#### [MODIFY] [container-pool.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/container-pool.service.js)
+- Maintain a list (or set) of `activeContainers` (containers leased out via `acquire`).
+- When `acquire()` is called, add the container to `activeContainers`.
+- When a container is destroyed (users of `Container` are responsible for calling `destroy()`), it needs to be removed from `activeContainers`.
+- **Refactor**: Wrap the returned Container's `destroy` method so that it automatically removes itself from the `ContainerPoolManager`'s active list when called. This prevents leaking references if the consumer forgets to notify the pool.
+
 #### [MODIFY] [app.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/app.js)
-- Import `mongoose` to check `mongoose.connection.readyState`.
-- Import `ContainerPoolManager` to access the singleton instance.
-- Update `GET /api/health` to return:
-  ```json
-  {
-    "status": "ok", // or "error" if DB/critical services down
-    "uptime": 12345, // process.uptime()
-    "timestamp": "...",
-    "database": "connected", // mapped from mongoose state
-    "containers": {
-      "total": 2,
-      "active": 2, // (pool length + active leases? Need to check ContainerPoolManager API)
-      "image": "python:3.9-slim"
-    }
-  }
-  ```
-  *Note: `ContainerPoolManager` exposes `pool` (available containers). It doesn't seem to track "leased" containers explicitly in a list, but it removes them from `pool`. I might need to infer "active" or add a counter if important, but "Available" vs "Pool Size" is enough for now.*
+- Update `/api/health` to include `active` count from `containerPool.activeContainers.size` (or length).
+
 
 ### Frontend
 

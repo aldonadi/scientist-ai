@@ -49,6 +49,7 @@ app.get('/api/health', (req, res) => {
         containers: {
             poolSize: containerPool.poolSize,
             available: containerPool.pool.length,
+            active: containerPool.activeContainers.size,
             image: containerPool.image
         }
     });

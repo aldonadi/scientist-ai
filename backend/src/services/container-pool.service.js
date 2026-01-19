@@ -6,6 +6,7 @@ class ContainerPoolManager {
     constructor() {
         this.docker = new Docker();
         this.pool = [];
+        this.activeContainers = new Set(); // Track containers currently in use by a task
         this.poolSize = process.env.CONTAINER_POOL_SIZE ? parseInt(process.env.CONTAINER_POOL_SIZE) : 2;
         this.image = 'python:3.9-slim'; // Standard image for now
         this.isInitializing = false;
@@ -52,6 +53,16 @@ class ContainerPoolManager {
             container = await this._createContainer();
         }
 
+        // Add to active set
+        this.activeContainers.add(container);
+
+        // Wrap the destroy method to handle cleanup from active set
+        const originalDestroy = container.destroy.bind(container);
+        container.destroy = async () => {
+            this.activeContainers.delete(container);
+            return originalDestroy();
+        };
+
         // Replenish asynchronously
         this._replenish().catch(err => console.error('Failed to replenish pool:', err));
 
@@ -62,6 +73,9 @@ class ContainerPoolManager {
      * Internal method to fill the pool up to poolSize.
      */
     async _replenish() {
+        // Pool size limit check: Don't create more if pool is full
+        // Also consider logic: Should we limit Total (pool + active) or just Pool?
+        // For now, consistent with original logic: Pool target is for IDLE containers.
         while (this.pool.length < this.poolSize) {
             try {
                 const container = await this._createContainer();
@@ -129,13 +143,19 @@ class ContainerPoolManager {
     }
 
     /**
-     * Clean up all containers in the pool.
+     * Clean up all containers in the pool and active ones.
      */
     async shutdown() {
         console.log('Shutting down container pool...');
-        // Destroy all pooled containers
+
+        // Destroy pooled containers
         await Promise.all(this.pool.map(c => c.destroy()));
         this.pool = [];
+
+        // Destroy active containers (force kill)
+        // Note: active containers have wrapped destroy(), but calling it here is fine.
+        await Promise.all(Array.from(this.activeContainers).map(c => c.destroy()));
+        this.activeContainers.clear();
     }
 }
 
