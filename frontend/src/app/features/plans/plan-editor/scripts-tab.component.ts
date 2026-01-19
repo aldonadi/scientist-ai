@@ -100,6 +100,7 @@ const ACTIONS_REFERENCE = [
   { method: 'actions.pause_experiment()', description: 'Pause (resume via control API)' },
   { method: 'actions.end_step(immediate=False)', description: 'End current step early' },
   { method: 'actions.skip_role()', description: 'Skip current role processing' },
+  { method: 'actions.skip_tool_call(mock_response)', description: 'Skip tool & use mock response (BEFORE_TOOL_CALL only)' },
   { method: 'actions.set_variable(key, value)', description: 'Set environment variable' },
   { method: 'actions.inject_message(role_name, content)', description: 'Inject message into role history' },
   { method: 'actions.query_llm(prompt, system=None, model=None)', description: 'Query LLM (blocking)' }

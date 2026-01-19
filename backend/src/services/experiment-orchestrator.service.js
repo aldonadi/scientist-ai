@@ -624,25 +624,7 @@ class ExperimentOrchestrator {
                             args: call.args
                         });
 
-                        await this.eventBus.emitAsync(EventTypes.TOOL_CALL, {
-                            experimentId: this.experiment._id,
-                            toolName: call.toolName,
-                            args: call.args
-                        });
-
-                        // Log tool call for UI visibility
-                        this.eventBus.emit(EventTypes.LOG, {
-                            experimentId: this.experiment._id,
-                            stepNumber: this.experiment.currentStep,
-                            source: 'TOOL',
-                            message: `Calling tool: ${call.toolName}`,
-                            data: { arguments: call.args }
-                        });
-
-                        // 1. Acquire Container
-                        const container = await ContainerPoolManager.getInstance().acquire();
-
-                        // 2. Resolve Tool Code
+                        // Resolve Tool Code early to ensure scope availability and endsTurn check
                         const toolDoc = await Tool.findOne({ name: call.toolName });
                         if (!toolDoc) {
                             throw new Error(`Tool detected but not found in DB: ${call.toolName}`);
@@ -651,9 +633,38 @@ class ExperimentOrchestrator {
                         let result = '';
                         let error = null;
 
-                        // Create Python wrapper that calls the tool's execute() function
-                        // and outputs the modified environment as JSON
-                        const toolWrapper = `
+                        if (this._controlFlow.skipToolCall) {
+                            result = this._controlFlow.skipToolCall.result;
+                            this.eventBus.emit(EventTypes.LOG, {
+                                experimentId: this.experiment._id,
+                                stepNumber: this.experiment.currentStep,
+                                source: 'SYSTEM',
+                                message: `Skipping tool execution for ${call.toolName} (Mock Response used)`,
+                                data: { mockResult: result }
+                            });
+                            this._controlFlow.skipToolCall = null;
+                        } else {
+                            await this.eventBus.emitAsync(EventTypes.TOOL_CALL, {
+                                experimentId: this.experiment._id,
+                                toolName: call.toolName,
+                                args: call.args
+                            });
+
+                            // Log tool call for UI visibility
+                            this.eventBus.emit(EventTypes.LOG, {
+                                experimentId: this.experiment._id,
+                                stepNumber: this.experiment.currentStep,
+                                source: 'TOOL',
+                                message: `Calling tool: ${call.toolName}`,
+                                data: { arguments: call.args }
+                            });
+
+                            // 1. Acquire Container
+                            const container = await ContainerPoolManager.getInstance().acquire();
+
+                            // Create Python wrapper that calls the tool's execute() function
+                            // and outputs the modified environment as JSON
+                            const toolWrapper = `
 import os
 import json
 import sys
@@ -698,58 +709,59 @@ except Exception as e:
     print(json.dumps({'success': False, 'error': str(e)}))
 `;
 
-                        try {
-                            // 3. Execute with wrapper
-                            const execResult = await container.execute(
-                                toolWrapper,
-                                {
-                                    TOOL_ENV: JSON.stringify(this.experiment.currentEnvironment.variables),
-                                    TOOL_ARGS: JSON.stringify(call.args || {}),
-                                    TOOL_CODE: toolDoc.code
-                                },
-                                []
-                            );
-
-                            // 4. Handle Result
                             try {
-                                const jsonOutput = JSON.parse(execResult.stdout);
+                                // 3. Execute with wrapper
+                                const execResult = await container.execute(
+                                    toolWrapper,
+                                    {
+                                        TOOL_ENV: JSON.stringify(this.experiment.currentEnvironment.variables),
+                                        TOOL_ARGS: JSON.stringify(call.args || {}),
+                                        TOOL_CODE: toolDoc.code
+                                    },
+                                    []
+                                );
 
-                                if (!jsonOutput.success) {
-                                    throw new Error(jsonOutput.error || 'Tool execution failed');
-                                }
+                                // 4. Handle Result
+                                try {
+                                    const jsonOutput = JSON.parse(execResult.stdout);
 
-                                // Merge environment changes from tool
-                                if (jsonOutput.environment) {
-                                    Object.assign(this.experiment.currentEnvironment.variables, jsonOutput.environment);
-                                    this.experiment.markModified('currentEnvironment');
-                                    // Also update our local filtered copy
-                                    Object.assign(filteredEnv.variables, jsonOutput.environment);
-                                }
-                                result = jsonOutput.result || jsonOutput.environment;
-                            } catch (parseErr) {
-                                // Log that tool didn't return valid JSON
-                                this.eventBus.emit(EventTypes.LOG, {
-                                    experimentId: this.experiment._id,
-                                    stepNumber: this.experiment.currentStep,
-                                    source: 'TOOL',
-                                    message: `Tool ${call.toolName} did not return valid JSON - environment not updated`,
-                                    data: {
-                                        rawOutput: execResult.stdout,
-                                        stderr: execResult.stderr,
-                                        parseError: parseErr.message
+                                    if (!jsonOutput.success) {
+                                        throw new Error(jsonOutput.error || 'Tool execution failed');
                                     }
-                                });
-                                result = execResult.stdout;
-                            }
 
-                            if (execResult.exitCode !== 0) {
-                                error = execResult.stderr || 'Unknown error';
+                                    // Merge environment changes from tool
+                                    if (jsonOutput.environment) {
+                                        Object.assign(this.experiment.currentEnvironment.variables, jsonOutput.environment);
+                                        this.experiment.markModified('currentEnvironment');
+                                        // Also update our local filtered copy
+                                        Object.assign(filteredEnv.variables, jsonOutput.environment);
+                                    }
+                                    result = jsonOutput.result || jsonOutput.environment;
+                                } catch (parseErr) {
+                                    // Log that tool didn't return valid JSON
+                                    this.eventBus.emit(EventTypes.LOG, {
+                                        experimentId: this.experiment._id,
+                                        stepNumber: this.experiment.currentStep,
+                                        source: 'TOOL',
+                                        message: `Tool ${call.toolName} did not return valid JSON - environment not updated`,
+                                        data: {
+                                            rawOutput: execResult.stdout,
+                                            stderr: execResult.stderr,
+                                            parseError: parseErr.message
+                                        }
+                                    });
+                                    result = execResult.stdout;
+                                }
+
+                                if (execResult.exitCode !== 0) {
+                                    error = execResult.stderr || 'Unknown error';
+                                }
+                            } catch (err) {
+                                error = err.message;
+                            } finally {
+                                // 5. Cleanup
+                                await container.destroy(); // One-shot
                             }
-                        } catch (err) {
-                            error = err.message;
-                        } finally {
-                            // 5. Cleanup
-                            await container.destroy(); // One-shot
                         }
 
                         await this.eventBus.emitAsync(EventTypes.TOOL_RESULT, {
@@ -1090,6 +1102,14 @@ try:
             })
         
         @staticmethod
+        def skip_tool_call(mock_response_dict):
+            """Skip the pending tool call and return a mock response dict"""
+            Actions._pending.append({
+                'type': 'SKIP_TOOL_CALL',
+                'result': mock_response_dict
+            })
+        
+        @staticmethod
         def query_llm(prompt, system_prompt=None, model=None):
             """
             Query the LLM and get a response (blocking).
@@ -1380,6 +1400,25 @@ except Exception as e:
                     });
                     break;
 
+                case 'SKIP_TOOL_CALL':
+                    if (hookType === 'BEFORE_TOOL_CALL') {
+                        this._controlFlow.skipToolCall = { result: action.result };
+                        this.eventBus.emit(EventTypes.LOG, {
+                            experimentId: this.experiment._id,
+                            stepNumber: this.experiment.currentStep,
+                            source: 'SCRIPT',
+                            message: 'Script requested to skip tool call with mock response'
+                        });
+                    } else {
+                        this.eventBus.emit(EventTypes.LOG, {
+                            experimentId: this.experiment._id,
+                            stepNumber: this.experiment.currentStep,
+                            source: 'SCRIPT',
+                            message: 'Warning: skip_tool_call() ignored (only valid in BEFORE_TOOL_CALL)'
+                        });
+                    }
+                    break;
+
                 case 'QUERY_LLM':
                     // TODO: Implement blocking LLM query
                     // For now, log that this feature is not yet fully implemented
@@ -1411,6 +1450,7 @@ except Exception as e:
             stopExperiment: null,
             pauseExperiment: false,
             skipRole: false,
+            skipToolCall: null,
             endStep: null,
             pendingLogs: [],
             pendingMessages: []

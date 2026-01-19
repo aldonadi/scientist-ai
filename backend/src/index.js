@@ -14,9 +14,39 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Start Server
 if (require.main === module) {
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
     });
+
+    // Graceful Shutdown
+    const gracefulShutdown = async (signal) => {
+        console.log(`${signal} received. Shutting down gracefully...`);
+        server.close(async () => {
+            console.log('HTTP server closed.');
+
+            // Cleanup Container Pool
+            try {
+                const ContainerPoolManager = require('./services/container-pool.service');
+                await ContainerPoolManager.getInstance().shutdown();
+                console.log('Container Pool cleaned up.');
+            } catch (err) {
+                console.error('Error cleaning up Container Pool:', err);
+            }
+
+            // Close Database Connection
+            try {
+                await mongoose.connection.close();
+                console.log('MongoDB connection closed.');
+            } catch (err) {
+                console.error('Error closing MongoDB connection:', err);
+            }
+
+            process.exit(0);
+        });
+    };
+
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 }
 
 module.exports = app;

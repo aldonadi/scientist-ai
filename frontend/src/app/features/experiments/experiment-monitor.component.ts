@@ -130,7 +130,7 @@ interface RoleActivity {
             <div *ngIf="roleActivities.length === 0" class="text-gray-400 text-sm text-center py-8">
               No role activity yet...
             </div>
-            <div *ngFor="let activity of roleActivities" class="mb-4 last:mb-0">
+            <div *ngFor="let activity of roleActivities; trackBy: trackByActivity" class="mb-4 last:mb-0">
               <div class="flex items-center gap-2 mb-1">
                 <span 
                   class="w-2 h-2 rounded-full animate-pulse"
@@ -176,7 +176,7 @@ interface RoleActivity {
              </div>
              <div class="flex-1 overflow-y-auto">
                  <button 
-                    *ngFor="let role of getRoleList()"
+                    *ngFor="let role of getRoleList(); trackBy: trackByRolename"
                     (click)="selectedRole = role"
                     class="w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors"
                     [ngClass]="selectedRole === role ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'">
@@ -200,7 +200,7 @@ interface RoleActivity {
               </div>
               <div class="flex-1 overflow-y-auto p-6 space-y-8 bg-slate-50">
                   <ng-container *ngIf="selectedRole && getSelectedHistory().length > 0; else noChat">
-                      <div *ngFor="let msg of getSelectedHistory(); let i = index" class="flex flex-col w-full">
+                      <div *ngFor="let msg of getSelectedHistory(); let i = index; trackBy: trackByMsg" class="flex flex-col w-full">
                           
                           <!-- Step Separator (Before User Messages) -->
                           <div *ngIf="msg.role === 'user'" class="w-full flex items-center gap-4 my-6">
@@ -583,6 +583,18 @@ export class ExperimentMonitorComponent implements OnInit, OnDestroy {
       minute: '2-digit',
       second: '2-digit'
     });
+  }
+
+  trackByActivity(index: number, item: RoleActivity): string {
+    return item.timestamp + item.roleName + item.status;
+  }
+
+  trackByRolename(index: number, item: string): string {
+    return item;
+  }
+
+  trackByMsg(index: number, item: ChatMessage): string {
+    return item.timestamp + item.role;
   }
 
   goBack(): void {

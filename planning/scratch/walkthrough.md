@@ -46,6 +46,7 @@ actions.end_step(immediate=False)      # End step early
 actions.skip_role()                    # Skip current role
 actions.set_variable(key, value)       # Set env variable
 actions.inject_message(role, content)  # Inject message
+actions.skip_tool_call(mock_dict)      # Skip tool & use mock response
 actions.query_llm(prompt, system, model)  # LLM query (TODO)
 ```
 
@@ -79,3 +80,14 @@ Verified end-to-end using browser automation with a live "BlackJack" experiment.
 - Confirmed Export to CSV works.
 
 ![Verification Recording](/home/andrew/.gemini/antigravity/brain/2fd790e2-53e3-4146-8f13-7b3f5f79a974/verify_state_history_1768794920365.webp)
+
+# UI Polish & Stability (Story 067)
+Improved the polling mechanism and data visibility in the Monitor:
+
+### Polling Stability
+- Implemented `trackBy` across all auto-refreshing lists (Chat History, Log Feed, State History) to prevent DOM destruction and preserve text selection/expansion states.
+- Ensures "Thinking Process" blocks stay open and chat selection remains stable during updates.
+
+### Data Visibility
+- Added **Double-Click Modal** to the State History table cells to view full content of truncated values.
+- Updated **Environment View (JSON Tree)** to allow clicking on string values to view them in a full-size modal.

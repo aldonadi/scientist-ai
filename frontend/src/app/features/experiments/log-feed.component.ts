@@ -21,7 +21,7 @@ export interface LogEntry {
         No logs yet...
       </div>
       
-      <div *ngFor="let log of logs" 
+      <div *ngFor="let log of logs; trackBy: trackByLogId" 
            class="px-3 py-1.5 border-b border-gray-100 hover:bg-gray-50 transition-colors"
            [ngClass]="getLogClass(log)">
         <div class="flex items-start gap-3">
@@ -140,5 +140,9 @@ export class LogFeedComponent implements OnChanges, AfterViewChecked {
         } catch {
             return String(data);
         }
+    }
+
+    trackByLogId(index: number, log: LogEntry): string {
+        return log._id;
     }
 }
