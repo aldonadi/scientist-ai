@@ -1,67 +1,43 @@
-# Implementation Plan - Per-Role Chat History
+# UI Tweaks Implementation Plan
 
-This plan outlines the changes required to persist chat history for each Role in an experiment and leverage it for context-aware interactions with the Ollama provider.
-
-## Goal Description
-Currently, the Experiment Orchestrator constructs a fresh prompt for each step, isolating the context. Code investigation reveals that the Ollama API is stateless and requires the full `messages` array to be sent with each request to maintain context.
-To enable "memory" for Roles across steps (or even just robust debugging), we must persist the chat history (User <-> Assistant <-> Tool) for each Role and resend it during inference.
+## Goal
+Implement a set of UI improvements requested by the user to enhance usability in the Experiment Monitor, Script Editor, and Tools Library.
 
 ## User Review Required
-> [!IMPORTANT]
-> **Context Window Limits**: Validating "entire history" indefinitely will eventually exceed the context window of local models (e.g., 4k or 8k tokens).
-> **Recommendation**: We should implement a basic sliding window or "max messages" limit in the future. For this initial implementation, we will append history indefinitely until a failure occurs, or add a simple cap (e.g., last 50 messages).
+> [!NOTE]
+> Tool List filtering will use `localStorage` to persist the selected namespace between sessions/navigations.
 
 ## Proposed Changes
 
-### Backend
+### Frontend
 
-#### [MODIFY] [experiment.model.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/models/experiment.model.js)
-- Update `ExperimentSchema` to include a `roleHistory` field.
-- **Structure**:
-  ```javascript
-  roleHistory: {
-      type: Map,
-      of: [
-          {
-              role: { type: String, enum: ['system', 'user', 'assistant', 'tool'] },
-              content: String,
-              tool_calls: Schema.Types.Mixed, // Optional
-              images: [String], // Optional
-              timestamp: { type: Date, default: Date.now }
-          }
-      ],
-      default: {}
-  }
-  ```
+#### [MODIFY] [experiment-monitor.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/experiments/experiment-monitor.component.ts)
+- **Polling Interval**: Change `setInterval` delay from `1000` to `2000` ms.
+- **System Prompt UI**:
+    - Update template to use `line-clamp-4` for System Prompts by default.
+    - Add a "Expand/Collapse" toggle button (icon) if content exceeds threshold (checking `msg.content.length` or line count).
+    - Use a simple set `expandedMessages: Set<number>` to track expansion state.
 
-#### [MODIFY] [experiment-orchestrator.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/experiment-orchestrator.service.js)
-- **Method `initializing()`**:
-    - Allow pre-seeding history if needed (optional).
-- **Method `processRole()`**:
-    - **Load**: Retrieve `this.experiment.roleHistory.get(role.name)` or initialize `[]`.
-    - **Prompt Construction**:
-        - Instead of resetting `messages` to just `[System, User]`, append the new `User` message (with environment state) to the *existing* history.
-        - *Note*: usage of `systemPrompt` should probably be "sticky" (always first) or reiterated. Ollama often handles system prompts as a specific field or the first message.
-        - **Strategy**: Keep `System` prompt as index 0. Append previous history (excluding old system prompts if any). Append new `User` message.
-    - **Inference**: Pass the full accumulated history to `ProviderService.chat`.
-    - **Save**:
-        - Append the `User` prompt to `roleHistory`.
-        - Append the `Assistant` response (and tool calls) to `roleHistory`.
-        - Append `Tool` results to `roleHistory`.
-        - Persist changes to DB: `this.experiment.markModified('roleHistory'); await this.experiment.save();`.
+#### [MODIFY] [scripts-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/scripts-tab.component.ts)
+- **Script Textbox**: Increase `rows` attribute from `6` to `20` (or `min-h-[400px]`) to show more code.
+
+#### [MODIFY] [tool-list.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/tools/tool-list.component.ts)
+- **Pagination**: Change `pageSize` default from `10` to `50`.
+- **Filter Persistence**:
+    - In `ngOnInit`, check `localStorage.getItem('toolList_namespace')` and set `selectedNamespace`.
+    - In `filterTools`, update `localStorage.setItem('toolList_namespace', this.selectedNamespace)`.
 
 ## Verification Plan
 
 ### Automated Tests
-- **New Test**: `backend/tests/services/experiment-orchestrator.history.test.js`
-    - **Scenario**: Run a mock experiment with 2 steps.
-    - **Verify**:
-        - Step 1 history is saved.
-        - Step 2 prompt includes Step 1's history.
-        - Database contains the full conversation structure in `roleHistory`.
+- Run `npm run build` in frontend to ensure no template errors.
 
 ### Manual Verification
-- **Inspection**:
-    1. Run a simple experiment (e.g., "Hello World" or a math sequence).
-    2. Check MongoDB directly or add a temporary log to print the `messages` array sent to Ollama.
-    3. Verify that the second step's prompt allows the model to "remember" the first step's output (e.g., "What number did I just say?").
+- **Monitor**: Verify updates happen every 2s. Check System Prompt expansion behavior (long vs short prompts).
+- **Scripts**: Check script editor height is sufficient.
+- **Tools**:
+    - Set namespace filter A.
+    - Edit a tool.
+    - Save/Back.
+    - Verify filter A is still selected.
+    - Check pagination shows up to 50 items.
