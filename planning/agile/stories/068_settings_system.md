@@ -23,14 +23,15 @@ Implement a comprehensive, extensible Settings system that enables users to conf
 
 | Question | Decision |
 |----------|----------|
-| UI Layout | Workshop multiple ASCII mockups, pick best fit |
+| UI Layout | **Hybrid:** Sidebar (default) → Flat list (on search) |
 | Essential Data Types | String, Integer, Float, Boolean, Enum, JSON |
 | Save Behavior | Auto-save on change (with debounce) |
 | Import/Export | Available to all users, not admin-only |
 | Storage Backend | MongoDB only for v1 (with interface for future) |
-| Validation Approach | Zod-based (see elaboration below) |
-| Advanced Settings | Flag settings as `advanced: true`, hidden by default |
+| Validation Approach | Zod-based (consistent with existing codebase) |
+| Advanced Settings | Flag as `advanced: true`, hidden by default |
 | Schema Versioning | Required for v1, enables import compatibility |
+| Validation Error UI | Red border + light red background + inline error |
 
 ---
 
@@ -193,79 +194,127 @@ POST   /api/settings/import       - Import from JSON
 
 ## UI Mockups (ASCII Reference)
 
-### Settings Page Layout (Option A: Sidebar Navigation)
+### UI Layout Strategy: Hybrid Approach
+
+**Decision:** Implement BOTH layout modes with automatic switching:
+- **Default (no search):** Sidebar navigation (Option A) - hierarchical browsing
+- **When searching:** Flat filtered list (Option B) - command-palette style results
+- The transition should be smooth; as soon as the user types in the search box, the sidebar collapses and results appear in a flat list
+
+**Navigation Entry Point:**
+- The ⚙️ button in the header (already exists but not wired) navigates to `/settings`
+- Settings page is a full-page view, not a modal
+
+---
+
+### Default View: Sidebar Navigation
+When no search query is active, show hierarchical sidebar with settings grouped.
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ ⚙️ Settings                                          🔍 [Search settings...] │
 ├────────────────────────┬────────────────────────────────────────────────────┤
-│ ▼ General              │  🎨 Appearance                                     │
-│   ├─ Appearance        │  ─────────────────────────────────────────────────│
-│   └─ Notifications     │                                                    │
-│ ▼ Experiments          │  Theme                              [System ▼]    │
-│   ├─ Execution         │  Application color theme                           │
-│   └─ Display           │                                                    │
-│ ▶ Data                 │  Compact Mode                        [  ] Off     │
-│ ▶ Advanced             │  Reduce spacing for dense information display     │
-│                        │                                                    │
-│                        │  🔔 Notifications                                  │
-│                        │  ─────────────────────────────────────────────────│
-│                        │                                                    │
-│                        │  Sound Effects                       [✓] On       │
-│                        │  Play sounds for events and errors                 │
+│ ▼ Providers            │  🔗 Ollama                                          │
+│   └─ Ollama ←selected  │  ─────────────────────────────────────────────────  │
+│ ▶ Experiments          │                                                     │
+│ ▶ Display              │  API Base URL                   [http://localhost:11434]
+│                        │  Base URL for the Ollama API server                 │
+│ ────────────────────   │                                                     │
+│ [ ] Show Advanced      │  Context Length                          [  4096  ] │
+│                        │  Maximum context window size      #ollama #perf     │
+│                        │                                                     │
+│                        │  ─────────────────────────────────────────────────  │
+│                        │                                          [↺ Reset]  │
 └────────────────────────┴────────────────────────────────────────────────────┘
+│                         [Export Settings] [Import Settings] [Reset All]     │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Settings Page Layout (Option B: Flat Filtered List)
+---
+
+### Search Active: Flat Filtered List
+When user types in search box, sidebar disappears and results appear as a flat list.
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ ⚙️ Settings                                                                 │
+│ ⚙️ Settings                                                                  │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ 🔍 [Search settings...                                                    ] │
-│ Tags: [All ▼]  Groups: [All ▼]                                              │
+│ 🔍 [context                                                           ] [✕] │
+│ Showing 2 results matching "context"                 [ ] Show Advanced      │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│ 🎨 GENERAL > APPEARANCE                                                     │
+│ 🔗 PROVIDERS > OLLAMA                                                       │
 │ ┌─────────────────────────────────────────────────────────────────────────┐ │
-│ │ Theme                                                     [System ▼]   │ │
-│ │ Application color theme                                  #appearance   │ │
-│ ├─────────────────────────────────────────────────────────────────────────┤ │
-│ │ Compact Mode                                                [  ] Off   │ │
-│ │ Reduce spacing for dense information display             #appearance   │ │
+│ │ Context Length                                              [  4096  ] │ │
+│ │ Maximum context window size for model prompts        #ollama #perf [↺] │ │
 │ └─────────────────────────────────────────────────────────────────────────┘ │
 │                                                                             │
-│ ⚡ EXPERIMENTS > EXECUTION                                                  │
+│ 📊 EXPERIMENTS > DISPLAY                                                    │
 │ ┌─────────────────────────────────────────────────────────────────────────┐ │
-│ │ Max Concurrent Experiments                                    [ 3  ]   │ │
-│ │ Maximum experiments running simultaneously        #performance #limits │ │
+│ │ Show Context in Logs                                          [✓] On  │ │
+│ │ Display full context in experiment step logs           #display   [↺] │ │
 │ └─────────────────────────────────────────────────────────────────────────┘ │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Single Setting Row (Expanded with Validation Error)
+---
+
+### Validation Error Styling
+Settings with validation errors expand to show the error message. The entire row gets a red-tinted background/border for visibility.
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ Max Retries                                                     [ -5  ]   │
-│ Number of retry attempts for failed operations               #reliability │
-│ ⚠️ Value must be between 0 and 10                                         │
+│ NORMAL ROW (valid)                                                          │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ API Base URL                                  [http://localhost:11434] │ │
+│ │ Base URL for the Ollama API server                      #ollama    [↺] │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│ ERROR ROW (invalid) — red border, light red background                      │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ Context Length                                              [  500  ]  │ │▒
+│ │ Maximum context window size for model prompts        #ollama #perf [↺] │ │▒ ← red border
+│ │ ⚠️ Must be between 2048 and 131072                                      │ │▒
+│ └─────────────────────────────────────────────────────────────────────────┘ │
+│ ↑ light red background (#FEE2E2 or similar)                                 │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+**CSS Notes:**
+- Valid row: `border: 1px solid #E5E7EB` (gray-200)
+- Error row: `border: 2px solid #EF4444` (red-500), `background: #FEF2F2` (red-50)
+- Error message: `color: #DC2626` (red-600), appears below the input
+
+---
 
 ### Input Type Examples
 ```
 String:     [___________________________________]
-Integer:    [  5  ] [▲] [▼]   (spinner or plain input)
+Integer:    [  5  ] [▲][▼]   (spinner or plain input)
 Float:      [ 0.75 ]
-Boolean:    [✓] Enable feature   OR   ( On  )(•Off•)
+Boolean:    [✓] Enable feature   OR   ●On ○Off (toggle)
 Enum:       [Option B ▼]
-MultiEnum:  [✓] Option A  [ ] Option B  [✓] Option C
-Textarea:   ┌────────────────────────────────────┐
-            │ Multi-line content here...         │
-            │                                    │
+JSON:       ┌────────────────────────────────────┐
+            │ {                                  │
+            │   "temperature": 0.7,              │
+            │   "top_p": 0.9                     │
+            │ }                                  │
             └────────────────────────────────────┘
-Path:       [/home/user/data        ] [📁 Browse]
-URL:        [https://example.com    ] [🔗 Test]
-JSON:       Code editor with syntax highlighting
+            (monaco editor or syntax-highlighted textarea)
+```
+
+---
+
+### Advanced Settings Toggle
+When "Show Advanced" is unchecked (default), settings with `advanced: true` are hidden.
+```
+┌────────────────────────┐
+│ [ ] Show Advanced      │  ← unchecked: advanced settings hidden
+└────────────────────────┘
+
+┌────────────────────────┐
+│ [✓] Show Advanced      │  ← checked: advanced settings visible
+└────────────────────────┘
+
+Advanced settings could also have a subtle visual indicator (e.g., 🔧 icon or muted styling)
 ```
 
 ---
@@ -286,17 +335,19 @@ JSON:       Code editor with syntax highlighting
 - [ ] `POST /api/settings/reset-all` resets all settings to defaults
 
 ### Frontend
-- [ ] Settings page accessible from header navigation
-- [ ] Settings rendered dynamically from definitions API
-- [ ] Search bar filters settings by name, description, tags, group
-- [ ] Group navigation (layout TBD via ASCII mockup workshop)
+- [ ] Settings page accessible via ⚙️ header button → `/settings` route
+- [ ] **Default view:** Sidebar navigation with collapsible group tree
+- [ ] **Search view:** Flat filtered list (command-palette style) when search query active
+- [ ] Smooth transition between sidebar and search views
+- [ ] Search bar filters by name, description, tags, group
 - [ ] "Show Advanced" toggle to reveal `advanced: true` settings
 - [ ] Each type renders appropriate editor (string, integer, float, boolean, enum, JSON)
 - [ ] Auto-save with debounce on change
 - [ ] Real-time validation with inline error display
-- [ ] Per-setting reset icon (visible when value differs from default)
+- [ ] Validation error rows: red border, light red background, error message below
+- [ ] Per-setting reset icon [↺] (visible when value differs from default)
 - [ ] Factory reset button with confirmation modal (type "RESET" to confirm)
-- [ ] Export/Import buttons in UI
+- [ ] Export/Import buttons in UI footer
 
 ### Cross-Cutting
 - [ ] New setting added by editing only `settings.registry.js`

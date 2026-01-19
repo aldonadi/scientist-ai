@@ -11,4 +11,6 @@ Draft a user story for implementing a general Settings system based on the requi
 - [x] Draft story file 068 with recommendations <!-- id: 4 -->
 - [x] Incorporate user feedback on open questions <!-- id: 6 -->
 - [x] Add elaborations (Zod validation, migration, reset UX) <!-- id: 7 -->
-- [/] Present to user for final review <!-- id: 5 -->
+- [x] Update with hybrid UI layout decision <!-- id: 8 -->
+- [x] Present to user for final review <!-- id: 5 -->
+
