@@ -1,45 +1,56 @@
-# Variable Visibility Per Role - Walkthrough
+# Script System Upgrade - Walkthrough
 
 ## Summary
-Implemented Story 063: Users can now configure which environment variables each Role sees "for free" in their system prompt.
+Implemented a significant upgrade to the Script system enabling richer experiment behaviors:
+1. **Hook Context Injection**: Scripts receive hook-specific data via `context['hook']`
+2. **Script Actions API**: 8 actions for controlling experiment flow
+3. **Quick Reference Panel**: Frontend UI showing available context and actions
 
-## What Was Built
+## Changes Made
 
-### 1. Environment Tab - Expand/Collapse Rows
-- Each variable row has an expand chevron (▶/▼)
-- Expanding shows role visibility checkboxes
-- "Visible" column shows summary (e.g. "2 Roles", "All")
+### Backend ([experiment-orchestrator.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/experiment-orchestrator.service.js))
 
-![Environment Tab with expanded row](file:///home/andrew/.gemini/antigravity/brain/319cb8c0-e7cc-4689-b50d-bacfc1d99556/.system_generated/click_feedback/click_feedback_1768766819511.png)
+render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/experiment-orchestrator.service.js)
 
-### 2. Role Editor - Chip-Based Variable Picker
-- Replaced comma-separated text input with chips
-- Searchable dropdown shows all environment variables with type and value
-- "Select All" / "Clear All" quick action
+**Key additions:**
+- `_controlFlow` object for tracking stop/pause/skip/endStep signals
+- `_buildHookContext()` - constructs hook-specific context for 12 hook types
+- `_processScriptActions()` - handles 8 action types with proper logging
+- Updated `processStep()`, `processRole()`, `runLoop()` for control flow
 
-![Role Editor with variable picker](file:///home/andrew/.gemini/antigravity/brain/319cb8c0-e7cc-4689-b50d-bacfc1d99556/.system_generated/click_feedback/click_feedback_1768766853254.png)
+### Frontend ([scripts-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/scripts-tab.component.ts))
 
-### 3. Visibility Matrix Modal
-- Accessible from both Environment and Roles tabs
-- Grid layout: Variables × Roles
-- Row/column bulk actions (All/None)
-- Changes sync bidirectionally
+render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/scripts-tab.component.ts)
 
-![Visibility Matrix Modal](file:///home/andrew/.gemini/antigravity/brain/319cb8c0-e7cc-4689-b50d-bacfc1d99556/.system_generated/click_feedback/click_feedback_1768766862230.png)
+**Key additions:**
+- `HOOK_CONTEXT_FIELDS` - per-hook context field definitions
+- `ACTIONS_REFERENCE` - all available actions with descriptions
+- Collapsible Quick Reference panel showing context and actions
 
-## Files Changed
+## Hook Context Fields
 
-| File | Change |
-|------|--------|
-| [visibility-matrix-modal.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/visibility-matrix-modal.component.ts) | **NEW** - Grid modal with toggle logic |
-| [environment-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/environment-tab.component.ts) | Added expand/collapse, role checkboxes |
-| [roles-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/roles-tab.component.ts) | Replaced text input with chip picker |
-| [plan-editor.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/plan-editor.component.ts) | Wired data between tabs |
-| [index.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/index.ts) | Export new component |
+| Hook | Available Fields |
+|------|------------------|
+| `STEP_START` | `step_number` |
+| `BEFORE_TOOL_CALL` | `tool_name`, `args` |
+| `TOOL_RESULT` | `tool_name`, `result`, `env_changes` |
+| `EXPERIMENT_END` | `result`, `duration` |
 
-## Verification
+## Actions API
 
-✅ Frontend build passes (`npm run build`)  
-✅ Browser testing confirmed all features working
+```python
+actions.log(message, data=None)        # Write log entry
+actions.stop_experiment(success, msg)  # Stop as SUCCESS/FAILURE
+actions.pause_experiment()             # Pause experiment
+actions.end_step(immediate=False)      # End step early
+actions.skip_role()                    # Skip current role
+actions.set_variable(key, value)       # Set env variable
+actions.inject_message(role, content)  # Inject message
+actions.query_llm(prompt, system, model)  # LLM query (TODO)
+```
 
-![Recording of feature testing](file:///home/andrew/.gemini/antigravity/brain/319cb8c0-e7cc-4689-b50d-bacfc1d99556/visibility_feature_test_1768766797862.webp)
+## Validation
+
+- ✅ Backend tests pass (`npm test`)
+- ✅ Frontend builds successfully (`npm run build`)
+- ⏳ Manual testing recommended for action behaviors

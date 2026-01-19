@@ -38,6 +38,20 @@ const ExperimentSchema = new Schema({
     },
     result: {
         type: String
+    },
+    roleHistory: {
+        type: Map,
+        of: [
+            {
+                role: { type: String, enum: ['system', 'user', 'assistant', 'tool'] },
+                content: String,
+                tool_calls: Schema.Types.Mixed,
+                images: [String],
+                thinking: String,
+                timestamp: { type: Date, default: Date.now }
+            }
+        ],
+        default: {}
     }
 }, {
     timestamps: true

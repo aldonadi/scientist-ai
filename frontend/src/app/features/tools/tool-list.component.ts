@@ -2,7 +2,9 @@ import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { ToolService, Tool } from '../../core/services/tool.service';
+import { ToolService, Tool, ToolUsage } from '../../core/services/tool.service';
+import { ConfirmService } from '../../core/services/confirm.service';
+import { ToastService } from '../../core/services/toast.service';
 
 @Component({
   selector: 'app-tool-list',
@@ -133,14 +135,22 @@ export class ToolListComponent implements OnInit {
   tooltipY = 0;
 
   currentPage = 1;
-  pageSize = 10;
+  pageSize = 50;
   totalTools = 0;
 
   Math = Math;
 
-  constructor(private toolService: ToolService) { }
+  constructor(
+    private toolService: ToolService,
+    private confirmService: ConfirmService,
+    private toastService: ToastService
+  ) { }
 
   ngOnInit(): void {
+    const savedNamespace = localStorage.getItem('toolList_namespace');
+    if (savedNamespace) {
+      this.selectedNamespace = savedNamespace;
+    }
     this.loadTools();
   }
 
@@ -181,6 +191,13 @@ export class ToolListComponent implements OnInit {
 
     if (this.selectedNamespace) {
       filtered = filtered.filter(t => t.namespace === this.selectedNamespace);
+    }
+
+    // Save selection
+    if (this.selectedNamespace) {
+      localStorage.setItem('toolList_namespace', this.selectedNamespace);
+    } else {
+      localStorage.removeItem('toolList_namespace');
     }
 
     this.totalTools = filtered.length;
@@ -255,12 +272,42 @@ export class ToolListComponent implements OnInit {
   }
 
   deleteTool(tool: Tool): void {
-    if (confirm(`Delete tool "${tool.namespace}/${tool.name}"?`)) {
-      this.toolService.deleteTool(tool._id).subscribe({
-        next: () => this.loadTools(),
-        error: (err) => console.error('Failed to delete tool:', err)
-      });
-    }
+    this.toolService.getToolUsage(tool._id).subscribe({
+      next: async (usage) => {
+        let message = `Are you sure you want to delete "${tool.namespace}/${tool.name}"?`;
+
+        if (usage.length > 0) {
+          const plans = [...new Set(usage.map(u => u.planName))];
+          message += `\n\n⚠️ WARNING: This tool is currently used in the following plans:\n- ${plans.join('\n- ')}\n\nDeleting it may break these experiments.`;
+        } else {
+          message += `\n\nThis action cannot be undone.`;
+        }
+
+        const shouldDelete = await this.confirmService.confirm({
+          title: 'Delete Tool?',
+          message: message,
+          confirmText: 'Delete',
+          cancelText: 'Cancel'
+        });
+
+        if (shouldDelete) {
+          this.toolService.deleteTool(tool._id).subscribe({
+            next: () => {
+              this.toastService.success(`Tool "${tool.name}" deleted`);
+              this.loadTools();
+            },
+            error: (err) => {
+              console.error('Failed to delete tool:', err);
+              this.toastService.error('Failed to delete tool: ' + (err.error?.message || err.message));
+            }
+          });
+        }
+      },
+      error: (err) => {
+        console.error('Failed to check tool usage:', err);
+        this.toastService.error('Failed to check tool usage');
+      }
+    });
   }
 
   prevPage(): void {

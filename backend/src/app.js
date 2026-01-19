@@ -19,6 +19,8 @@ const toolRoutes = require('./routes/tool.routes');
 const planRoutes = require('./routes/plan.routes');
 const experimentRoutes = require('./routes/experiment.routes');
 const providerRoutes = require('./routes/provider.routes');
+const mongoose = require('mongoose');
+const ContainerPoolManager = require('./services/container-pool.service');
 
 // Routes
 app.use('/api/tools', toolRoutes);
@@ -26,10 +28,30 @@ app.use('/api/plans', planRoutes);
 app.use('/api/experiments', experimentRoutes);
 app.use('/api/providers', providerRoutes);
 app.get('/api/health', (req, res) => {
+    const containerPool = ContainerPoolManager.getInstance();
+    const dbStatusMap = {
+        0: 'disconnected',
+        1: 'connected',
+        2: 'connecting',
+        3: 'disconnecting',
+    };
+
     res.json({
         status: 'ok',
         timestamp: new Date(),
-        service: 'scientist-ai-backend'
+        uptime: process.uptime(),
+        service: 'scientist-ai-backend',
+        database: {
+            status: dbStatusMap[mongoose.connection.readyState] || 'unknown',
+            host: mongoose.connection.host,
+            name: mongoose.connection.name
+        },
+        containers: {
+            poolSize: containerPool.poolSize,
+            available: containerPool.pool.length,
+            active: containerPool.activeContainers.size,
+            image: containerPool.image
+        }
     });
 });
 

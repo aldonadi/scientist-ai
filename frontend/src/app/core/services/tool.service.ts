@@ -23,6 +23,12 @@ export interface CreateToolDto {
     endsTurn?: boolean;
 }
 
+export interface ToolUsage {
+    planId: string;
+    planName: string;
+    roleName: string;
+}
+
 @Injectable({
     providedIn: 'root'
 })
@@ -50,5 +56,9 @@ export class ToolService {
 
     deleteTool(id: string): Observable<void> {
         return this.http.delete<void>(`${this.apiUrl}/${id}`);
+    }
+
+    getToolUsage(id: string): Observable<ToolUsage[]> {
+        return this.http.get<ToolUsage[]>(`${this.apiUrl}/${id}/usage`);
     }
 }

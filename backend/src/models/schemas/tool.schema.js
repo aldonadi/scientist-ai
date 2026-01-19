@@ -21,7 +21,8 @@ const toolSchema = z.object({
             message: "Parameters must be a valid JSON Schema object"
         }),
     code: z.string()
-        .min(1, 'Code is required')
+        .min(1, 'Code is required'),
+    endsTurn: z.boolean().optional()
 });
 
 /**
@@ -45,7 +46,8 @@ const toolUpdateSchema = z.object({
             message: "Parameters must be a valid JSON Schema object"
         })
         .optional(),
-    code: z.string().optional()
+    code: z.string().optional(),
+    endsTurn: z.boolean().optional()
 });
 
 module.exports = {

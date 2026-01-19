@@ -1,152 +1,198 @@
-# Variable Visibility Per Role - Implementation Plan
+# Script System Upgrade: Hook Context & Actions API
 
-Allow users to configure which environment variables each Role can see "for free" in their system prompt, without requiring tool calls.
+This plan implements a significant enhancement to the Script system, enabling scripts to receive hook-specific context data and perform actions that affect experiment execution.
+
+## User Review Required
+
+> [!NOTE]
+> **Approved Design Decisions:**
+> 
+> 1. **Hook Context**: Use `context['hook']` to hold hook-specific data (`tool_name`, `tool_response`, `model_prompt`, etc.)
+> 2. **LLM Query Provider**: Use experiment's provider with option to override model name
+> 3. **Immediate Step End**: Yes, skip remaining scripts. If `end_step()` called in `STEP_END` hook, log warning and ignore
 
 ## Proposed Changes
 
-### Visibility Matrix Modal Component (New)
+### Backend - Python Wrapper Enhancement
 
-#### [NEW] [visibility-matrix-modal.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/visibility-matrix-modal.component.ts)
+#### [MODIFY] [experiment-orchestrator.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/experiment-orchestrator.service.js)
 
-Create a standalone modal component with:
-- **Inputs:** `roles: Role[]`, `variableKeys: string[]`, `isOpen: boolean`
-- **Outputs:** `rolesChange: EventEmitter<Role[]>`, `closeModal: EventEmitter<void>`
-- **Features:**
-  - Grid layout: Variables as rows, Roles as columns
-  - Each cell: Clickable checkbox bound to role's `variableWhitelist`
-  - Row-level "All" / "None" buttons
-  - Column-level "All" / "None" buttons
-  - Close button for modal dismissal
+**Changes to `executeHook()` method:**
+1. Construct `hook` dict with hook-type-specific fields based on `eventPayload`
+2. Inject `hook` and `actions` into Python execution namespace
+3. Parse returned `_pending_actions` array from script output
+4. Process actions after script completes (stop experiment, log, end step, etc.)
 
----
+**New helper method `_processScriptActions()`:**
+- Interpret action objects and apply effects to experiment state
+- Handle `STOP_EXPERIMENT`, `LOG`, `END_STEP`, `SKIP_ROLE`, `QUERY_LLM`
+- Additional actions: `PAUSE_EXPERIMENT`, `INJECT_MESSAGE`, `SET_VARIABLE`
+- Return control signals to caller (e.g., shouldSkipRole, shouldEndStep)
 
-### Environment Tab Updates
+**Python wrapper changes:**
+```python
+# Inject 'hook' context dict with hook-specific data
+hook = {
+    'type': 'BEFORE_TOOL_CALL',
+    'tool_name': ...,
+    'args': ...
+}
 
-#### [MODIFY] [environment-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/environment-tab.component.ts)
+# Inject 'actions' helper class
+class Actions:
+    _pending = []
+    
+    @staticmethod
+    def stop_experiment(success=False, message=None):
+        Actions._pending.append({
+            'type': 'STOP_EXPERIMENT',
+            'success': success,
+            'message': message
+        })
+    
+    @staticmethod
+    def log(message, data=None):
+        Actions._pending.append({
+            'type': 'LOG', 
+            'message': message,
+            'data': data
+        })
+    # ... etc
 
-1. **Add new inputs:**
-   ```typescript
-   @Input() roles: Role[] = [];
-   @Output() rolesChange = new EventEmitter<Role[]>();
-   ```
-
-2. **Add expand/collapse state:** Track which variable rows are expanded via `expandedRows: Set<number>`
-
-3. **Add table column:** "Visible" column showing "X Roles" or "All" summary
-
-4. **Add expandable row detail:** When expanded, show checkboxes for each role
-
-5. **Add "Open Matrix" button:** Opens the visibility matrix modal
-
-6. **Logic:** When role checkboxes are toggled, update the corresponding Role's `variableWhitelist` and emit `rolesChange`
-
----
-
-### Role Editor Tab Updates
-
-#### [MODIFY] [roles-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/roles-tab.component.ts)
-
-1. **Add new input for environment keys:**
-   ```typescript
-   @Input() environmentKeys: string[] = [];
-   ```
-
-2. **Replace text input with chip-based picker:**
-   - Display selected variables as removable chips (similar to tools)
-   - Add a searchable dropdown for selecting variables
-   - Show variable type and initial value in dropdown options
-
-3. **Add "Open Matrix" button:** Opens the visibility matrix modal
-
-4. **Logic:** Selected chips update `editingRole.variableWhitelist` array
+actions = Actions()
+```
 
 ---
 
-### Plan Editor Component Updates
+#### [MODIFY] [script.schema.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/models/schemas/script.schema.js)
 
-#### [MODIFY] [plan-editor.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/plan-editor.component.ts)
-
-1. **Import new modal component**
-
-2. **Pass roles to Environment tab:**
-   ```html
-   <app-environment-tab 
-     [(environment)]="plan.initialEnvironment"
-     [roles]="plan.roles"
-     (rolesChange)="plan.roles = $event">
-   </app-environment-tab>
-   ```
-
-3. **Pass environment keys to Roles tab:**
-   ```html
-   <app-roles-tab 
-     [(roles)]="plan.roles"
-     [providers]="providers"
-     [environmentKeys]="getEnvironmentKeys()">
-   </app-roles-tab>
-   ```
-
-4. **Add modal state and handlers**
+No schema changes required. Existing schema supports new behavior.
 
 ---
 
-### Index Export
+### Backend - Orchestrator Control Flow
 
-#### [MODIFY] [index.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/index.ts)
+#### [MODIFY] [experiment-orchestrator.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/experiment-orchestrator.service.js)
 
-Export the new `VisibilityMatrixModalComponent`
+**Changes to `processRole()` method:**
+- Check for `skipRole` flag after hook execution
+- If set, log "Role [name] skipped due to script action" and return early
+
+**Changes to `processStep()` method:**
+- Check for `endStep` flag after each role
+- If `immediate`, log "Step ending immediately due to script action" and exit step loop
+- Otherwise, complete current hook batch then exit
+
+**Edge case handling:**
+- If `end_step()` called during `STEP_END` hook, log warning and ignore (prevent infinite loop)
+
+**Changes to `runLoop()` method:**
+- Check for `stopExperiment` flag after each step
+- Update experiment status and result accordingly
+
+---
+
+### Frontend - Script Editor Quick Reference
+
+#### [MODIFY] [scripts-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/scripts-tab.component.ts)
+
+Add a collapsible Quick Reference panel showing:
+1. Available `hook` fields for the currently selected hook type
+2. Available `actions` methods with signatures
+
+**New data structure:**
+```typescript
+const HOOK_CONTEXT_FIELDS: Record<string, {field: string, type: string, description: string}[]> = {
+  'BEFORE_TOOL_CALL': [
+    { field: 'tool_name', type: 'string', description: 'Name of the tool about to be called' },
+    { field: 'args', type: 'dict', description: 'Arguments passed to the tool' }
+  ],
+  'STEP_START': [
+    { field: 'step_number', type: 'int', description: 'Current step number (0-indexed)' }
+  ],
+  // ... etc
+};
+
+const ACTIONS_REFERENCE = [
+  { method: 'actions.stop_experiment(success=False, message=None)', description: 'Stop experiment as SUCCESS or FAILURE' },
+  { method: 'actions.log(message, data=None)', description: 'Write entry to experiment log' },
+  { method: 'actions.end_step(immediate=False)', description: 'End current step' },
+  { method: 'actions.skip_role()', description: 'Skip current role processing' },
+  { method: 'actions.query_llm(prompt, system=None, model=None)', description: 'Query LLM and get response (blocking)' },
+];
+```
+
+**Template changes:**
+- Add collapsible reference panel below hook description
+- Show fields in a compact table format
+- Show actions with method signatures
+
+---
+
+## File Summary
+
+| File | Action | Description |
+|------|--------|-------------|
+| [experiment-orchestrator.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/experiment-orchestrator.service.js) | MODIFY | Add hook context injection, actions API, control flow handling |
+| [scripts-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/scripts-tab.component.ts) | MODIFY | Add Quick Reference panel for hook context and actions |
 
 ---
 
 ## Verification Plan
 
-### Manual Browser Testing
+### Automated Tests
 
-Since this is a frontend UI feature with no backend changes, verification will be manual browser testing:
+Existing test infrastructure in `backend/tests/`:
+- `backend/tests/integration/hooks.test.js` - Hook integration tests
+- `backend/tests/services/event-bus.test.js` - Event bus tests
 
-1. **Start the app:**
+**New tests to add:**
+
+1. **Unit Test: Hook Context Injection** (`backend/tests/services/hook-context.test.js`)
    ```bash
-   cd frontend && npm start
+   cd backend && npm test -- --testPathPattern=hook-context
    ```
-   Navigate to `http://localhost:4200/plans` in browser
+   - Verify each hook type produces correct context fields
+   - Verify context is accessible in Python script
 
-2. **Environment Tab - Expand/Collapse:**
-   - Create or edit a plan with 2+ roles and 3+ environment variables
-   - Verify each variable row has an expand chevron (▶)
-   - Click chevron → verify row expands showing role checkboxes
-   - Toggle checkboxes → verify changes persist
-   - Click chevron again → verify row collapses
+2. **Unit Test: Script Actions** (`backend/tests/services/script-actions.test.js`)
+   ```bash
+   cd backend && npm test -- --testPathPattern=script-actions
+   ```
+   - Verify each action method produces correct output format
+   - Verify actions are collected and returned from script
 
-3. **Environment Tab - Summary Column:**
-   - Verify "Visible" column shows "X Roles" count
-   - When all roles checked → verify shows "All"
+3. **Integration Test: Actions Processing** (`backend/tests/integration/script-actions.test.js`)
+   ```bash
+   cd backend && npm test -- --testPathPattern=integration/script-actions
+   ```
+   - Test `actions.stop_experiment()` terminates experiment with correct status
+   - Test `actions.log()` creates log entry in database
+   - Test `actions.end_step()` advances to next step
+   - Test `actions.skip_role()` skips role processing
 
-4. **Role Editor - Variable Picker:**
-   - Edit a role
-   - Verify selected variables appear as removable chips
-   - Click search box → verify dropdown shows all env variables
-   - Select a variable → verify chip appears
-   - Click × on chip → verify chip is removed
-   - Verify whitelist updates in role data
+### Manual Verification
 
-5. **Visibility Matrix Modal:**
-   - Click "Open Matrix" from Environment tab → verify modal opens
-   - Click "Open Matrix" from Role editor → verify modal opens
-   - Verify grid shows all variables × all roles
-   - Click a cell → verify checkbox toggles
-   - Click row "All" → verify all cells in row checked
-   - Click column "None" → verify all cells in column unchecked
-   - Close modal → verify changes reflected in both tabs
+1. **Quick Reference UI Test**:
+   - Open Plan Editor → Scripts tab
+   - Select different hooks (STEP_START, BEFORE_TOOL_CALL, etc.)
+   - Verify Quick Reference panel updates to show relevant fields
+   - Verify actions section shows all available methods
 
-6. **Data Persistence:**
-   - Save the plan
-   - Reload the page
-   - Verify visibility settings are preserved
+2. **Hook Context End-to-End Test**:
+   - Create a plan with script on `BEFORE_TOOL_CALL`:
+     ```python
+     def run(context):
+         actions.log(f"About to call tool: {hook.tool_name}")
+     ```
+   - Run experiment with a role that has tools
+   - Check logs for the "About to call tool: [name]" entry
 
-### Build Verification
-
-```bash
-cd frontend && npm run build
-```
-
-Verify build completes without errors.
+3. **Stop Experiment Action Test**:
+   - Create a plan with script on `STEP_START`:
+     ```python
+     def run(context):
+         if hook.step_number >= 2:
+             actions.stop_experiment(success=True, message="Early success!")
+     ```
+   - Run experiment, verify it stops at step 2 with SUCCESS status

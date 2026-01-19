@@ -1,13 +1,24 @@
-# Variable Visibility Per Role - Story 063
+# Script System Upgrade - Task Checklist
 
-## Progress
-- [x] Create user story 063 with acceptance criteria
-- [x] Register story in backlog
-- [x] Research existing component structure
-- [x] Create implementation plan
-- [x] Get user approval on plan
-- [x] Implement Environment Tab expand/collapse (Option B)
-- [x] Implement Role Editor variable picker (Option F)
-- [x] Create Visibility Matrix modal component (Option J)
-- [x] Wire modal to both Environment and Role tabs
-- [x] Verify functionality
+## Planning Phase ✅
+- [x] Create user story file (065_script_system_upgrade.md)
+- [x] Register story in backlog.md
+- [x] Create implementation_plan.md
+- [x] User review and approval
+
+## Backend Implementation ✅
+- [x] Add control flow state tracking (`_controlFlow`)
+- [x] Rewrite `executeHook` with Actions class and hook context
+- [x] Implement `_buildHookContext` (12 hook types)
+- [x] Implement `_processScriptActions` (8 action types)
+- [x] Update `processStep`, `processRole`, `runLoop` for control flow
+
+## Frontend Implementation ✅
+- [x] Add Quick Reference panel to Scripts tab
+- [x] Show hook-specific context fields for selected hook
+- [x] Show available actions with signatures
+
+## Verification ✅
+- [x] Backend tests pass
+- [x] Frontend builds successfully
+- [ ] Manual end-to-end testing with script using actions

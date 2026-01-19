@@ -60,6 +60,10 @@ class OllamaStrategy extends ProviderStrategy {
                     yield { type: 'text', content: chunk.message.content };
                 }
 
+                if (chunk.message && chunk.message.thinking) {
+                    yield { type: 'thinking', content: chunk.message.thinking };
+                }
+
                 // Yield tool calls if present
                 if (chunk.message && chunk.message.tool_calls) {
                     for (const toolCall of chunk.message.tool_calls) {
