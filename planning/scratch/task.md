@@ -1,11 +1,7 @@
-# UI Polish - Task Checklist
+# Tasks
 
-## Frontend Implementation
-- [ ] Implement `trackBy` in Experiment Monitor (Chat)
-- [ ] Implement `trackBy` in Log Feed
-- [ ] Implement `trackBy` in State History
-- [ ] Implement Data Modal in Json Tree
-- [ ] Implement Data Modal in State History
-
-## Verification
-- [ ] Manual verification of stability and modals
+- [/] Investigate "Failed to Fetch Models" error <!-- id: 0 -->
+    - [ ] Locate frontend component and service for "Test Models" <!-- id: 1 -->
+    - [ ] Locate backend endpoint for fetching models <!-- id: 2 -->
+    - [ ] debug backend/frontend communication <!-- id: 3 -->
+    - [ ] fix the issue <!-- id: 4 -->

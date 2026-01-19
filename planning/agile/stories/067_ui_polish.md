@@ -12,10 +12,14 @@ The Experiment Monitor UI has usability issues related to polling and data visib
    - Add click-to-view feature for truncated strings in Environment View.
 
 ## Tasks
-- [ ] Create 067_ui_polish.md
-- [ ] FE: Fix ExperimentMonitor polling (Chat History trackBy)
-- [ ] FE: Fix LogFeed polling (trackBy)
-- [ ] FE: Fix StateHistory polling (trackBy)
-- [ ] FE: Implement JSON Tree View Modal
-- [ ] FE: Implement State History Cell Modal
-- [ ] Verify functionality
+- [X] Create 067_ui_polish.md
+- [X] FE: Fix ExperimentMonitor polling (Chat History trackBy)
+- [X] FE: Fix LogFeed polling (trackBy)
+- [X] FE: Fix StateHistory polling (trackBy)
+- [X] FE: Implement JSON Tree View Modal
+- [X] FE: Implement State History Cell Modal
+- [X] Verify functionality
+
+## Review
+
+**1/19/26** - Accepted by Product Owner
