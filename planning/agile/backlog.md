@@ -62,6 +62,7 @@ Status can be:
 | 049_logs_api                                       | 3      | DONE        |
 | 050_fix_ollama_tool_passing                        | 2      | DONE        |
 | 051_unify_container_interface                      | 5      | DONE        |
+| 064_system_health_modal                            | 3      | READY       |
 | 052_container_security_hardening                   | 2      | DONE        |
 | 053_plan_duplicate_endpoint                        | 2      | DONE        |
 | 054_llm_retry_logic                                | 3      | DONE        |

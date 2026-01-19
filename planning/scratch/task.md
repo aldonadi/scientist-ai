@@ -1,15 +1,15 @@
-# Task: Persist Chat History Per Role
+# System Health Modal
 
-- [x] Investigate Ollama API / `ollama-js` capabilities for chat history <!-- id: 0 -->
-- [x] Analyze `Experiment` model schema for storage options <!-- id: 1 -->
-- [x] Develop implementation plan for storing and retrieving role-based history <!-- id: 2 -->
-- [x] Modify `Experiment` schema to add `roleHistory` <!-- id: 4 -->
-- [x] Update `ExperimentOrchestrator` to load and append to history <!-- id: 5 -->
-- [x] Implement history persistence in `ExperimentOrchestrator` <!-- id: 6 -->
-- [x] Add automated tests for history interactions <!-- id: 7 -->
-- [x] Modify `Experiment` schema to add `roleHistory` <!-- id: 4 -->
-- [x] Update `ExperimentOrchestrator` to load and append to history <!-- id: 5 -->
-- [x] Implement history persistence in `ExperimentOrchestrator` <!-- id: 6 -->
-- [x] Add automated tests for history interactions <!-- id: 7 -->
-- [x] Verify functionality with manual test <!-- id: 3 -->
-- [x] Implement 'Chat History' tab in frontend Experiment Monitor <!-- id: 8 -->
+- [ ] Planning
+    - [ ] Explore codebase for existing header/status indicators <!-- id: 0 -->
+    - [ ] Create User Story 064 <!-- id: 1 -->
+    - [ ] Register story in backlog <!-- id: 2 -->
+    - [ ] Create Implementation Plan <!-- id: 3 -->
+- [ ] Implementation
+    - [ ] Backend: Add System Health API endpoint
+    - [ ] Frontend: Create System Health Service
+    - [ ] Frontend: Create System Health Modal Component
+    - [ ] Frontend: Integrate Modal into Header/Navigation
+- [ ] Verification
+    - [ ] Verify API returns correct data
+    - [ ] Verify Modal opens and displays data correctly

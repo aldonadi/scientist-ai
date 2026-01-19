@@ -1,60 +1,65 @@
-# Tool Library and Editor Improvements Implementation Plan
+# Implementation Plan - System Health Modal
 
-## Goal
-Improve the Tool Library and Editor by adding robust deletion with usage checks, adding a deletion button in the editor, fixing the persistence of the `endsTurn` property, and displaying usage information in the editor.
+This plan describes the changes required to implement the "System Health" modal and the underlying backend support.
+
+## User Review Required
+> [!NOTE]
+> The current backend `/api/health` endpoint is minimal. I will expand it to include database status, uptime, and container pool statistics.
+> The frontend `HealthStatus` interface will be updated to match the new API response.
 
 ## Proposed Changes
 
 ### Backend
 
-#### [MODIFY] [tool.schema.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/models/schemas/tool.schema.js)
-- Add `endsTurn: z.boolean().optional()` to both `toolSchema` and `toolUpdateSchema` to allow persistence.
-
-#### [MODIFY] [tool.controller.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/controllers/tool.controller.js)
-- Implement `getToolUsage` handler.
-    - Query `ExperimentPlan.find({ "roles.tools": id }).select('name roles')`.
-    - Iterate to find which specific roles contain the tool ID.
-    - Return structure: `[{ planId, planName, roleName }]`.
-- Add route `GET /api/tools/:id/usage` in `tool.routes.js`.
-
-#### [MODIFY] [tool.routes.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/routes/tool.routes.js)
-- Register `getUsage` endpoint.
+#### [MODIFY] [app.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/app.js)
+- Import `mongoose` to check `mongoose.connection.readyState`.
+- Import `ContainerPoolManager` to access the singleton instance.
+- Update `GET /api/health` to return:
+  ```json
+  {
+    "status": "ok", // or "error" if DB/critical services down
+    "uptime": 12345, // process.uptime()
+    "timestamp": "...",
+    "database": "connected", // mapped from mongoose state
+    "containers": {
+      "total": 2,
+      "active": 2, // (pool length + active leases? Need to check ContainerPoolManager API)
+      "image": "python:3.9-slim"
+    }
+  }
+  ```
+  *Note: `ContainerPoolManager` exposes `pool` (available containers). It doesn't seem to track "leased" containers explicitly in a list, but it removes them from `pool`. I might need to infer "active" or add a counter if important, but "Available" vs "Pool Size" is enough for now.*
 
 ### Frontend
 
-#### [MODIFY] [tool.service.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/core/services/tool.service.ts)
-- Add `getToolUsage(id: string): Observable<ToolUsage[]>` method.
-- Update `CreateToolDto` interface to include optional `endsTurn`.
+#### [MODIFY] [header.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/core/layout/header.component.ts)
+- Update `HealthStatus` interface to match new API response.
+- Add `openSystemHealth()` method.
+- Import `SystemHealthModalComponent` (to be created).
+- Add click handler to the status badge.
 
-#### [MODIFY] [tool-list.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/tools/tool-list.component.ts)
-- Update `deleteTool`:
-    - Call `toolService.getToolUsage(tool._id)`.
-    - If usage exists, construct message listing plans.
-    - Use `confirmService.confirm` with appropriate warning.
-    - Proceed to delete if confirmed.
+#### [NEW] [system-health-modal.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/core/layout/system-health-modal.component.ts)
+- Create a standalone Angular component for the modal.
+- It will accept the `HealthStatus` data as input (or fetch it execution-time, but passing data from header is faster/easier if header is already polling).
+- Display the metrics defined in User Story 064.
 
-#### [MODIFY] [tool-editor.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/tools/tool-editor.component.ts)
-- **Delete Button**: Add to header next to Cancel/Save. Use same logic as List component (refactor logic to service or duplicate for now due to complexity of sharing).
-- **Usage Display**:
-    - Add `usage: ToolUsage[]` property.
-    - Determine logic for "See all" modal (limit 10).
-    - In template, add section to display links: `Plan Name (Role Name)`.
-    - Add modal for full list.
-- **Persistence**: Verify `save()` sends `endsTurn`.
+#### [NEW] [system-health-modal.component.html](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/core/layout/system-health-modal.component.html)
+- Template for the modal.
+- Use Tailwind classes for "nerdy/hackerish" aesthetic (monospace fonts, terminal-like colors perhaps, or just clean modern UI as requested "nice, hackerish/nerdy").
 
 ## Verification Plan
 
 ### Automated Tests
-- Run `npm run build` in frontend.
+- **Backend Health Endpoint**:
+    - Run `curl http://localhost:3000/api/health` and verify the JSON structure contains all new fields.
+    - I can write a small test script or just use `curl` via `run_command`.
 
 ### Manual Verification
-1.  **Ends Turn**: Edit a tool, toggle Ends Turn, Save. Refresh page to verify persistence.
-2.  **Usage Display**:
-    -   Create a Plan that uses a specific Tool.
-    -   Go to Tool Editor for that tool.
-    -   Verify the Plan/Role usage is displayed.
-    -   Click link to ensure it navigates to Plan Editor > Role tab.
-3.  **Deletion**:
-    -   Try to delete the used tool from List. Verify warning mentions the plan.
-    -   Try to delete from Editor. Verify same warning.
-    -   Create unused tool. Delete it. Verify simple confirmation.
+1.  Start backend (`npm run start` in `backend/`).
+2.  Start frontend (`npm run start` in `frontend/`).
+3.  Open browser (via `browser_subagent` or asking user since I can't interactively click).
+4.  *Actually using `browser_subagent`*:
+    - Navigate to the app.
+    - Click the status badge.
+    - Verify modal content properly displays uptime, DB status, and container info.
+
