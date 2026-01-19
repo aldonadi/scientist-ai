@@ -5,10 +5,10 @@ import { ExperimentService, ExperimentStateHistory } from '../../core/services/e
 import { Subscription, interval } from 'rxjs';
 
 @Component({
-    selector: 'app-state-history',
-    standalone: true,
-    imports: [CommonModule, FormsModule],
-    template: `
+  selector: 'app-state-history',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  template: `
     <div class="h-full flex flex-col bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       <!-- Toolbar -->
       <div class="px-4 py-3 border-b border-gray-100 bg-gray-50 flex flex-wrap items-center justify-between gap-4 shrink-0">
@@ -71,10 +71,10 @@ import { Subscription, interval } from 'rxjs';
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let row of sortedHistory; let even = even" [class.bg-gray-50]="even" class="hover:bg-blue-50 transition-colors">
+            <tr *ngFor="let row of sortedHistory; let even = even; trackBy: trackByStep" [class.bg-gray-50]="even" class="hover:bg-blue-50 transition-colors">
               <td class="px-4 py-3 font-bold text-gray-900 text-center border-r border-gray-100">{{ row.stepNumber }}</td>
               <td class="px-4 py-3 text-gray-500 text-xs border-r border-gray-100 font-mono">{{ formatTime(row.timestamp) }}</td>
-              <td *ngFor="let col of columns" class="px-4 py-3 border-r border-gray-100 last:border-0 font-mono text-gray-700 truncate max-w-xs " [title]="getValue(row.environment, col)">
+              <td *ngFor="let col of columns" class="px-4 py-3 border-r border-gray-100 last:border-0 font-mono text-gray-700 truncate max-w-xs cursor-pointer hover:bg-blue-100" [title]="getValue(row.environment, col)" (dblclick)="openModal(getValue(row.environment, col), col)">
                  {{ formatValue(getValue(row.environment, col)) }}
               </td>
             </tr>
@@ -87,8 +87,21 @@ import { Subscription, interval } from 'rxjs';
         </table>
       </div>
     </div>
+
+    <!-- Modal -->
+    <div *ngIf="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" (click)="closeModal()">
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 w-3/4 max-w-4xl max-h-[80vh] flex flex-col" (click)="$event.stopPropagation()">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-xl shrink-0">
+                <h3 class="text-lg font-semibold text-gray-900 font-mono">{{ modalTitle }}</h3>
+                <button (click)="closeModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+            </div>
+            <div class="p-6 overflow-auto font-mono text-xs whitespace-pre-wrap flex-1 bg-white">
+                {{ modalContent }}
+            </div>
+        </div>
+    </div>
   `,
-    styles: [`
+  styles: [`
     :host {
       display: block;
       height: 100%;
@@ -110,192 +123,211 @@ import { Subscription, interval } from 'rxjs';
   `]
 })
 export class StateHistoryComponent implements OnInit, OnDestroy, OnChanges {
-    @Input() experimentId?: string;
-    @Input() isRunning: boolean = false;
+  @Input() experimentId?: string;
+  @Input() isRunning: boolean = false;
 
-    history: ExperimentStateHistory[] = [];
-    sortedHistory: ExperimentStateHistory[] = [];
+  history: ExperimentStateHistory[] = [];
+  sortedHistory: ExperimentStateHistory[] = [];
 
-    columns: string[] = [];
-    newColumnKey: string = '';
-    sortAscending: boolean = true;
+  columns: string[] = [];
+  newColumnKey: string = '';
+  sortAscending: boolean = true;
 
-    private pollSubscription?: Subscription;
-    private readonly STORAGE_KEY = 'scientist-ai-history-columns';
+  private pollSubscription?: Subscription;
+  private readonly STORAGE_KEY = 'scientist-ai-history-columns';
 
-    constructor(private experimentService: ExperimentService) { }
+  constructor(private experimentService: ExperimentService) { }
 
-    ngOnInit(): void {
-        this.loadColumnConfig();
-        if (this.experimentId) {
-            this.fetchHistory();
-            this.startPolling();
-        }
+  ngOnInit(): void {
+    this.loadColumnConfig();
+    if (this.experimentId) {
+      this.fetchHistory();
+      this.startPolling();
     }
+  }
 
-    ngOnChanges(changes: SimpleChanges): void {
-        if (changes['experimentId'] && !changes['experimentId'].firstChange) {
-            this.fetchHistory();
-        }
-        if (changes['isRunning']) {
-            if (this.isRunning) {
-                this.startPolling();
-            } else {
-                this.stopPolling(); // Don't stop immediately if we want to keep checking for final updates? Nah, stop is fine.
-            }
-        }
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['experimentId'] && !changes['experimentId'].firstChange) {
+      this.fetchHistory();
     }
-
-    ngOnDestroy(): void {
-        this.stopPolling();
+    if (changes['isRunning']) {
+      if (this.isRunning) {
+        this.startPolling();
+      } else {
+        this.stopPolling(); // Don't stop immediately if we want to keep checking for final updates? Nah, stop is fine.
+      }
     }
+  }
 
-    startPolling() {
-        this.stopPolling();
-        if (this.isRunning && this.experimentId) {
-            this.pollSubscription = interval(5000).subscribe(() => {
-                this.fetchHistory();
-            });
-        }
+  ngOnDestroy(): void {
+    this.stopPolling();
+  }
+
+  startPolling() {
+    this.stopPolling();
+    if (this.isRunning && this.experimentId) {
+      this.pollSubscription = interval(5000).subscribe(() => {
+        this.fetchHistory();
+      });
     }
+  }
 
-    stopPolling() {
-        if (this.pollSubscription) {
-            this.pollSubscription.unsubscribe();
-            this.pollSubscription = undefined;
-        }
+  stopPolling() {
+    if (this.pollSubscription) {
+      this.pollSubscription.unsubscribe();
+      this.pollSubscription = undefined;
     }
+  }
 
-    fetchHistory() {
-        if (!this.experimentId) return;
-        this.experimentService.getHistory(this.experimentId).subscribe({
-            next: (data) => {
-                this.history = data;
-                this.updateSortedHistory();
-
-                // If we have no columns configured and generic data exists, init defaults
-                if (this.columns.length === 0 && data.length > 0) {
-                    this.initDefaultColumns(data);
-                }
-            },
-            error: (err) => console.error('Failed to fetch history', err)
-        });
-    }
-
-    updateSortedHistory() {
-        this.sortedHistory = [...this.history].sort((a, b) => {
-            return this.sortAscending ? a.stepNumber - b.stepNumber : b.stepNumber - a.stepNumber;
-        });
-    }
-
-    toggleSort() {
-        this.sortAscending = !this.sortAscending;
+  fetchHistory() {
+    if (!this.experimentId) return;
+    this.experimentService.getHistory(this.experimentId).subscribe({
+      next: (data) => {
+        this.history = data;
         this.updateSortedHistory();
-    }
 
-    // --- Column Management ---
-
-    loadColumnConfig() {
-        const saved = localStorage.getItem(this.STORAGE_KEY);
-        if (saved) {
-            try {
-                this.columns = JSON.parse(saved);
-            } catch (e) {
-                console.error('Failed to parse saved columns', e);
-            }
+        // If we have no columns configured and generic data exists, init defaults
+        if (this.columns.length === 0 && data.length > 0) {
+          this.initDefaultColumns(data);
         }
+      },
+      error: (err) => console.error('Failed to fetch history', err)
+    });
+  }
+
+  updateSortedHistory() {
+    this.sortedHistory = [...this.history].sort((a, b) => {
+      return this.sortAscending ? a.stepNumber - b.stepNumber : b.stepNumber - a.stepNumber;
+    });
+  }
+
+  toggleSort() {
+    this.sortAscending = !this.sortAscending;
+    this.updateSortedHistory();
+  }
+
+  // --- Column Management ---
+
+  loadColumnConfig() {
+    const saved = localStorage.getItem(this.STORAGE_KEY);
+    if (saved) {
+      try {
+        this.columns = JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse saved columns', e);
+      }
     }
+  }
 
-    saveColumnConfig() {
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.columns));
+  saveColumnConfig() {
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.columns));
+  }
+
+  initDefaultColumns(data: ExperimentStateHistory[]) {
+    // Find the entry with the most keys
+    const allKeys = new Set<string>();
+    // Sample last 5 steps to find keys
+    data.slice(-5).forEach(step => {
+      if (step.environment) {
+        Object.keys(step.environment).forEach(k => allKeys.add(k));
+      }
+    });
+
+    // Take first 15 keys alphabetically
+    this.columns = Array.from(allKeys).sort().slice(0, 15);
+    this.saveColumnConfig(); // Save these as default preference? Or maybe not? Let's save.
+  }
+
+  resetColumns() {
+    this.columns = [];
+    this.localStorage.removeItem(this.STORAGE_KEY);
+    this.fetchHistory(); // Re-trigger default init logic
+  }
+
+  // Fix for previous line: this.localStorage is wrong, should be localStorage
+
+  addColumn(key: string) {
+    if (key && !this.columns.includes(key)) {
+      this.columns.push(key);
+      this.saveColumnConfig();
+      this.newColumnKey = '';
     }
+  }
 
-    initDefaultColumns(data: ExperimentStateHistory[]) {
-        // Find the entry with the most keys
-        const allKeys = new Set<string>();
-        // Sample last 5 steps to find keys
-        data.slice(-5).forEach(step => {
-            if (step.environment) {
-                Object.keys(step.environment).forEach(k => allKeys.add(k));
-            }
-        });
+  removeColumn(key: string) {
+    this.columns = this.columns.filter(c => c !== key);
+    this.saveColumnConfig();
+  }
 
-        // Take first 15 keys alphabetically
-        this.columns = Array.from(allKeys).sort().slice(0, 15);
-        this.saveColumnConfig(); // Save these as default preference? Or maybe not? Let's save.
-    }
+  // --- Helpers ---
 
-    resetColumns() {
-        this.columns = [];
-        this.localStorage.removeItem(this.STORAGE_KEY);
-        this.fetchHistory(); // Re-trigger default init logic
-    }
+  getValue(obj: any, path: string): any {
+    if (!obj) return undefined;
+    return path.split('.').reduce((o, key) => (o && o[key] !== undefined) ? o[key] : undefined, obj);
+  }
 
-    // Fix for previous line: this.localStorage is wrong, should be localStorage
+  formatValue(val: any): string {
+    if (val === undefined || val === null) return '-';
+    if (typeof val === 'object') return JSON.stringify(val); // Simplistic, but works for now.
+    if (typeof val === 'string' && val.length > 50) return val.substring(0, 50) + '...';
+    return String(val);
+  }
 
-    addColumn(key: string) {
-        if (key && !this.columns.includes(key)) {
-            this.columns.push(key);
-            this.saveColumnConfig();
-            this.newColumnKey = '';
-        }
-    }
+  formatTime(ts: string): string {
+    const d = new Date(ts);
+    return d.toTimeString().split(' ')[0]; // HH:MM:SS
+  }
 
-    removeColumn(key: string) {
-        this.columns = this.columns.filter(c => c !== key);
-        this.saveColumnConfig();
-    }
+  exportCSV() {
+    if (this.sortedHistory.length === 0) return;
 
-    // --- Helpers ---
+    const headers = ['Step', 'Time', ...this.columns];
+    const rows = this.sortedHistory.map(row => {
+      return [
+        row.stepNumber,
+        new Date(row.timestamp).toISOString(),
+        ...this.columns.map(col => {
+          let val = this.getValue(row.environment, col);
+          if (typeof val === 'object') val = JSON.stringify(val).replace(/"/g, '""'); // Escape quotes
+          if (typeof val === 'string') val = `"${val}"`; // Quote strings
+          return val ?? '';
+        })
+      ].join(',');
+    });
 
-    getValue(obj: any, path: string): any {
-        if (!obj) return undefined;
-        return path.split('.').reduce((o, key) => (o && o[key] !== undefined) ? o[key] : undefined, obj);
-    }
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `experiment_${this.experimentId}_history.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 
-    formatValue(val: any): string {
-        if (val === undefined || val === null) return '-';
-        if (typeof val === 'object') return JSON.stringify(val); // Simplistic, but works for now.
-        if (typeof val === 'string' && val.length > 50) return val.substring(0, 50) + '...';
-        return String(val);
-    }
+  // Helper for fix
+  get localStorage() {
+    return localStorage;
+  }
 
-    formatTime(ts: string): string {
-        const d = new Date(ts);
-        return d.toTimeString().split(' ')[0]; // HH:MM:SS
-    }
+  trackByStep(index: number, item: ExperimentStateHistory): number {
+    return item.stepNumber;
+  }
 
-    exportCSV() {
-        if (this.sortedHistory.length === 0) return;
+  // Modal Logic
+  showModal = false;
+  modalTitle = '';
+  modalContent = '';
 
-        const headers = ['Step', 'Time', ...this.columns];
-        const rows = this.sortedHistory.map(row => {
-            return [
-                row.stepNumber,
-                new Date(row.timestamp).toISOString(),
-                ...this.columns.map(col => {
-                    let val = this.getValue(row.environment, col);
-                    if (typeof val === 'object') val = JSON.stringify(val).replace(/"/g, '""'); // Escape quotes
-                    if (typeof val === 'string') val = `"${val}"`; // Quote strings
-                    return val ?? '';
-                })
-            ].join(',');
-        });
+  openModal(content: any, title: string) {
+    this.modalContent = typeof content === 'object' ? JSON.stringify(content, null, 2) : String(content);
+    this.modalTitle = title;
+    this.showModal = true;
+  }
 
-        const csvContent = [headers.join(','), ...rows].join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.setAttribute('href', url);
-        link.setAttribute('download', `experiment_${this.experimentId}_history.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
-    // Helper for fix
-    get localStorage() {
-        return localStorage;
-    }
+  closeModal() {
+    this.showModal = false;
+  }
 }
