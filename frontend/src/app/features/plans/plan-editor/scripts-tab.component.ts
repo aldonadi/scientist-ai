@@ -100,7 +100,7 @@ const LIFECYCLE_EVENTS = [
             
             <textarea [(ngModel)]="script.code"
                       (ngModelChange)="validateScript(script)"
-                      rows="6"
+                      rows="30"
                       placeholder="def run(context):
     # Your code here
     pass"

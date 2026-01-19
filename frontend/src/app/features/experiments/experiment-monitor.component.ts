@@ -206,9 +206,20 @@ interface RoleActivity {
 
                           <!-- System Message -->
                           <div *ngIf="msg.role === 'system'" class="flex flex-col items-center mb-4">
-                              <div class="bg-gray-200 text-gray-700 text-xs px-4 py-2 rounded-full shadow-sm max-w-3xl text-center">
+                              <div class="bg-gray-200 text-gray-700 text-xs px-4 py-2 rounded-full shadow-sm max-w-3xl text-center transition-all duration-200">
                                   <span class="font-bold block mb-1">SYSTEM PROMPT</span>
-                                  <span class="whitespace-pre-wrap">{{ msg.content }}</span>
+                                  
+                                  <div [class.line-clamp-4]="!expandedSystemPrompts.has(i)" 
+                                       [class.overflow-hidden]="!expandedSystemPrompts.has(i)"
+                                       class="whitespace-pre-wrap">
+                                      {{ msg.content }}
+                                  </div>
+
+                                  <button *ngIf="msg.content.split('\n').length > 4 || msg.content.length > 300"
+                                          (click)="toggleSystemPrompt(i)"
+                                          class="mt-1 text-blue-500 hover:text-blue-700 font-bold focus:outline-none">
+                                      {{ expandedSystemPrompts.has(i) ? '▲ Show Less' : '▼ Show More' }}
+                                  </button>
                               </div>
                           </div>
 
@@ -332,6 +343,7 @@ export class ExperimentMonitorComponent implements OnInit, OnDestroy {
   isControlling = false;
   activeTab: 'monitor' | 'chat' = 'monitor';
   selectedRole: string | null = null;
+  expandedSystemPrompts: Set<number> = new Set();
 
   private pollSubscription?: Subscription;
   private readonly POLL_INTERVAL = 2000; // 2 seconds
@@ -426,6 +438,16 @@ export class ExperimentMonitorComponent implements OnInit, OnDestroy {
 
     return history;
   }
+
+  toggleSystemPrompt(index: number): void {
+    if (this.expandedSystemPrompts.has(index)) {
+      this.expandedSystemPrompts.delete(index);
+    } else {
+      this.expandedSystemPrompts.add(index);
+    }
+  }
+
+
 
   loadLogs(): void {
     if (!this.id) return;

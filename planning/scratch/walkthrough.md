@@ -43,7 +43,7 @@ Added a **Chat History** tab to the Experiment Monitor page:
 - **Role Selection Sidebar**: Choose which Role's perspective to view.
 - **Message Stream**:
   - **Step Separators**: Horizontal rule with Step Number separating interactions.
-  - **System Prompts**: Centered gray pill at the top.
+  - **System Prompts**: Centered gray pill at the top (collapsible if long).
   - **User (Step) Prompts**: Right-aligned blue bubbles.
   - **Assistant Responses**: Left-aligned white bubbles with role avatar.
     - **Thinking Process**: Collapsible section showing the model's internal reasoning (if available).

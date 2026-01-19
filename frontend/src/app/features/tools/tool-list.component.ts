@@ -133,7 +133,7 @@ export class ToolListComponent implements OnInit {
   tooltipY = 0;
 
   currentPage = 1;
-  pageSize = 10;
+  pageSize = 50;
   totalTools = 0;
 
   Math = Math;
@@ -141,6 +141,10 @@ export class ToolListComponent implements OnInit {
   constructor(private toolService: ToolService) { }
 
   ngOnInit(): void {
+    const savedNamespace = localStorage.getItem('toolList_namespace');
+    if (savedNamespace) {
+      this.selectedNamespace = savedNamespace;
+    }
     this.loadTools();
   }
 
@@ -181,6 +185,13 @@ export class ToolListComponent implements OnInit {
 
     if (this.selectedNamespace) {
       filtered = filtered.filter(t => t.namespace === this.selectedNamespace);
+    }
+
+    // Save selection
+    if (this.selectedNamespace) {
+      localStorage.setItem('toolList_namespace', this.selectedNamespace);
+    } else {
+      localStorage.removeItem('toolList_namespace');
     }
 
     this.totalTools = filtered.length;

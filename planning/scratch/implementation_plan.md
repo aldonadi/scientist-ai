@@ -19,7 +19,7 @@ Implement a set of UI improvements requested by the user to enhance usability in
     - Use a simple set `expandedMessages: Set<number>` to track expansion state.
 
 #### [MODIFY] [scripts-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/scripts-tab.component.ts)
-- **Script Textbox**: Increase `rows` attribute from `6` to `20` (or `min-h-[400px]`) to show more code.
+- **Script Textbox**: Increase `rows` attribute to `40` to accommodate larger scripts (approx 50 lines visible with scrolling if needed).
 
 #### [MODIFY] [tool-list.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/tools/tool-list.component.ts)
 - **Pagination**: Change `pageSize` default from `10` to `50`.
