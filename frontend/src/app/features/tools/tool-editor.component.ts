@@ -37,6 +37,7 @@ const DEFAULT_TOOL_CODE = `def execute(env, args):
   template: `
     <div class="h-full flex flex-col">
       <!-- Header -->
+      <!-- Header -->
       <div class="flex items-center justify-between mb-6">
         <div class="flex items-center">
           <button (click)="goBack()" class="mr-4 text-gray-500 hover:text-gray-700">
@@ -48,6 +49,8 @@ const DEFAULT_TOOL_CODE = `def execute(env, args):
           <span *ngIf="isDirty()" class="ml-3 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full border border-amber-200">
              ● Unsaved Changes
           </span>
+        </div>
+        
         <div class="flex items-center space-x-3">
           <button *ngIf="!isNew" 
                   (click)="deleteTool()" 

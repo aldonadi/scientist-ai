@@ -174,6 +174,13 @@ export class PlanEditorComponent implements OnInit, CanComponentDeactivate {
       this.loadPlan();
     }
     this.fetchProviders();
+
+    // Deep linking for tabs
+    this.route.fragment.subscribe(fragment => {
+      if (fragment && this.tabs.some(t => t.id === fragment)) {
+        this.activeTab = fragment;
+      }
+    });
   }
 
   fetchProviders(): void {
