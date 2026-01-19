@@ -1,23 +1,21 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-
-interface HealthStatus {
-    status: 'ok' | 'error' | 'loading';
-    database: string;
-    providers: { name: string; status: string }[];
-}
+import { SystemHealthModalComponent, HealthStatus } from './system-health-modal.component';
 
 @Component({
-    selector: 'app-header',
-    standalone: true,
-    imports: [CommonModule],
-    template: `
+  selector: 'app-header',
+  standalone: true,
+  imports: [CommonModule, SystemHealthModalComponent],
+  template: `
     <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm">
       <div class="flex items-center">
         <span class="text-gray-500 text-sm">Status:</span>
-        <span [class]="statusClass" class="ml-2 px-2 py-1 rounded text-xs font-medium">
+        <button 
+          (click)="openSystemHealth()"
+          [class]="statusClass" 
+          class="ml-2 px-2 py-1 rounded text-xs font-medium cursor-pointer hover:underline focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all">
           {{ health.status === 'ok' ? 'ONLINE' : health.status === 'loading' ? 'CHECKING...' : 'OFFLINE' }}
-        </span>
+        </button>
       </div>
       
       <div class="flex items-center space-x-4">
@@ -35,47 +33,68 @@ interface HealthStatus {
         </button>
       </div>
     </header>
+
+    <app-system-health-modal
+        *ngIf="isHealthModalOpen"
+        [health]="health"
+        (close)="closeSystemHealth()">
+    </app-system-health-modal>
   `
 })
 export class HeaderComponent implements OnInit, OnDestroy {
-    health: HealthStatus = {
-        status: 'loading',
-        database: 'unknown',
-        providers: []
-    };
+  health: HealthStatus = {
+    status: 'loading',
+    timestamp: new Date(),
+    uptime: 0,
+    service: 'scientist-ai-backend',
+    database: { status: 'unknown', host: '', name: '' },
+    containers: { poolSize: 0, available: 0, image: '' }
+  };
+  isHealthModalOpen = false;
 
-    private intervalId: any;
+  private intervalId: any;
 
-    get statusClass(): string {
-        switch (this.health.status) {
-            case 'ok': return 'bg-green-100 text-green-800';
-            case 'error': return 'bg-red-100 text-red-800';
-            default: return 'bg-yellow-100 text-yellow-800';
-        }
+  get statusClass(): string {
+    switch (this.health.status) {
+      case 'ok': return 'bg-green-100 text-green-800';
+      case 'error': return 'bg-red-100 text-red-800';
+      default: return 'bg-yellow-100 text-yellow-800';
     }
+  }
 
-    ngOnInit(): void {
-        this.checkHealth();
-        // Poll health every 30 seconds
-        this.intervalId = setInterval(() => this.checkHealth(), 30000);
-    }
+  ngOnInit(): void {
+    this.checkHealth();
+    // Poll health every 30 seconds
+    this.intervalId = setInterval(() => this.checkHealth(), 30000);
+  }
 
-    ngOnDestroy(): void {
-        if (this.intervalId) {
-            clearInterval(this.intervalId);
-        }
+  ngOnDestroy(): void {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
     }
+  }
 
-    private async checkHealth(): Promise<void> {
-        try {
-            const response = await fetch('/api/health');
-            if (response.ok) {
-                this.health = await response.json();
-            } else {
-                this.health.status = 'error';
-            }
-        } catch {
-            this.health.status = 'error';
-        }
+  openSystemHealth(): void {
+    // Refresh health when opening
+    this.checkHealth().then(() => {
+      this.isHealthModalOpen = true;
+    });
+  }
+
+  closeSystemHealth(): void {
+    this.isHealthModalOpen = false;
+  }
+
+  private async checkHealth(): Promise<void> {
+    try {
+      const response = await fetch('/api/health');
+      if (response.ok) {
+        this.health = await response.json();
+      } else {
+        this.health.status = 'error';
+      }
+    } catch {
+      this.health.status = 'error';
     }
+  }
 }
