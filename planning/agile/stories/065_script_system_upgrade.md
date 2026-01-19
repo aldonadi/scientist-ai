@@ -130,3 +130,4 @@ def run(context):
 
 ## Review Log
 - 2026-01-18: Story created during planning phase
+- 2026-01-18: Approved. Design decisions finalized: context['hook'] structure, experiment provider with model override for LLM queries, logging for skipped roles/early step ends.
