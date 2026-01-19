@@ -1,6 +1,7 @@
 const { Experiment } = require('../models/experiment.model');
 const { ExperimentPlan } = require('../models/experimentPlan.model');
 const { ExperimentOrchestrator } = require('../services/experiment-orchestrator.service');
+const { ExperimentStateHistory } = require('../models/history.model');
 const OrchestratorRegistry = require('../services/orchestrator-registry.service');
 const { EventTypes } = require('../services/event-bus');
 const Log = require('../models/log.model');
@@ -457,6 +458,32 @@ const streamExperimentEvents = async (req, res) => {
     }
 };
 
+/**
+ * Get state history for a specific experiment
+ * GET /api/experiments/:id/history
+ */
+const getExperimentHistory = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        // Validate ObjectId format
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({
+                error: true,
+                message: 'Invalid ID format'
+            });
+        }
+
+        const history = await ExperimentStateHistory.find({ experimentId: id })
+            .sort({ stepNumber: 1 }) // Chronological order
+            .lean();
+
+        res.status(200).json(history);
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     launchExperiment,
     controlExperiment,
@@ -464,5 +491,6 @@ module.exports = {
     getExperiment,
     deleteExperiment,
     getExperimentLogs,
-    streamExperimentEvents
+    streamExperimentEvents,
+    getExperimentHistory
 };

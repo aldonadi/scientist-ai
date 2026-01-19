@@ -66,4 +66,16 @@ export class ExperimentService {
     deleteExperiment(id: string): Observable<void> {
         return this.http.delete<void>(`${this.apiUrl}/${id}`);
     }
+
+    getHistory(id: string): Observable<ExperimentStateHistory[]> {
+        return this.http.get<ExperimentStateHistory[]>(`${this.apiUrl}/${id}/history`);
+    }
+}
+
+export interface ExperimentStateHistory {
+    _id: string;
+    experimentId: string;
+    stepNumber: number;
+    timestamp: string;
+    environment: any;
 }

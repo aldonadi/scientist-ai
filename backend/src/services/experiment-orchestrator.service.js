@@ -1,6 +1,7 @@
 const { EventBus, EventTypes } = require('./event-bus');
 const { Experiment } = require('../models/experiment.model');
 const { ExperimentPlan } = require('../models/experimentPlan.model');
+const { ExperimentStateHistory } = require('../models/history.model');
 const Tool = require('../models/tool.model');
 const { Provider } = require('../models/provider.model');
 const { deepCopy } = require('../models/schemas/environment.schema');
@@ -270,6 +271,8 @@ class ExperimentOrchestrator {
                 stepNumber: step,
                 environmentSnapshot: this.experiment.currentEnvironment
             });
+
+            await this._saveStateSnapshot(step);
             return true;
         }
 
@@ -300,7 +303,37 @@ class ExperimentOrchestrator {
             environmentSnapshot: this.experiment.currentEnvironment
         });
 
+        await this._saveStateSnapshot(step);
+
         return !this._controlFlow.stopExperiment && !this._controlFlow.pauseExperiment;
+    }
+
+    /**
+     * Saves a snapshot of the current environment state to the history.
+     */
+    async _saveStateSnapshot(stepNumber) {
+        try {
+            // Create deep copy of environment variables to prevent reference issues
+            // Although we're saving to Mongo which handles serialization, being explicit is safer
+            // JSON.parse/stringify is a simple way to deep copy pure JSON data (which env vars must be)
+            const envCopy = JSON.parse(JSON.stringify(this.experiment.currentEnvironment.variables || {}));
+
+            await ExperimentStateHistory.create({
+                experimentId: this.experiment._id,
+                stepNumber: stepNumber,
+                timestamp: new Date(),
+                environment: envCopy
+            });
+        } catch (error) {
+            // Log error but don't fail the step; history is non-critical
+            this.eventBus.emit(EventTypes.LOG, {
+                experimentId: this.experiment._id,
+                stepNumber: stepNumber,
+                source: 'SYSTEM',
+                message: 'Failed to save state history snapshot',
+                data: { error: error.message }
+            });
+        }
     }
 
     /**
