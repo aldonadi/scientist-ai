@@ -6,6 +6,7 @@ const toolController = require('../controllers/tool.controller');
 router.post('/', toolController.createTool);
 router.get('/', toolController.listTools);
 router.get('/:id', toolController.getTool);
+router.get('/:id/usage', toolController.getToolUsage);
 router.put('/:id', toolController.updateTool);
 router.delete('/:id', toolController.deleteTool);
 

@@ -1,8 +1,8 @@
 import { Component, OnInit, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
-import { ToolService, Tool, CreateToolDto } from '../../core/services/tool.service';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
+import { ToolService, Tool, CreateToolDto, ToolUsage } from '../../core/services/tool.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { CanComponentDeactivate } from '../../core/guards/unsaved-changes.guard';
@@ -33,7 +33,7 @@ const DEFAULT_TOOL_CODE = `def execute(env, args):
 @Component({
   selector: 'app-tool-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div class="h-full flex flex-col">
       <!-- Header -->
@@ -48,8 +48,12 @@ const DEFAULT_TOOL_CODE = `def execute(env, args):
           <span *ngIf="isDirty()" class="ml-3 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full border border-amber-200">
              ● Unsaved Changes
           </span>
-        </div>
         <div class="flex items-center space-x-3">
+          <button *ngIf="!isNew" 
+                  (click)="deleteTool()" 
+                  class="px-4 py-2 border border-red-300 text-red-700 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors">
+            Delete
+          </button>
           <button (click)="goBack()" 
                   class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
             Cancel
@@ -160,6 +164,25 @@ const DEFAULT_TOOL_CODE = `def execute(env, args):
                         [class.border-gray-300]="!parametersError"></textarea>
               <p *ngIf="parametersError" class="mt-1 text-xs text-red-600">{{ parametersError }}</p>
             </div>
+
+            <!-- Usage Info -->
+            <div *ngIf="!isNew && usage.length > 0">
+                <div class="h-px bg-gray-200 my-4"></div>
+                <h3 class="text-sm font-medium text-gray-900 mb-2">Used In</h3>
+                <div class="space-y-2">
+                    <div *ngFor="let use of usage | slice:0:10" class="text-xs text-gray-600">
+                        <a [routerLink]="['/plans', use.planId]" [fragment]="'roles'" class="text-blue-600 hover:underline">
+                            {{ use.planName }}
+                        </a>
+                        <span class="text-gray-400"> ({{ use.roleName }})</span>
+                    </div>
+                    <button *ngIf="usage.length > 10" 
+                            (click)="showUsageModal = true"
+                            class="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                        ...and {{ usage.length - 10 }} more. See all
+                    </button>
+                </div>
+            </div>
           </div>
         </div>
         
@@ -182,6 +205,30 @@ const DEFAULT_TOOL_CODE = `def execute(env, args):
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Usage Modal -->
+    <div *ngIf="showUsageModal" class="fixed inset-0 z-50 flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/50" (click)="showUsageModal = false"></div>
+        <div class="relative bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden max-h-[80vh] flex flex-col">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">Tool Usage</h3>
+                <button (click)="showUsageModal = false" class="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6">
+                <ul class="space-y-3">
+                    <li *ngFor="let use of usage" class="flex justify-between items-center border-b border-gray-50 pb-2 last:border-0">
+                        <div>
+                            <a [routerLink]="['/plans', use.planId]" [fragment]="'roles'" (click)="showUsageModal = false" class="font-medium text-blue-600 hover:underline text-sm block">
+                                {{ use.planName }}
+                            </a>
+                            <span class="text-xs text-gray-500">Role: {{ use.roleName }}</span>
+                        </div>
+                        <span class="text-xs text-gray-400">ID: ...{{ use.planId.slice(-4) }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
     </div>
   `
 })
@@ -209,6 +256,9 @@ export class ToolEditorComponent implements OnInit, CanComponentDeactivate {
 
   // Dirty checking
   private initialToolState: string = '';
+  // Usage
+  usage: ToolUsage[] = [];
+  showUsageModal = false;
   private bypassGuard = false;
 
   constructor(
@@ -248,6 +298,7 @@ export class ToolEditorComponent implements OnInit, CanComponentDeactivate {
         };
         this.parametersJson = JSON.stringify(tool.parameters, null, 2);
         this.saveInitialState();
+        this.loadUsage();
       },
       error: (err) => {
         console.error('Failed to load tool:', err);
@@ -401,6 +452,47 @@ export class ToolEditorComponent implements OnInit, CanComponentDeactivate {
       error: (err) => {
         console.error('Failed to save tool:', err);
         this.toastService.error('Failed to save tool: ' + (err.error?.message || err.message));
+      }
+    });
+  }
+  loadUsage(): void {
+    if (!this.id) return;
+    this.toolService.getToolUsage(this.id).subscribe({
+      next: (usage) => this.usage = usage,
+      error: (err) => console.error('Failed to load usage:', err)
+    });
+  }
+
+  deleteTool(): void {
+    if (!this.id) return;
+
+    let message = `Are you sure you want to delete "${this.tool.name}"?`;
+
+    if (this.usage.length > 0) {
+      const plans = [...new Set(this.usage.map(u => u.planName))];
+      message += `\n\n⚠️ WARNING: This tool is currently used in the following plans:\n- ${plans.join('\n- ')}\n\nDeleting it may break these experiments.`;
+    } else {
+      message += `\n\nThis action cannot be undone.`;
+    }
+
+    this.confirmService.confirm({
+      title: 'Delete Tool?',
+      message: message,
+      confirmText: 'Delete',
+      cancelText: 'Cancel'
+    }).then((shouldDelete) => {
+      if (shouldDelete) {
+        this.toolService.deleteTool(this.id!).subscribe({
+          next: () => {
+            this.toastService.success(`Tool "${this.tool.name}" deleted`);
+            this.bypassGuard = true;
+            this.router.navigate(['/tools']);
+          },
+          error: (err) => {
+            console.error('Failed to delete tool:', err);
+            this.toastService.error('Failed to delete tool: ' + (err.error?.message || err.message));
+          }
+        });
       }
     });
   }

@@ -49,3 +49,14 @@ Added a **Chat History** tab to the Experiment Monitor page:
     - **Thinking Process**: Collapsible section showing the model's internal reasoning (if available).
   - **Tool Calls**: Integrated cards within the assistant response.
   - **Tool Results**: Indented gray code blocks for output visibility.
+
+## Tool Library Improvements
+
+- **Safe Deletion**:
+  - Implemented usage checking before deletion.
+  - Warns users if a tool is used in any active ExperimentPlans, listing the specific plans and roles.
+  - Requires explicit confirmation via dialog.
+- **Tool Editor**:
+  - **Usage Display**: Added a "Used In" section showing links to Plans/Roles that utilize the tool.
+  - **Delete Button**: Added a delete button directly in the editor for convenience.
+  - **Persistence**: Fixed `endsTurn` property persistence.

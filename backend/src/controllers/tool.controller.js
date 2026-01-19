@@ -1,6 +1,7 @@
 const { z } = require('zod');
 const mongoose = require('mongoose');
 const Tool = require('../models/tool.model');
+const { ExperimentPlan } = require('../models/experimentPlan.model');
 const { toolSchema, toolUpdateSchema } = require('../models/schemas/tool.schema');
 
 const createTool = async (req, res, next) => {
@@ -184,10 +185,48 @@ const deleteTool = async (req, res, next) => {
     }
 };
 
+const getToolUsage = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ error: 'Bad Request', message: 'Invalid tool ID' });
+        }
+
+        // Find plans that have any role using this tool
+        // Query looks for roles.tools array containing the id
+        const plans = await ExperimentPlan.find({
+            'roles.tools': id
+        }).select('name roles');
+
+        const usage = [];
+
+        for (const plan of plans) {
+            // Find specific roles within this plan that use the tool
+            const matchingRoles = plan.roles.filter(role =>
+                role.tools && role.tools.some(toolId => toolId.toString() === id)
+            );
+
+            for (const role of matchingRoles) {
+                usage.push({
+                    planId: plan._id,
+                    planName: plan.name,
+                    roleName: role.name
+                });
+            }
+        }
+
+        res.status(200).json(usage);
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     createTool,
     listTools,
     getTool,
     updateTool,
-    deleteTool
+    deleteTool,
+    getToolUsage
 };
