@@ -1,7 +1,12 @@
-# Tasks
+# Task: Draft Settings System Story (068)
 
-- [/] Investigate "Failed to Fetch Models" error <!-- id: 0 -->
-    - [ ] Locate frontend component and service for "Test Models" <!-- id: 1 -->
-    - [ ] Locate backend endpoint for fetching models <!-- id: 2 -->
-    - [ ] debug backend/frontend communication <!-- id: 3 -->
-    - [ ] fix the issue <!-- id: 4 -->
+## Objective
+Draft a user story for implementing a general Settings system based on the requirements provided by the user.
+
+## Progress
+- [x] Review backlog.md <!-- id: 0 -->
+- [x] Review example story file 055_sse_streaming_endpoint.md <!-- id: 1 -->
+- [x] Review additional story files for format reference <!-- id: 2 -->
+- [x] Explore project structure and tech stack <!-- id: 3 -->
+- [/] Draft story file 068 with recommendations <!-- id: 4 -->
+- [ ] Present to user for feedback <!-- id: 5 -->
