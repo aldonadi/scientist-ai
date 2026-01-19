@@ -48,7 +48,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     uptime: 0,
     service: 'scientist-ai-backend',
     database: { status: 'unknown', host: '', name: '' },
-    containers: { poolSize: 0, available: 0, image: '' }
+    containers: { poolSize: 0, available: 0, active: 0, image: '' }
   };
   isHealthModalOpen = false;
 
