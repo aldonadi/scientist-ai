@@ -46,6 +46,7 @@ actions.end_step(immediate=False)      # End step early
 actions.skip_role()                    # Skip current role
 actions.set_variable(key, value)       # Set env variable
 actions.inject_message(role, content)  # Inject message
+actions.skip_tool_call(mock_dict)      # Skip tool & use mock response
 actions.query_llm(prompt, system, model)  # LLM query (TODO)
 ```
 
