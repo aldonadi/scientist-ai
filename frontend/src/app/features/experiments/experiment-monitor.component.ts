@@ -51,7 +51,7 @@ interface RoleActivity {
               {{ experiment?.status || 'LOADING' }}
             </span>
             <span class="text-gray-600 font-medium">
-              Step {{ experiment?.currentStep || 0 }}
+              Step {{ experiment?.currentStep || 0 }}<ng-container *ngIf="plan?.maxSteps">/{{ plan!.maxSteps }} ({{ getStepPercentage() }}%)</ng-container>
             </span>
           </div>
           
@@ -599,5 +599,12 @@ export class ExperimentMonitorComponent implements OnInit, OnDestroy {
 
   goBack(): void {
     this.router.navigate(['/experiments']);
+  }
+
+  getStepPercentage(): number {
+    if (!this.experiment?.currentStep || !this.plan?.maxSteps) {
+      return 0;
+    }
+    return Math.round((this.experiment.currentStep / this.plan.maxSteps) * 100);
   }
 }
