@@ -1,11 +1,12 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { SystemHealthModalComponent, HealthStatus } from './system-health-modal.component';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, SystemHealthModalComponent],
+  imports: [CommonModule, RouterLink, SystemHealthModalComponent],
   template: `
     <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm">
       <div class="flex items-center">
@@ -28,9 +29,9 @@ import { SystemHealthModalComponent, HealthStatus } from './system-health-modal.
           </span>
           <span class="ml-2 text-sm text-gray-700">Admin</span>
         </div>
-        <button class="text-gray-600 hover:text-gray-900">
+        <a routerLink="/settings" class="text-gray-600 hover:text-gray-900 cursor-pointer" title="Settings">
           <span class="text-lg">⚙️</span>
-        </button>
+        </a>
       </div>
     </header>
 

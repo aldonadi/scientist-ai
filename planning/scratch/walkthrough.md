@@ -1,93 +1,64 @@
-# Script System Upgrade - Walkthrough
+# Settings System Implementation - Walkthrough
 
 ## Summary
-Implemented a significant upgrade to the Script system enabling richer experiment behaviors:
-1. **Hook Context Injection**: Scripts receive hook-specific data via `context['hook']`
-2. **Script Actions API**: 8 actions for controlling experiment flow
-3. **Quick Reference Panel**: Frontend UI showing available context and actions
 
-## Changes Made
+Implemented a comprehensive Settings system (story 068) with:
+- **Backend**: Registry-based settings with Zod validation, MongoDB storage, REST API
+- **Frontend**: Angular settings page with hybrid sidebar/search layout, auto-save
 
-### Backend ([experiment-orchestrator.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/experiment-orchestrator.service.js))
+## Files Created
 
-render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/experiment-orchestrator.service.js)
+### Backend
+| File | Purpose |
+|------|---------|
+| [settings.registry.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/settings/settings.registry.js) | Declarative settings definitions with Zod validators |
+| [settings-store.interface.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/settings/settings-store.interface.js) | Abstract storage interface |
+| [mongodb-settings-store.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/settings/mongodb-settings-store.js) | MongoDB implementation |
+| [settings.service.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/services/settings/settings.service.js) | Core service with get/set/validate/export/import |
+| [settings.controller.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/controllers/settings.controller.js) | API endpoint handlers |
+| [settings.routes.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/src/routes/settings.routes.js) | Express router |
+| [settings.test.js](file:///home/andrew/Projects/Code/web/scientist-ai/backend/tests/services/settings/settings.test.js) | Unit tests (37/37 passing) |
 
-**Key additions:**
-- `_controlFlow` object for tracking stop/pause/skip/endStep signals
-- `_buildHookContext()` - constructs hook-specific context for 12 hook types
-- `_processScriptActions()` - handles 8 action types with proper logging
-- Updated `processStep()`, `processRole()`, `runLoop()` for control flow
+### Frontend
+| File | Purpose |
+|------|---------|
+| [settings.service.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/core/services/settings.service.ts) | API client |
+| [settings-page.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/settings/settings-page.component.ts) | Main page with sidebar/search hybrid |
 
-### Frontend ([scripts-tab.component.ts](file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/scripts-tab.component.ts))
-
-render_diffs(file:///home/andrew/Projects/Code/web/scientist-ai/frontend/src/app/features/plans/plan-editor/scripts-tab.component.ts)
-
-**Key additions:**
-- `HOOK_CONTEXT_FIELDS` - per-hook context field definitions
-- `ACTIONS_REFERENCE` - all available actions with descriptions
-- Collapsible Quick Reference panel showing context and actions
-
-## Hook Context Fields
-
-| Hook | Available Fields |
-|------|------------------|
-| `STEP_START` | `step_number` |
-| `BEFORE_TOOL_CALL` | `tool_name`, `args` |
-| `TOOL_RESULT` | `tool_name`, `result`, `env_changes` |
-| `EXPERIMENT_END` | `result`, `duration` |
-
-## Actions API
-
-```python
-actions.log(message, data=None)        # Write log entry
-actions.stop_experiment(success, msg)  # Stop as SUCCESS/FAILURE
-actions.pause_experiment()             # Pause experiment
-actions.end_step(immediate=False)      # End step early
-actions.skip_role()                    # Skip current role
-actions.set_variable(key, value)       # Set env variable
-actions.inject_message(role, content)  # Inject message
-actions.skip_tool_call(mock_dict)      # Skip tool & use mock response
-actions.query_llm(prompt, system, model)  # LLM query (TODO)
-```
-
-## Validation
-
-- ✅ Backend tests pass (`npm test`)
-- ✅ Frontend builds successfully (`npm run build`)
-- ⏳ Manual testing recommended for action behaviors
-
-# State History Tab - Walkthrough
-
-## Summary
-Implemented a new **State History** tab in the Experiment Monitor that allows users to track the evolution of environment variables across each step of an experiment.
-
-## Changes Made
-- **Backend**:
-  - Created `ExperimentStateHistory` model to store snapshots.
-  - Updated `ExperimentOrchestrator` to save state at the end of every step.
-  - Added `GET /api/experiments/:id/history` endpoint.
-- **Frontend**:
-  - Created `StateHistoryComponent` with:
-    - Dynamic column management (add/remove/reset).
-    - Polling for live updates (5s interval).
-    - Client-side sorting and CSV Export.
-  - Integrated tab into `ExperimentMonitorComponent`.
+---
 
 ## Verification
-Verified end-to-end using browser automation with a live "BlackJack" experiment.
-- Confirmed step snapshots are created.
-- Confirmed table updates in real-time.
-- Confirmed Export to CSV works.
 
-![Verification Recording](/home/andrew/.gemini/antigravity/brain/2fd790e2-53e3-4146-8f13-7b3f5f79a974/verify_state_history_1768794920365.webp)
+### Unit Tests
+```bash
+cd backend && npm test -- --testPathPatterns=settings
+# 37/37 tests passing
+```
 
-# UI Polish & Stability (Story 067)
-Improved the polling mechanism and data visibility in the Monitor:
+### Manual Browser Testing
 
-### Polling Stability
-- Implemented `trackBy` across all auto-refreshing lists (Chat History, Log Feed, State History) to prevent DOM destruction and preserve text selection/expansion states.
-- Ensures "Thinking Process" blocks stay open and chat selection remains stable during updates.
+All features verified working:
 
-### Data Visibility
-- Added **Double-Click Modal** to the State History table cells to view full content of truncated values.
-- Updated **Environment View (JSON Tree)** to allow clicking on string values to view them in a full-size modal.
+````carousel
+![Initial settings page showing sidebar and Ollama settings](/home/andrew/.gemini/antigravity/brain/1f44fb6a-72b5-402a-b1e0-63ecbf3524ce/initial_settings_page_1768866186746.png)
+<!-- slide -->
+![After modifying Context Length - "Modified" badge and value 8192 persists after reload](/home/andrew/.gemini/antigravity/brain/1f44fb6a-72b5-402a-b1e0-63ecbf3524ce/persisted_setting_value_1768866250786.png)
+````
+
+| Feature | Status |
+|---------|--------|
+| Sidebar navigation | ✅ |
+| Search flat list mode | ✅ |
+| Show Advanced toggle | ✅ |
+| Auto-save with debounce | ✅ |
+| Persistence after reload | ✅ |
+| Export/Import/Reset buttons | ✅ |
+
+---
+
+## Initial Settings
+
+Three Ollama provider settings registered:
+- **API Base URL** (string): `http://localhost:11434`
+- **Context Length** (integer): 2048–131072, default 4096
+- **Model Options** (json, advanced): `{ temperature: 0.7 }`

@@ -85,7 +85,7 @@ exports.createPlan = async (req, res, next) => {
 exports.listPlans = async (req, res, next) => {
     try {
         const plans = await ExperimentPlan.find()
-            .select('name description roles goals createdAt updatedAt')
+            .select('name description roles goals maxSteps createdAt updatedAt')
             .lean();
 
         // Transform results to add counts
@@ -95,6 +95,7 @@ exports.listPlans = async (req, res, next) => {
             description: plan.description,
             roleCount: plan.roles ? plan.roles.length : 0,
             goalCount: plan.goals ? plan.goals.length : 0,
+            maxSteps: plan.maxSteps,
             roles: plan.roles ? plan.roles.map(r => ({ name: r.name })) : [],
             createdAt: plan.createdAt,
             updatedAt: plan.updatedAt

@@ -86,3 +86,4 @@ Status can be:
 | 065_script_system_upgrade                          | 13     | DONE        |
 | 066_state_history_tab                              | 8      | DONE        |
 | 067_ui_polish                                      | 5      | DONE        |
+| 068_settings_system                                | 13     | READY       |

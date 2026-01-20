@@ -19,6 +19,7 @@ const toolRoutes = require('./routes/tool.routes');
 const planRoutes = require('./routes/plan.routes');
 const experimentRoutes = require('./routes/experiment.routes');
 const providerRoutes = require('./routes/provider.routes');
+const settingsRoutes = require('./routes/settings.routes');
 const mongoose = require('mongoose');
 const ContainerPoolManager = require('./services/container-pool.service');
 
@@ -27,6 +28,7 @@ app.use('/api/tools', toolRoutes);
 app.use('/api/plans', planRoutes);
 app.use('/api/experiments', experimentRoutes);
 app.use('/api/providers', providerRoutes);
+app.use('/api/settings', settingsRoutes);
 app.get('/api/health', (req, res) => {
     const containerPool = ContainerPoolManager.getInstance();
     const dbStatusMap = {
