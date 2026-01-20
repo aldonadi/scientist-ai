@@ -7,18 +7,18 @@ import { ConfirmService } from '../../core/services/confirm.service';
 import { Subject, debounceTime } from 'rxjs';
 
 interface GroupNode {
-    name: string;
-    path: string[];
-    settings: SettingValue[];
-    children: GroupNode[];
-    expanded: boolean;
+  name: string;
+  path: string[];
+  settings: SettingValue[];
+  children: GroupNode[];
+  expanded: boolean;
 }
 
 @Component({
-    selector: 'app-settings-page',
-    standalone: true,
-    imports: [CommonModule, FormsModule],
-    template: `
+  selector: 'app-settings-page',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  template: `
     <div class="settings-container">
       <!-- Header -->
       <div class="settings-header">
@@ -187,7 +187,7 @@ interface GroupNode {
       </div>
     </div>
   `,
-    styles: [`
+  styles: [`
     .settings-container {
       display: flex;
       flex-direction: column;
@@ -528,304 +528,312 @@ interface GroupNode {
   `]
 })
 export class SettingsPageComponent implements OnInit, OnDestroy {
-    settings: SettingValue[] = [];
-    groupTree: GroupNode[] = [];
-    selectedGroup = '';
-    searchQuery = '';
-    showAdvanced = false;
-    loading = true;
-    error = '';
-    settingErrors: Record<string, string> = {};
+  settings: SettingValue[] = [];
+  groupTree: GroupNode[] = [];
+  selectedGroup = '';
+  searchQuery = '';
+  showAdvanced = false;
+  loading = true;
+  error = '';
+  settingErrors: Record<string, string> = {};
 
-    private searchSubject = new Subject<string>();
-    private saveSubjects = new Map<string, Subject<any>>();
+  private searchSubject = new Subject<string>();
+  private saveSubjects = new Map<string, Subject<any>>();
 
-    constructor(
-        private settingsService: SettingsService,
-        private toast: ToastService,
-        private confirm: ConfirmService
-    ) { }
+  constructor(
+    private settingsService: SettingsService,
+    private toast: ToastService,
+    private confirm: ConfirmService
+  ) { }
 
-    ngOnInit(): void {
-        this.loadSettings();
+  ngOnInit(): void {
+    this.loadSettings();
 
-        // Debounce search
-        this.searchSubject.pipe(debounceTime(150)).subscribe(query => {
-            this.searchQuery = query;
+    // Debounce search
+    this.searchSubject.pipe(debounceTime(150)).subscribe(query => {
+      this.searchQuery = query;
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.searchSubject.complete();
+    this.saveSubjects.forEach(s => s.complete());
+  }
+
+  get isSearchActive(): boolean {
+    return this.searchQuery.trim().length > 0;
+  }
+
+  get filteredSettings(): SettingValue[] {
+    if (!this.isSearchActive) return this.settings;
+
+    // Split query into keywords (whitespace-separated)
+    const keywords = this.searchQuery.toLowerCase().split(/\s+/).filter(k => k.length > 0);
+
+    return this.settings.filter(s => {
+      // Build searchable text from all relevant fields
+      const searchableText = [
+        s.name,
+        s.description,
+        s.key,
+        ...s.tags,
+        ...s.group,
+      ].join(' ').toLowerCase();
+
+      // All keywords must be found in the searchable text
+      const matchesSearch = keywords.every(keyword => searchableText.includes(keyword));
+
+      const matchesAdvanced = this.showAdvanced || !s.advanced;
+      return matchesSearch && matchesAdvanced;
+    });
+  }
+
+  get displayedSettings(): SettingValue[] {
+    if (this.isSearchActive) {
+      return this.filteredSettings;
+    }
+
+    // Show settings for selected group
+    if (this.selectedGroup) {
+      return this.settings.filter(s => {
+        const groupPath = s.group.join('/');
+        const matchesGroup = groupPath === this.selectedGroup || groupPath.startsWith(this.selectedGroup + '/');
+        const matchesAdvanced = this.showAdvanced || !s.advanced;
+        return matchesGroup && matchesAdvanced;
+      });
+    }
+
+    return [];
+  }
+
+  async loadSettings(): Promise<void> {
+    this.loading = true;
+    this.error = '';
+    try {
+      this.settings = await this.settingsService.getAll();
+      this.buildTree();
+
+      // Select first group by default
+      if (this.groupTree.length > 0) {
+        const firstGroup = this.groupTree[0];
+        firstGroup.expanded = true;
+        if (firstGroup.children.length > 0) {
+          this.selectedGroup = firstGroup.children[0].path.join('/');
+        } else {
+          this.selectedGroup = firstGroup.path.join('/');
+        }
+      }
+    } catch (e: any) {
+      this.error = e.message || 'Failed to load settings';
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  buildTree(): void {
+    const tree = new Map<string, GroupNode>();
+
+    for (const setting of this.settings) {
+      const groupPath = setting.group;
+      if (groupPath.length === 0) continue;
+
+      // Create top-level group
+      const topName = groupPath[0];
+      if (!tree.has(topName)) {
+        tree.set(topName, {
+          name: topName,
+          path: [topName],
+          settings: [],
+          children: [],
+          expanded: false,
         });
+      }
+      const topNode = tree.get(topName)!;
+
+      if (groupPath.length === 1) {
+        topNode.settings.push(setting);
+      } else {
+        // Create child group
+        const childName = groupPath[1];
+        let childNode = topNode.children.find(c => c.name === childName);
+        if (!childNode) {
+          childNode = {
+            name: childName,
+            path: [topName, childName],
+            settings: [],
+            children: [],
+            expanded: false,
+          };
+          topNode.children.push(childNode);
+        }
+        childNode.settings.push(setting);
+      }
     }
 
-    ngOnDestroy(): void {
-        this.searchSubject.complete();
-        this.saveSubjects.forEach(s => s.complete());
+    this.groupTree = Array.from(tree.values());
+  }
+
+  selectGroup(group: GroupNode): void {
+    // Toggle expansion for top-level groups
+    if (group.children.length > 0) {
+      group.expanded = !group.expanded;
+    }
+    this.selectedGroup = group.path.join('/');
+  }
+
+  onSearchChange(query: string): void {
+    this.searchSubject.next(query);
+  }
+
+  clearSearch(): void {
+    this.searchQuery = '';
+  }
+
+  trackBySetting(index: number, setting: SettingValue): string {
+    return setting.key;
+  }
+
+  async onValueChange(setting: SettingValue, event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    let value: any = input.value;
+
+    if (setting.type === 'integer') {
+      value = parseInt(value, 10);
+    } else if (setting.type === 'float') {
+      value = parseFloat(value);
     }
 
-    get isSearchActive(): boolean {
-        return this.searchQuery.trim().length > 0;
+    await this.saveSetting(setting, value);
+  }
+
+  async onBooleanChange(setting: SettingValue, event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    await this.saveSetting(setting, input.checked);
+  }
+
+  async onSelectChange(setting: SettingValue, event: Event): Promise<void> {
+    const select = event.target as HTMLSelectElement;
+    await this.saveSetting(setting, select.value);
+  }
+
+  async onJsonChange(setting: SettingValue, event: Event): Promise<void> {
+    const textarea = event.target as HTMLTextAreaElement;
+    try {
+      const value = JSON.parse(textarea.value);
+      delete this.settingErrors[setting.key];
+      await this.saveSetting(setting, value);
+    } catch {
+      this.settingErrors[setting.key] = 'Invalid JSON';
+    }
+  }
+
+  private async saveSetting(setting: SettingValue, value: any): Promise<void> {
+    // Get or create debounced save subject for this setting
+    if (!this.saveSubjects.has(setting.key)) {
+      const subject = new Subject<any>();
+      this.saveSubjects.set(setting.key, subject);
+
+      subject.pipe(debounceTime(500)).subscribe(async (val) => {
+        const result = await this.settingsService.update(setting.key, val);
+        if (!result.success) {
+          this.settingErrors[setting.key] = result.errors?.[0]?.message || 'Validation failed';
+        } else {
+          delete this.settingErrors[setting.key];
+          // Update local value
+          const s = this.settings.find(x => x.key === setting.key);
+          if (s) {
+            s.value = val;
+            s.isDefault = false;
+          }
+        }
+      });
     }
 
-    get filteredSettings(): SettingValue[] {
-        if (!this.isSearchActive) return this.settings;
+    this.saveSubjects.get(setting.key)!.next(value);
+  }
 
-        const query = this.searchQuery.toLowerCase();
-        return this.settings.filter(s => {
-            const matchesSearch =
-                s.name.toLowerCase().includes(query) ||
-                s.description.toLowerCase().includes(query) ||
-                s.tags.some(t => t.toLowerCase().includes(query)) ||
-                s.group.some(g => g.toLowerCase().includes(query));
+  async resetSetting(setting: SettingValue): Promise<void> {
+    const confirmed = await this.confirm.confirm({
+      title: 'Reset Setting',
+      message: `Reset "${setting.name}" to its default value?`
+    });
 
-            const matchesAdvanced = this.showAdvanced || !s.advanced;
-            return matchesSearch && matchesAdvanced;
-        });
+    if (!confirmed) return;
+
+    try {
+      const result = await this.settingsService.reset(setting.key);
+      setting.value = result.value;
+      setting.isDefault = true;
+      delete this.settingErrors[setting.key];
+      this.toast.success(`Reset ${setting.name} to default`);
+    } catch (e: any) {
+      this.toast.error(e.message);
     }
+  }
 
-    get displayedSettings(): SettingValue[] {
-        if (this.isSearchActive) {
-            return this.filteredSettings;
+  async factoryReset(): Promise<void> {
+    const confirmed = await this.confirm.confirm({
+      title: '⚠️ Factory Reset',
+      message: 'This will reset ALL settings to their default values. Are you sure?',
+      confirmText: 'Reset All'
+    });
+
+    if (!confirmed) return;
+
+    try {
+      const result = await this.settingsService.resetAll();
+      this.toast.success(`Reset ${result.settingsReset} settings to defaults`);
+      await this.loadSettings();
+    } catch (e: any) {
+      this.toast.error(e.message);
+    }
+  }
+
+  async exportSettings(): Promise<void> {
+    try {
+      const data = await this.settingsService.export();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `settings-export-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      this.toast.success('Settings exported');
+    } catch (e: any) {
+      this.toast.error(e.message);
+    }
+  }
+
+  async importSettings(): Promise<void> {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        const result = await this.settingsService.import(data);
+
+        if (result.imported > 0) {
+          this.toast.success(`Imported ${result.imported} settings`);
+          await this.loadSettings();
         }
 
-        // Show settings for selected group
-        if (this.selectedGroup) {
-            return this.settings.filter(s => {
-                const groupPath = s.group.join('/');
-                const matchesGroup = groupPath === this.selectedGroup || groupPath.startsWith(this.selectedGroup + '/');
-                const matchesAdvanced = this.showAdvanced || !s.advanced;
-                return matchesGroup && matchesAdvanced;
-            });
+        if (result.errors.length > 0) {
+          this.toast.info(`${result.skipped} settings skipped`);
         }
+      } catch (e: any) {
+        this.toast.error(e.message || 'Failed to import settings');
+      }
+    };
+    input.click();
+  }
 
-        return [];
-    }
-
-    async loadSettings(): Promise<void> {
-        this.loading = true;
-        this.error = '';
-        try {
-            this.settings = await this.settingsService.getAll();
-            this.buildTree();
-
-            // Select first group by default
-            if (this.groupTree.length > 0) {
-                const firstGroup = this.groupTree[0];
-                firstGroup.expanded = true;
-                if (firstGroup.children.length > 0) {
-                    this.selectedGroup = firstGroup.children[0].path.join('/');
-                } else {
-                    this.selectedGroup = firstGroup.path.join('/');
-                }
-            }
-        } catch (e: any) {
-            this.error = e.message || 'Failed to load settings';
-        } finally {
-            this.loading = false;
-        }
-    }
-
-    buildTree(): void {
-        const tree = new Map<string, GroupNode>();
-
-        for (const setting of this.settings) {
-            const groupPath = setting.group;
-            if (groupPath.length === 0) continue;
-
-            // Create top-level group
-            const topName = groupPath[0];
-            if (!tree.has(topName)) {
-                tree.set(topName, {
-                    name: topName,
-                    path: [topName],
-                    settings: [],
-                    children: [],
-                    expanded: false,
-                });
-            }
-            const topNode = tree.get(topName)!;
-
-            if (groupPath.length === 1) {
-                topNode.settings.push(setting);
-            } else {
-                // Create child group
-                const childName = groupPath[1];
-                let childNode = topNode.children.find(c => c.name === childName);
-                if (!childNode) {
-                    childNode = {
-                        name: childName,
-                        path: [topName, childName],
-                        settings: [],
-                        children: [],
-                        expanded: false,
-                    };
-                    topNode.children.push(childNode);
-                }
-                childNode.settings.push(setting);
-            }
-        }
-
-        this.groupTree = Array.from(tree.values());
-    }
-
-    selectGroup(group: GroupNode): void {
-        // Toggle expansion for top-level groups
-        if (group.children.length > 0) {
-            group.expanded = !group.expanded;
-        }
-        this.selectedGroup = group.path.join('/');
-    }
-
-    onSearchChange(query: string): void {
-        this.searchSubject.next(query);
-    }
-
-    clearSearch(): void {
-        this.searchQuery = '';
-    }
-
-    trackBySetting(index: number, setting: SettingValue): string {
-        return setting.key;
-    }
-
-    async onValueChange(setting: SettingValue, event: Event): Promise<void> {
-        const input = event.target as HTMLInputElement;
-        let value: any = input.value;
-
-        if (setting.type === 'integer') {
-            value = parseInt(value, 10);
-        } else if (setting.type === 'float') {
-            value = parseFloat(value);
-        }
-
-        await this.saveSetting(setting, value);
-    }
-
-    async onBooleanChange(setting: SettingValue, event: Event): Promise<void> {
-        const input = event.target as HTMLInputElement;
-        await this.saveSetting(setting, input.checked);
-    }
-
-    async onSelectChange(setting: SettingValue, event: Event): Promise<void> {
-        const select = event.target as HTMLSelectElement;
-        await this.saveSetting(setting, select.value);
-    }
-
-    async onJsonChange(setting: SettingValue, event: Event): Promise<void> {
-        const textarea = event.target as HTMLTextAreaElement;
-        try {
-            const value = JSON.parse(textarea.value);
-            delete this.settingErrors[setting.key];
-            await this.saveSetting(setting, value);
-        } catch {
-            this.settingErrors[setting.key] = 'Invalid JSON';
-        }
-    }
-
-    private async saveSetting(setting: SettingValue, value: any): Promise<void> {
-        // Get or create debounced save subject for this setting
-        if (!this.saveSubjects.has(setting.key)) {
-            const subject = new Subject<any>();
-            this.saveSubjects.set(setting.key, subject);
-
-            subject.pipe(debounceTime(500)).subscribe(async (val) => {
-                const result = await this.settingsService.update(setting.key, val);
-                if (!result.success) {
-                    this.settingErrors[setting.key] = result.errors?.[0]?.message || 'Validation failed';
-                } else {
-                    delete this.settingErrors[setting.key];
-                    // Update local value
-                    const s = this.settings.find(x => x.key === setting.key);
-                    if (s) {
-                        s.value = val;
-                        s.isDefault = false;
-                    }
-                }
-            });
-        }
-
-        this.saveSubjects.get(setting.key)!.next(value);
-    }
-
-    async resetSetting(setting: SettingValue): Promise<void> {
-        const confirmed = await this.confirm.confirm({
-            title: 'Reset Setting',
-            message: `Reset "${setting.name}" to its default value?`
-        });
-
-        if (!confirmed) return;
-
-        try {
-            const result = await this.settingsService.reset(setting.key);
-            setting.value = result.value;
-            setting.isDefault = true;
-            delete this.settingErrors[setting.key];
-            this.toast.success(`Reset ${setting.name} to default`);
-        } catch (e: any) {
-            this.toast.error(e.message);
-        }
-    }
-
-    async factoryReset(): Promise<void> {
-        const confirmed = await this.confirm.confirm({
-            title: '⚠️ Factory Reset',
-            message: 'This will reset ALL settings to their default values. Are you sure?',
-            confirmText: 'Reset All'
-        });
-
-        if (!confirmed) return;
-
-        try {
-            const result = await this.settingsService.resetAll();
-            this.toast.success(`Reset ${result.settingsReset} settings to defaults`);
-            await this.loadSettings();
-        } catch (e: any) {
-            this.toast.error(e.message);
-        }
-    }
-
-    async exportSettings(): Promise<void> {
-        try {
-            const data = await this.settingsService.export();
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `settings-export-${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-            this.toast.success('Settings exported');
-        } catch (e: any) {
-            this.toast.error(e.message);
-        }
-    }
-
-    async importSettings(): Promise<void> {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        input.onchange = async (e) => {
-            const file = (e.target as HTMLInputElement).files?.[0];
-            if (!file) return;
-
-            try {
-                const text = await file.text();
-                const data = JSON.parse(text);
-                const result = await this.settingsService.import(data);
-
-                if (result.imported > 0) {
-                    this.toast.success(`Imported ${result.imported} settings`);
-                    await this.loadSettings();
-                }
-
-                if (result.errors.length > 0) {
-                    this.toast.info(`${result.skipped} settings skipped`);
-                }
-            } catch (e: any) {
-                this.toast.error(e.message || 'Failed to import settings');
-            }
-        };
-        input.click();
-    }
-
-    stringifyJson(value: any): string {
-        return JSON.stringify(value, null, 2);
-    }
+  stringifyJson(value: any): string {
+    return JSON.stringify(value, null, 2);
+  }
 }
