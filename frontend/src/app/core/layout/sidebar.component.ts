@@ -14,16 +14,16 @@ import { CommonModule } from '@angular/common';
       
       <!-- Header with toggle button -->
       <div class="p-4 border-b border-gray-700 flex items-center" [class.justify-center]="collapsed">
-        <button 
-          (click)="toggle()" 
-          class="text-gray-400 hover:text-white transition-colors focus:outline-none"
-          [title]="collapsed ? 'Expand sidebar' : 'Collapse sidebar'">
-          <span class="text-lg">{{ collapsed ? '☰' : '✕' }}</span>
-        </button>
-        <div *ngIf="!collapsed" class="ml-3 overflow-hidden whitespace-nowrap">
+        <div *ngIf="!collapsed" class="flex-1 overflow-hidden whitespace-nowrap">
           <h1 class="text-xl font-bold text-white">SCIENTIST.AI</h1>
           <span class="text-xs text-gray-400">v1.0</span>
         </div>
+        <button 
+          (click)="toggle()" 
+          class="text-gray-400 hover:text-white transition-colors focus:outline-none p-1 hover:bg-gray-700 rounded"
+          [title]="collapsed ? 'Expand sidebar' : 'Collapse sidebar'">
+          <span class="text-lg font-bold">{{ collapsed ? '»' : '«' }}</span>
+        </button>
       </div>
       
       <!-- Navigation -->
