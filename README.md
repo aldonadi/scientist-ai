@@ -330,3 +330,37 @@ z.boolean()
 },
 ```
 
+### Retrieving Settings in Frontend Code
+
+Inject the `SettingsService` and use its async methods:
+
+```typescript
+import { Component, OnInit } from '@angular/core';
+import { SettingsService } from '../../core/services/settings.service';
+
+@Component({ /* ... */ })
+export class MyComponent implements OnInit {
+  private ollamaBaseUrl = '';
+
+  constructor(private settingsService: SettingsService) {}
+
+  async ngOnInit() {
+    // Get a single setting
+    const setting = await this.settingsService.get('providers.ollama.apiBaseUrl');
+    this.ollamaBaseUrl = setting.value;
+
+    // Or get all settings at once
+    const allSettings = await this.settingsService.getAll();
+    const contextLength = allSettings.find(s => s.key === 'providers.ollama.contextLength')?.value;
+  }
+}
+```
+
+**Available Methods:**
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `get(key)` | `Promise<SettingValue>` | Single setting with value and metadata |
+| `getAll()` | `Promise<SettingValue[]>` | All settings with current values |
+| `update(key, value)` | `Promise<{success, errors?}>` | Update and validate |
+| `reset(key)` | `Promise<{value, wasReset}>` | Reset to default |
+
