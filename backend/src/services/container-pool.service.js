@@ -1,13 +1,14 @@
 const Docker = require('dockerode');
 const { v4: uuidv4 } = require('uuid');
 const Container = require('../domain/container');
+const { getSettingsService } = require('../services/settings');
 
 class ContainerPoolManager {
     constructor() {
         this.docker = new Docker();
         this.pool = [];
         this.activeContainers = new Set(); // Track containers currently in use by a task
-        this.poolSize = process.env.CONTAINER_POOL_SIZE ? parseInt(process.env.CONTAINER_POOL_SIZE) : 2;
+        this.poolSize = 2; // Default, will be updated by initialize() from settings
         this.image = 'python:3.9-slim'; // Standard image for now
         this.isInitializing = false;
     }
@@ -23,14 +24,20 @@ class ContainerPoolManager {
     }
 
     /**
-     * Initialize the pool by pre-warming containers.
+     * Initialize the pool by loading settings and pre-warming containers.
+     * Must be called after MongoDB connects.
      */
     async initialize() {
         if (this.isInitializing) return;
         this.isInitializing = true;
 
-        console.log(`Initializing Container Pool (Target Size: ${this.poolSize})...`);
         try {
+            // Load pool size from settings
+            const settings = getSettingsService();
+            this.poolSize = await settings.get('docker.containerPoolSize');
+            console.log(`Container Pool Size from settings: ${this.poolSize}`);
+
+            console.log(`Initializing Container Pool (Target Size: ${this.poolSize})...`);
             await this._ensureImage();
             await this._replenish();
         } catch (error) {

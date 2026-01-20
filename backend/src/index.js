@@ -3,10 +3,20 @@ const app = require('./app');
 require('dotenv').config();
 
 const PORT = process.env.PORT || 3000;
+const ContainerPoolManager = require('./services/container-pool.service');
 
 // Database Connection
 mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('Connected to MongoDB'))
+    .then(async () => {
+        console.log('Connected to MongoDB');
+
+        // Initialize container pool after DB is connected (needs settings from DB)
+        try {
+            await ContainerPoolManager.getInstance().initialize();
+        } catch (err) {
+            console.error('Failed to initialize container pool:', err);
+        }
+    })
     .catch(err => {
         console.error('Failed to connect to MongoDB', err);
         process.exit(1);
@@ -26,7 +36,6 @@ if (require.main === module) {
 
             // Cleanup Container Pool
             try {
-                const ContainerPoolManager = require('./services/container-pool.service');
                 await ContainerPoolManager.getInstance().shutdown();
                 console.log('Container Pool cleaned up.');
             } catch (err) {
@@ -50,4 +59,3 @@ if (require.main === module) {
 }
 
 module.exports = app;
-

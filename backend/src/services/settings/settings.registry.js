@@ -72,6 +72,18 @@ const settingsRegistry = [
         ),
         helpText: 'JSON object with keys like: temperature, top_p, top_k, seed, num_predict, etc.',
     },
+    {
+        key: 'docker.containerPoolSize',
+        name: 'Container Pool Size',
+        description: 'Number of containers to keep in the pool',
+        type: 'integer',
+        default: 2,
+        tags: ['docker', 'performance', 'container'],
+        group: ['Docker'],
+        scope: 'global',
+        advanced: false,
+        validator: z.number().int('Must be an integer').min(1, 'Minimum is 1').max(10, 'Maximum is 10'),
+    },
 ];
 
 /**
